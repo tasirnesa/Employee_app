@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "windows"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement()) @map("Id")
+  fullName     String   @map("FullName")
+  userName     String   @unique @map("UserName")
+  password     String   @map("Password")
+  gender       String?  @map("Gender")
+  age          Int?     @map("Age")
+  status       String   @map("Status") // Changed to String for bit(1)
+  role         String   @map("Role")
+  locked       String   @map("Locked") // Changed to String for bit(1)
+  isFirstLogin String   @map("IsFirstLogin") // Changed to String for bit(1)
+  activeStatus String   @map("activeStatus") // Changed to String for bit(1)
+  createdDate  DateTime @map("CreatedDate") // Changed to DateTime to support date
+  createdBy    Int      @map("CreatedBy")
+}
+
+model Evaluation {
+  evaluationID   Int      @id @default(autoincrement()) @map("EvaluationID")
+  evaluatorID    Int      @map("EvaluatorID")
+  evaluateeID    Int      @map("EvaluateeID")
+  evaluationType String   @map("EvaluationType")
+  sessionID      Int      @map("SessionID")
+  evaluationDate DateTime @map("EvaluationDate") // Changed to DateTime to support date
+}
+
+model EvaluationCriteria {
+  criteriaID   Int      @id @default(autoincrement()) @map("CriteriaID")
+  title        String   @map("Title")
+  description  String?  @map("Description")
+  createdBy    Int      @map("CreatedBy")
+  createdDate  DateTime @map("CreatedDate") // Added to match database
+}
+
+model EvaluationResult {
+  resultID     Int      @id @default(autoincrement()) @map("ResultID")
+  evaluationID Int      @map("EvaluationID")
+  criteriaID   Int      @map("CriteriaID")
+  score        Float    @map("Score") // Changed to Float for double precision
+  feedback     String?  @map("Feedback")
+}
+
+model EvaluationSession {
+  sessionID    Int      @id @default(autoincrement()) @map("SessionID")
+  title        String   @map("Title")
+  startDate    DateTime @map("StartDate") // Changed to DateTime to support date
+  endDate      DateTime @map("EndDate") // Changed to DateTime to support date
+  activatedBy  Int      @map("ActivatedBy")
+}
