@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { AppBar, Toolbar, Typography, Avatar, Menu, MenuItem, IconButton, Box } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../context/UserContext';
 import type { User } from '../types/interfaces';
 
-interface HeaderProps {
-  user: User | null;
-}
-
-const Header: React.FC<HeaderProps> = ({ user }) => {
-  console.log('Header rendering, user:', user);
+const Header: React.FC = () => {
+  console.log('Header rendering');
   const navigate = useNavigate();
+  const { user } = useUser();
   const [profileAnchorEl, setProfileAnchorEl] = useState<null | HTMLElement>(null);
   const profileOpen = Boolean(profileAnchorEl);
 
@@ -75,7 +73,7 @@ const Header: React.FC<HeaderProps> = ({ user }) => {
                 <Box>
                   <Typography variant="subtitle1">{user.fullName}</Typography>
                   <Typography variant="body2" color="textSecondary">
-                    {user.role}
+                    {user.role || 'User'}
                   </Typography>
                 </Box>
               </MenuItem>

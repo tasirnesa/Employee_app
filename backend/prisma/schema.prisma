@@ -22,6 +22,8 @@ model User {
   activeStatus String   @map("activeStatus") // Changed to String for bit(1)
   createdDate  DateTime @map("CreatedDate") // Changed to DateTime to support date
   createdBy    Int      @map("CreatedBy")
+  evaluationsAsEvaluator Evaluation[] @relation("evaluator")
+  evaluationsAsEvaluatee Evaluation[] @relation("evaluatee")
 }
 
 model Evaluation {
@@ -31,6 +33,8 @@ model Evaluation {
   evaluationType String   @map("EvaluationType")
   sessionID      Int      @map("SessionID")
   evaluationDate DateTime @map("EvaluationDate") // Changed to DateTime to support date
+  evaluator      User     @relation("evaluator", fields: [evaluatorID], references: [id])
+  evaluatee      User     @relation("evaluatee", fields: [evaluateeID], references: [id])
 }
 
 model EvaluationCriteria {

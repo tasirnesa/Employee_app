@@ -43,7 +43,7 @@ const UserDetail: React.FC = () => {
           <Typography><strong>Active:</strong> {user.activeStatus ? 'Yes' : 'No'}</Typography>
           <Typography><strong>Created Date:</strong> {new Date(user.createdDate).toLocaleDateString()}</Typography>
           <Typography><strong>Created By:</strong> {user.createdBy}</Typography>
-          <Button variant="contained" onClick={() => navigate('/users')} sx={{ mt: 2 }}>
+          <Button variant="contained" onClick={() => navigate('/users/view')} sx={{ mt: 2 }}>
             Back to Users
           </Button>
         </Box>

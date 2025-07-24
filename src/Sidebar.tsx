@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Drawer,
   List,
@@ -10,7 +10,7 @@ import {
   MenuItem,
   IconButton,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import AssignmentIcon from '@mui/icons-material/Assignment';
@@ -18,18 +18,29 @@ import RateReviewIcon from '@mui/icons-material/RateReview';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import FlagIcon from '@mui/icons-material/Flag';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import EventIcon from '@mui/icons-material/Event';
 
 const drawerWidth = 240;
 
 const Sidebar: React.FC = () => {
-  console.log('Sidebar rendering');
   const navigate = useNavigate();
+  const location = useLocation();
   const [userManagementAnchorEl, setUserManagementAnchorEl] = useState<null | HTMLElement>(null);
   const [criteriaManagementAnchorEl, setCriteriaManagementAnchorEl] = useState<null | HTMLElement>(null);
   const [evaluationsAnchorEl, setEvaluationsAnchorEl] = useState<null | HTMLElement>(null);
+  const [userProfile, setUserProfile] = useState<{ fullName?: string } | null>(null);
   const userManagementOpen = Boolean(userManagementAnchorEl);
   const criteriaManagementOpen = Boolean(criteriaManagementAnchorEl);
   const evaluationsOpen = Boolean(evaluationsAnchorEl);
+
+  useEffect(() => {
+    const storedProfile = localStorage.getItem('userProfile');
+    if (storedProfile) {
+      setUserProfile(JSON.parse(storedProfile));
+    }
+  }, []);
 
   const handleUserManagementMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     console.log('Opening user management menu');
@@ -97,6 +108,21 @@ const Sidebar: React.FC = () => {
     navigate('/evaluations/view');
   };
 
+  const handleGoals = () => {
+    console.log('Navigating to goals');
+    navigate('/goals');
+  };
+
+  const handleAnalyticsPerformance = () => {
+    console.log('Navigating to analytics performance');
+    navigate('/analytics/performance');
+  };
+
+  const handleSchedule = () => {
+    console.log('Navigating to schedule');
+    navigate('/schedule');
+  };
+
   return (
     <>
       <Drawer
@@ -108,8 +134,19 @@ const Sidebar: React.FC = () => {
         }}
       >
         <List>
+          {userProfile && (
+            <ListItem disablePadding>
+              <ListItemText
+                primary={`Logged in as: ${userProfile.fullName || 'Unknown User'}`}
+                sx={{ pl: 2, py: 1, fontWeight: 'bold', color: '#0288d1' }}
+              />
+            </ListItem>
+          )}
           <ListItem disablePadding>
-            <ListItemButton onClick={() => navigate('/dashboard')}>
+            <ListItemButton
+              selected={location.pathname === '/dashboard'}
+              onClick={() => navigate('/dashboard')}
+            >
               <ListItemIcon>
                 <DashboardIcon />
               </ListItemIcon>
@@ -117,7 +154,10 @@ const Sidebar: React.FC = () => {
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
-            <ListItemButton onClick={handleUserManagementMenuOpen}>
+            <ListItemButton
+              selected={location.pathname.startsWith('/users')}
+              onClick={handleUserManagementMenuOpen}
+            >
               <ListItemIcon>
                 <PeopleIcon />
               </ListItemIcon>
@@ -126,7 +166,10 @@ const Sidebar: React.FC = () => {
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
-            <ListItemButton onClick={handleCriteriaManagementMenuOpen}>
+            <ListItemButton
+              selected={location.pathname.startsWith('/criteria')}
+              onClick={handleCriteriaManagementMenuOpen}
+            >
               <ListItemIcon>
                 <AssignmentIcon />
               </ListItemIcon>
@@ -135,7 +178,10 @@ const Sidebar: React.FC = () => {
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
-            <ListItemButton onClick={handleEvaluationsMenuOpen}>
+            <ListItemButton
+              selected={location.pathname.startsWith('/evaluations')}
+              onClick={handleEvaluationsMenuOpen}
+            >
               <ListItemIcon>
                 <RateReviewIcon />
               </ListItemIcon>
@@ -144,7 +190,43 @@ const Sidebar: React.FC = () => {
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
-            <ListItemButton onClick={() => navigate('/reports')}>
+            <ListItemButton
+              selected={location.pathname === '/goals'}
+              onClick={handleGoals}
+            >
+              <ListItemIcon>
+                <FlagIcon />
+              </ListItemIcon>
+              <ListItemText primary="Goals" />
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding>
+            <ListItemButton
+              selected={location.pathname === '/analytics/performance'}
+              onClick={handleAnalyticsPerformance}
+            >
+              <ListItemIcon>
+                <AssessmentIcon />
+              </ListItemIcon>
+              <ListItemText primary="Analytics Performance" />
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding>
+            <ListItemButton
+              selected={location.pathname === '/schedule'}
+              onClick={handleSchedule}
+            >
+              <ListItemIcon>
+                <EventIcon />
+              </ListItemIcon>
+              <ListItemText primary="Schedule" />
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding>
+            <ListItemButton
+              selected={location.pathname === '/reports'}
+              onClick={() => navigate('/reports')}
+            >
               <ListItemIcon>
                 <BarChartIcon />
               </ListItemIcon>
@@ -152,7 +234,10 @@ const Sidebar: React.FC = () => {
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
-            <ListItemButton onClick={() => navigate('/settings')}>
+            <ListItemButton
+              selected={location.pathname === '/settings'}
+              onClick={() => navigate('/settings')}
+            >
               <ListItemIcon>
                 <SettingsIcon />
               </ListItemIcon>
@@ -168,8 +253,8 @@ const Sidebar: React.FC = () => {
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
-        <MenuItem onClick={handleCreateUser}>Create User</MenuItem>
-        <MenuItem onClick={handleViewUsers}>View Users</MenuItem>
+        <MenuItem onClick={handleCreateUser} selected={location.pathname === '/users/create'}>Create User</MenuItem>
+        <MenuItem onClick={handleViewUsers} selected={location.pathname === '/users/view'}>View Users</MenuItem>
       </Menu>
       <Menu
         anchorEl={criteriaManagementAnchorEl}
@@ -178,8 +263,8 @@ const Sidebar: React.FC = () => {
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
-        <MenuItem onClick={handleCreateCriteria}>Create Criteria</MenuItem>
-        <MenuItem onClick={handleViewCriteria}>View Criteria</MenuItem>
+        <MenuItem onClick={handleCreateCriteria} selected={location.pathname === '/criteria/create'}>Create Criteria</MenuItem>
+        <MenuItem onClick={handleViewCriteria} selected={location.pathname === '/criteria/view'}>View Criteria</MenuItem>
       </Menu>
       <Menu
         anchorEl={evaluationsAnchorEl}
@@ -188,8 +273,8 @@ const Sidebar: React.FC = () => {
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
-        <MenuItem onClick={handleCreateEvaluation}>Create Evaluation</MenuItem>
-        <MenuItem onClick={handleViewEvaluations}>View Evaluations</MenuItem>
+        <MenuItem onClick={handleCreateEvaluation} selected={location.pathname === '/evaluations/create'}>Create Evaluation</MenuItem>
+        <MenuItem onClick={handleViewEvaluations} selected={location.pathname === '/evaluations/view'}>View Evaluations</MenuItem>
       </Menu>
     </>
   );

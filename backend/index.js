@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const { PrismaClient } = require('@prisma/client');
+const jwt = require('jsonwebtoken'); // Added for token verification
 
 const app = express();
 app.use(cors());
@@ -22,9 +23,28 @@ try {
 
 // Middleware to normalize auth headers
 const getAuthHeader = (req) => {
-  const authHeader = req.headers['authorization'] || req.headers['auth'] || '';
-  console.log('getAuthHeader result:', authHeader);
-  return authHeader;
+  const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
+  console.log('Raw auth header:', authHeader);
+  return authHeader; 
+};
+
+
+const SECRET_KEY = 'a-very-secure-secret-key-2025'; 
+
+// Middleware to authenticate token
+const authenticateToken = (req, res, next) => {
+  const authHeader = getAuthHeader(req);
+  console.log('Auth header received:', authHeader);
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ message: 'No token provided' });
+  jwt.verify(token, SECRET_KEY, (err, user) => {
+    if (err) {
+      console.error('Token verification error:', err.message, 'Token:', token);
+      return res.status(403).json({ message: 'Invalid token' });
+    }
+    req.user = user;
+    next();
+  });
 };
 
 // Login endpoint
@@ -40,6 +60,7 @@ app.post('/api/auth/login', async (req, res) => {
       console.log('Missing username or password:', { username, password });
       return res.status(400).json({ error: 'Username and password are required' });
     }
+    
     console.log('Login attempt:', { username, password });
     const user = await prisma.user.findFirst({ where: { userName: username } });
     if (!user) {
@@ -51,26 +72,23 @@ app.post('/api/auth/login', async (req, res) => {
       console.log('Password mismatch for:', username);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+    const token = jwt.sign({ id: user.id, username: user.userName }, SECRET_KEY, { expiresIn: '1h' });
     console.log('Login successful:', username);
-    res.json({ token: 'dummy-token', user });
+    res.json({ token, user });
   } catch (error) {
-    console.error('Login error:', error.message);
+    console.error('Login error:', error.message, error.stack); 
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
 
-// Get current user
-app.get('/api/users/me', async (req, res) => {
+
+app.get('/api/users/me', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/users/me:', req.headers);
-    const authHeader = getAuthHeader(req);
-    if (!authHeader || authHeader !== 'Bearer dummy-token') {
-      console.log('Unauthorized: Invalid or missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    const user = await prisma.user.findUnique({ where: { id: 1 } });
+    const userId = req.user.id; 
+    const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
-      console.log('User not found for id: 1');
+      console.log('User not found for id:', userId);
       return res.status(404).json({ error: 'User not found' });
     }
     console.log('Current user fetched:', user);
@@ -81,15 +99,10 @@ app.get('/api/users/me', async (req, res) => {
   }
 });
 
-// Update current user
-app.put('/api/users/me', async (req, res) => {
+app.put('/api/users/me', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/users/me:', req.headers);
-    const authHeader = getAuthHeader(req);
-    if (!authHeader || authHeader !== 'Bearer dummy-token') {
-      console.log('Unauthorized: Invalid or missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    const userId = req.user.id; 
     const { fullName, userName, password } = req.body;
     if (!fullName || !userName) {
       console.log('Missing required fields:', { fullName, userName });
@@ -101,7 +114,7 @@ app.put('/api/users/me', async (req, res) => {
       ...(password && { password: await bcrypt.hash(password, 10) }),
     };
     const user = await prisma.user.update({
-      where: { id: 1 },
+      where: { id: userId },
       data: updateData,
     });
     console.log('User updated:', user);
@@ -112,15 +125,9 @@ app.put('/api/users/me', async (req, res) => {
   }
 });
 
-// Get user by ID
-app.get('/api/users/:id', async (req, res) => {
+app.get('/api/users/:id', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/users/:id:', req.headers);
-    const authHeader = getAuthHeader(req);
-    if (!authHeader || authHeader !== 'Bearer dummy-token') {
-      console.log('Unauthorized: Invalid or missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
     const userId = parseInt(req.params.id);
     if (isNaN(userId)) {
       console.log('Invalid user ID:', req.params.id);
@@ -139,15 +146,10 @@ app.get('/api/users/:id', async (req, res) => {
   }
 });
 
-// Get all users
-app.get('/api/users', async (req, res) => {
+
+app.get('/api/users', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/users:', req.headers);
-    const authHeader = getAuthHeader(req);
-    if (!authHeader || authHeader !== 'Bearer dummy-token') {
-      console.log('Unauthorized: Invalid or missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
     const users = await prisma.user.findMany();
     console.log('Users fetched:', users);
     res.json(users);
@@ -157,33 +159,68 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-// Get evaluations
-app.get('/api/evaluations', async (req, res) => {
+app.get('/api/evaluations', authenticateToken, async (req, res) => {
   try {
-    console.log('Headers for /api/evaluations:', req.headers);
-    const authHeader = getAuthHeader(req);
-    if (!authHeader || authHeader !== 'Bearer dummy-token') {
-      console.log('Unauthorized: Invalid or missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
+    console.log('Fetching evaluations with headers:', req.headers);
+    const evaluations = await prisma.evaluation.findMany({
+      include: {
+        evaluator: { select: { fullName: true } }, 
+        evaluatee: { select: { fullName: true } }, 
+      },
+    });
+    console.log('Evaluations fetched:', JSON.stringify(evaluations, null, 2));
+    if (!evaluations.length) {
+      console.log('No evaluations found');
+      return res.status(404).json({ message: 'No evaluations found' });
     }
-    const evaluations = await prisma.evaluation.findMany();
-    console.log('Evaluations fetched:', evaluations);
     res.json(evaluations);
   } catch (error) {
-    console.error('Fetch evaluations error:', error.message);
+    console.error('Get evaluations error:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      meta: error.meta,
+    });
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+app.post('/api/evaluations', authenticateToken, async (req, res) => {
+  console.log('Create evaluation request received with body:', req.body);
+  try {
+    const { evaluatorID, evaluateeID, evaluationType, sessionID } = req.body;
+
+    if (!evaluatorID || !evaluateeID || !evaluationType || !sessionID) {
+      console.log('Missing required fields:', { evaluatorID, evaluateeID, evaluationType, sessionID });
+      return res.status(400).json({ error: 'Missing required fields: evaluatorID, evaluateeID, evaluationType, sessionID' });
+    }
+
+    if (evaluatorID === evaluateeID) {
+      console.log('Evaluator and evaluatee cannot be the same:', { evaluatorID, evaluateeID });
+      return res.status(400).json({ error: 'Evaluator and evaluatee cannot be the same person' });
+    }
+
+    const evaluation = await prisma.evaluation.create({
+      data: {
+        evaluationID: undefined, 
+        evaluatorID: parseInt(evaluatorID),
+        evaluateeID: parseInt(evaluateeID),
+        evaluationType,
+        sessionID: parseInt(sessionID),
+        evaluationDate: new Date(),
+      },
+    });
+
+    console.log('Evaluation created:', evaluation);
+    res.status(201).json(evaluation);
+  } catch (error) {
+    console.error('Create evaluation error:', error.message);
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
 
-// Get criteria
-app.get('/api/criteria', async (req, res) => {
+app.get('/api/criteria', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/criteria:', req.headers);
-    const authHeader = getAuthHeader(req);
-    if (!authHeader || authHeader !== 'Bearer dummy-token') {
-      console.log('Unauthorized: Invalid or missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
     const criteria = await prisma.evaluationCriteria.findMany();
     console.log('Criteria fetched:', criteria);
     res.json(criteria);
@@ -193,15 +230,10 @@ app.get('/api/criteria', async (req, res) => {
   }
 });
 
-// Get results
-app.get('/api/results', async (req, res) => {
+
+app.get('/api/results', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/results:', req.headers);
-    const authHeader = getAuthHeader(req);
-    if (!authHeader || authHeader !== 'Bearer dummy-token') {
-      console.log('Unauthorized: Invalid or missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
     const results = await prisma.evaluationResult.findMany();
     console.log('Results fetched:', results);
     res.json(results);
@@ -211,15 +243,9 @@ app.get('/api/results', async (req, res) => {
   }
 });
 
-// Get evaluation sessions
-app.get('/api/sessions', async (req, res) => {
+app.get('/api/sessions', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/sessions:', req.headers);
-    const authHeader = getAuthHeader(req);
-    if (!authHeader || authHeader !== 'Bearer dummy-token') {
-      console.log('Unauthorized: Invalid or missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
     const sessions = await prisma.evaluationSession.findMany();
     console.log('Sessions fetched:', sessions);
     res.json(sessions);
@@ -229,7 +255,8 @@ app.get('/api/sessions', async (req, res) => {
   }
 });
 
-app.post('/api/users', async (req, res) => {
+
+app.post('/api/users', authenticateToken, async (req, res) => {
   console.log('Create user request received with body:', req.body);
   try {
     const {
@@ -246,15 +273,12 @@ app.post('/api/users', async (req, res) => {
       createdBy,
     } = req.body;
 
-    // Validate required fields
     if (!fullName || !userName || !password || !role || !createdBy) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
     const user = await prisma.user.create({
       data: {
         fullName,
@@ -280,9 +304,7 @@ app.post('/api/users', async (req, res) => {
   }
 });
 
-
-// New endpoint: Create Criteria
-app.post('/api/criteria', async (req, res) => {
+app.post('/api/criteria', authenticateToken, async (req, res) => {
   console.log('Create criteria request received with body:', req.body);
   try {
     const { title, description, createdBy } = req.body;
@@ -307,69 +329,80 @@ app.post('/api/criteria', async (req, res) => {
     res.status(500).json({ error: 'Failed to create criteria' });
   }
 });
-// New endpoint: Get Criteria
-app.get('/api/criteria', async (req, res) => {
-  console.log('Headers for /api/criteria:', req.headers);
+
+
+
+// const SECRET_KEY = 'a-very-secure-secret-key-2025';
+
+app.post('/api/evaluation-sessions', authenticateToken, async (req, res) => {
+  console.log('Create evaluation session request received with body:', req.body);
   try {
-    const criteria = await prisma.criteria.findMany();
-    console.log('Criteria fetched:', criteria);
-    res.json(criteria);
-  } catch (error) {
-    console.error('Fetch criteria error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch criteria' });
-  }
-});
+    const { title, startDate, endDate } = req.body;
 
-
-app.post('/api/evaluations', async (req, res) => {
-  console.log('Create evaluation request received with body:', req.body);
-  try {
-    const { evaluatorID, evaluateeID, evaluationType, sessionID } = req.body;
-
-    if (!evaluatorID || !evaluateeID || !evaluationType || !sessionID) {
-      return res.status(400).json({ error: 'Missing required fields: evaluatorID, evaluateeID, evaluationType, sessionID' });
+    if (!title || !startDate || !endDate) {
+      console.log('Missing required fields:', { title, startDate, endDate });
+      return res.status(400).json({ error: 'Missing required fields: title, startDate, endDate' });
     }
 
-    if (evaluatorID === evaluateeID) {
-      return res.status(400).json({ error: 'Evaluator and evaluatee cannot be the same person' });
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (end <= start) {
+      console.log('endDate must be after startDate:', { startDate, endDate });
+      return res.status(400).json({ error: 'endDate must be after startDate' });
     }
 
-    const evaluation = await prisma.evaluation.create({
+    // Use the user ID from the JWT payload (req.user.id) as activatedBy
+    const activatedBy = req.user.id; // This should be an integer from the token
+    if (!activatedBy) {
+      console.log('No user ID found in token:', req.user);
+      return res.status(400).json({ error: 'No user ID available to set activatedBy' });
+    }
+
+    const session = await prisma.evaluationSession.create({
       data: {
-        evaluatorID: parseInt(evaluatorID),
-        evaluateeID: parseInt(evaluateeID),
-        evaluationType,
-        sessionID: parseInt(sessionID),
-        evaluationDate: new Date(),
+        title,
+        startDate: start,
+        endDate: end,
+        activatedBy: activatedBy, // Use the user ID directly
       },
     });
 
-    console.log('Evaluation created:', evaluation);
-    res.status(201).json(evaluation);
+    console.log('Evaluation session created:', session);
+    res.status(201).json(session);
   } catch (error) {
-    console.error('Create evaluation error:', error.message);
-    res.status(500).json({ error: 'Failed to create evaluation' });
+    console.error('Create evaluation session error:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
 
-// Get evaluations endpoint
-app.get('/api/evaluations', async (req, res) => {
-  console.log('Headers for /api/evaluations:', req.headers);
+
+app.get('/api/evaluation-sessions/stats', authenticateToken, async (req, res) => {
   try {
-    const evaluations = await prisma.evaluation.findMany({
-      include: {
-        evaluator: { select: { fullName: true } },
-        evaluatee: { select: { fullName: true } },
-      },
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay()); // Start of the week (Sunday)
+
+    const stats = await prisma.$queryRaw`
+      SELECT
+        COUNT(*) FILTER (WHERE "StartDate" <= ${today} AND "EndDate" >= ${weekStart}) AS this_week,
+        COUNT(*) FILTER (WHERE "StartDate" <= ${today} AND "EndDate" = ${today}) AS today,
+        COUNT(*) FILTER (WHERE "EndDate" >= ${today}) AS pending
+      FROM "EvaluationSession"
+      WHERE "ActivatedBy" = ${req.user.id}
+    `;
+
+    res.json({
+      thisWeek: Number(stats[0].this_week) || 0,
+      today: Number(stats[0].today) || 0,
+      pending: Number(stats[0].pending) || 0,
+      meetings: 0 // Placeholder; adjust if "Meetings" has a specific definition
     });
-    console.log('Evaluations fetched:', evaluations);
-    res.json(evaluations);
   } catch (error) {
-    console.error('Fetch evaluations error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch evaluations' });
+    console.error('Error fetching session stats:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
-
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('Shutting down server...');

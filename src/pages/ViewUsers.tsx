@@ -154,19 +154,19 @@ const ViewUsers: React.FC = () => {
           <Table stickyHeader>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>ID</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Full Name</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Username</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Gender</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Age</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Role</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Locked</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>First Login</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Active</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Created Date</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Created By</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Action</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>ID</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Full Name</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Username</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Gender</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Age</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Role</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Locked</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>First Login</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Active</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Created Date</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Created By</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Action</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>

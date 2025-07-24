@@ -85,7 +85,7 @@ const Dashboard: React.FC = () => {
     },
   });
 
-  // Calculate metrics
+
   const totalUsers = users?.length || 0;
   const usersByRole = users?.reduce((acc, user) => {
     acc[user.role] = (acc[user.role] || 0) + 1;
@@ -94,7 +94,7 @@ const Dashboard: React.FC = () => {
   const activeUsers = users?.filter((user) => user.activeStatus).length || 0;
   const inactiveUsers = totalUsers - activeUsers;
 
-  // Pie chart data for users by role
+ 
   const roleChartData = {
     labels: Object.keys(usersByRole),
     datasets: [
@@ -106,7 +106,7 @@ const Dashboard: React.FC = () => {
     ],
   };
 
-  // Bar chart data for average scores per criteria
+ 
   const averageScores = criteria?.map((criterion) => {
     const relevantResults = results?.filter((result) => result.criteriaID === criterion.criteriaID) || [];
     const avgScore =
@@ -180,7 +180,7 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        {/* Recent Evaluations Table */}
+        {}
         <Grid item xs={12}>
           <Card>
             <CardContent>
@@ -212,7 +212,7 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        {/* Average Scores Bar Chart */}
+        {}
         <Grid item xs={12}>
           <Card>
             <CardContent>

@@ -5,11 +5,11 @@ export interface User {
   password: string;
   gender?: string;
   age?: number;
-  status: string; // Changed to string for bit(1)
+  status: string; 
   role: string;
-  locked: string; // Changed to string for bit(1)
-  isFirstLogin: string; // Changed to string for bit(1)
-  activeStatus: string; // Changed to string for bit(1)
+  locked: string; 
+  isFirstLogin: string; 
+  activeStatus: string; 
   createdDate: string;
   createdBy: number;
 }
@@ -21,8 +21,8 @@ export interface Evaluation {
   evaluationType: string;
   sessionID: number;
   evaluationDate: string;
-  evaluator: { fullName: string };
-  evaluatee: { fullName: string };
+  evaluator: { FullName: string };
+  evaluatee: { FullName: string };
 }
 
 
@@ -53,7 +53,7 @@ export interface EvaluationSession {
 
 export interface Criteria {
   id: number;
-  name: string;
+  title: string;
   description?: string;
   createdDate: string;
   createdBy: number;

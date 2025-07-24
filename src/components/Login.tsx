@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Typography, TextField, Button } from '@mui/material';
+import { useUser } from '../context/UserContext';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { setUser } = useUser();
 
   const handleLogin = async () => {
     try {
@@ -16,6 +18,8 @@ const Login: React.FC = () => {
         password,
       });
       localStorage.setItem('token', response.data.token);
+      localStorage.setItem('userProfile', JSON.stringify(response.data.user));
+      setUser(response.data.user); 
       navigate('/dashboard');
     } catch (err: any) {
       setError('Invalid credentials');
