@@ -39,11 +39,13 @@ const CreateCriteria: React.FC = () => {
             createdBy: 1, // Replace with actual user ID logic
             createdDate: new Date().toISOString(), // Current date as string
           };
+      console.log('Sending data to backend:', requestData);
       const response = await axios.post(
         Array.isArray(criteriaData) ? 'http://localhost:3000/api/criteria/bulk' : 'http://localhost:3000/api/criteria',
         requestData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      console.log('Backend response:', response.data);
       return response.data;
     },
     onSuccess: () => {
@@ -70,17 +72,23 @@ const CreateCriteria: React.FC = () => {
 
     Papa.parse(file, {
       header: true,
-      complete: (result) => {
+      complete: (result: any) => { // Temporarily use 'any' until typings are fully resolved
+        console.log('Parse result:', result);
         const data = result.data as { title: string; description?: string }[];
+        if (!Array.isArray(data)) {
+          setFileError('Invalid file format: Data is not an array');
+          return;
+        }
         const validData = data
           .filter(item => item.title && item.title.trim() !== '')
           .map(item => ({
-            criteriaID: 0, // Placeholder, to be set by backend
+            criteriaID: 0,
             title: item.title,
             description: item.description,
-            createdBy: 1, // Replace with actual user ID logic
-            createdDate: new Date().toISOString(), // Current date as string
+            createdBy: 1,
+            createdDate: new Date().toISOString(),
           } as EvaluationCriteria));
+        console.log('Valid data:', validData);
         if (validData.length === 0) {
           setFileError('No valid criteria found in the file');
           return;
@@ -88,10 +96,11 @@ const CreateCriteria: React.FC = () => {
         setFieldValue('bulkCriteria', validData);
         setFileError(null);
       },
-      error: (error) => {
+      error: (error: any) => {
+        console.error('Parse error:', error);
         setFileError(`Error parsing file: ${error.message}`);
       },
-    });
+    } as any); // Type assertion to bypass overload issues
   };
 
   return (
@@ -103,18 +112,19 @@ const CreateCriteria: React.FC = () => {
         initialValues={{
           title: '',
           description: '',
-          bulkCriteria: [] as EvaluationCriteria[], // Matches the interface
+          bulkCriteria: [] as EvaluationCriteria[],
         }}
         validationSchema={validationSchema}
         onSubmit={(values, { setSubmitting, resetForm }) => {
+          console.log('Form values:', values);
           if (values.bulkCriteria.length > 0) {
             createCriteriaMutation.mutate(values.bulkCriteria);
           } else {
             createCriteriaMutation.mutate({
-              criteriaID: 0, // Placeholder
+              criteriaID: 0,
               title: values.title,
               description: values.description,
-              createdBy: 1, // Replace with actual user ID
+              createdBy: 1,
               createdDate: new Date().toISOString(),
             });
           }

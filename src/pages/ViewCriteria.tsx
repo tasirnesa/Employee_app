@@ -54,6 +54,7 @@ const ViewCriteria: React.FC = () => {
                 <TableCell>Description</TableCell>
                 <TableCell>Created Date</TableCell>
                 <TableCell>Created By</TableCell>
+                <TableCell>Action</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
