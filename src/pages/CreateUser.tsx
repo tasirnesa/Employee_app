@@ -11,6 +11,10 @@ import {
   Button,
   Box,
   Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import type { User } from '../types/interfaces';
 
@@ -45,8 +49,8 @@ const CreateUser: React.FC = () => {
     fullName: Yup.string().required('Full Name is required'),
     userName: Yup.string().required('Username is required'),
     password: Yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
-    role: Yup.string().required('Role is required'),
-    gender: Yup.string().nullable(),
+    role: Yup.string().required('Role is required').oneOf(['Admin', 'SuperAdmin', 'Maker', 'Checker'], 'Please select a valid role'),
+    gender: Yup.string().required('Gender is required').oneOf(['Male', 'Female'], 'Please select a valid gender'),
     age: Yup.number().nullable().min(18, 'Age must be at least 18'),
   });
 
@@ -60,9 +64,9 @@ const CreateUser: React.FC = () => {
           fullName: '',
           userName: '',
           password: '',
-          gender: '',
+          gender: '', // Default to empty string
           age: '',
-          role: '',
+          role: '',  // Default to empty string
         }}
         validationSchema={validationSchema}
         onSubmit={(values, { setSubmitting }) => {
@@ -73,7 +77,7 @@ const CreateUser: React.FC = () => {
           setSubmitting(false);
         }}
       >
-        {({ errors, touched, isSubmitting }) => (
+        {({ errors, touched, isSubmitting, setFieldValue, values }) => (
           <Form>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Field
@@ -102,13 +106,25 @@ const CreateUser: React.FC = () => {
                 helperText={touched.password && errors.password}
               />
               <Field
-                as={TextField}
-                name="gender"
-                label="Gender"
+                as={FormControl}
                 fullWidth
                 error={touched.gender && !!errors.gender}
-                helperText={touched.gender && errors.gender}
-              />
+              >
+                <InputLabel id="gender-label">Gender</InputLabel>
+                <Select
+                  name="gender"
+                  labelId="gender-label"
+                  label="Gender"
+                  value={values.gender || ''} // Controlled value
+                  onChange={(e) => setFieldValue('gender', e.target.value)}
+                >
+                  <MenuItem value="Male">Male</MenuItem>
+                  <MenuItem value="Female">Female</MenuItem>
+                </Select>
+                {touched.gender && errors.gender && (
+                  <Typography color="error" variant="caption">{errors.gender}</Typography>
+                )}
+              </Field>
               <Field
                 as={TextField}
                 name="age"
@@ -119,13 +135,27 @@ const CreateUser: React.FC = () => {
                 helperText={touched.age && errors.age}
               />
               <Field
-                as={TextField}
-                name="role"
-                label="Role"
+                as={FormControl}
                 fullWidth
                 error={touched.role && !!errors.role}
-                helperText={touched.role && errors.role}
-              />
+              >
+                <InputLabel id="role-label">Role</InputLabel>
+                <Select
+                  name="role"
+                  labelId="role-label"
+                  label="Role"
+                  value={values.role || ''} // Controlled value
+                  onChange={(e) => setFieldValue('role', e.target.value)}
+                >
+                  <MenuItem value="Admin">Admin</MenuItem>
+                  <MenuItem value="SuperAdmin">SuperAdmin</MenuItem>
+                  <MenuItem value="Maker">Maker</MenuItem>
+                  <MenuItem value="Checker">Checker</MenuItem>
+                </Select>
+                {touched.role && errors.role && (
+                  <Typography color="error" variant="caption">{errors.role}</Typography>
+                )}
+              </Field>
               {createUserMutation.isError && (
                 <Alert severity="error">
                   Error creating user: {createUserMutation.error?.message || 'Unknown error'}
