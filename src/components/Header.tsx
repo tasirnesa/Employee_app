@@ -45,7 +45,7 @@ const Header: React.FC = () => {
   return (
     <AppBar
       position="static"
-      sx={{ width: `calc(100% - ${240}px)`, ml: `${240}px`, mb: 3 }}
+      sx={{ width: `calc(100% - ${0}px)`, ml: `${0}px`, mb: 3 }}
     >
       <Toolbar>
         <Typography variant="h6" sx={{ flexGrow: 1 }}>

@@ -14,7 +14,7 @@ import {
   Input,
 } from '@mui/material';
 import type { EvaluationCriteria } from '../types/interfaces';
-import Papa from 'papaparse'; // For CSV parsing
+import Papa from 'papaparse'; 
 
 const CreateCriteria: React.FC = () => {
   console.log('CreateCriteria rendering');
@@ -29,15 +29,15 @@ const CreateCriteria: React.FC = () => {
       const requestData = Array.isArray(criteriaData)
         ? criteriaData.map(item => ({
             ...item,
-            criteriaID: 0, // Placeholder, to be set by backend
-            createdBy: 1, // Replace with actual user ID logic (e.g., from token)
-            createdDate: new Date().toISOString(), // Current date as string
+            criteriaID: 0, 
+            createdBy: 1, 
+            createdDate: new Date().toISOString(),
           }))
         : {
             ...criteriaData,
-            criteriaID: 0, // Placeholder, to be set by backend
-            createdBy: 1, // Replace with actual user ID logic
-            createdDate: new Date().toISOString(), // Current date as string
+            criteriaID: 0, 
+            createdBy: 1, 
+            createdDate: new Date().toISOString(), 
           };
       console.log('Sending data to backend:', requestData);
       const response = await axios.post(
@@ -72,7 +72,7 @@ const CreateCriteria: React.FC = () => {
 
     Papa.parse(file, {
       header: true,
-      complete: (result: any) => { // Temporarily use 'any' until typings are fully resolved
+      complete: (result: any) => { 
         console.log('Parse result:', result);
         const data = result.data as { title: string; description?: string }[];
         if (!Array.isArray(data)) {
@@ -100,7 +100,7 @@ const CreateCriteria: React.FC = () => {
         console.error('Parse error:', error);
         setFileError(`Error parsing file: ${error.message}`);
       },
-    } as any); // Type assertion to bypass overload issues
+    } as any); 
   };
 
   return (

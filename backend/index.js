@@ -2,13 +2,13 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const { PrismaClient } = require('@prisma/client');
-const jwt = require('jsonwebtoken'); // Added for token verification
+const jwt = require('jsonwebtoken');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Initialize Prisma Client
+
 let prisma;
 try {
   prisma = new PrismaClient({
@@ -21,7 +21,6 @@ try {
   process.exit(1);
 }
 
-// Middleware to normalize auth headers
 const getAuthHeader = (req) => {
   const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
   console.log('Raw auth header:', authHeader);
@@ -31,7 +30,7 @@ const getAuthHeader = (req) => {
 
 const SECRET_KEY = 'a-very-secure-secret-key-2025'; 
 
-// Middleware to authenticate token
+
 const authenticateToken = (req, res, next) => {
   const authHeader = getAuthHeader(req);
   console.log('Auth header received:', authHeader);
@@ -47,7 +46,7 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// Login endpoint
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     console.log('Login request received with body:', req.body);
@@ -332,7 +331,6 @@ app.post('/api/criteria', authenticateToken, async (req, res) => {
 
 
 
-// const SECRET_KEY = 'a-very-secure-secret-key-2025';
 
 app.post('/api/evaluation-sessions', authenticateToken, async (req, res) => {
   console.log('Create evaluation session request received with body:', req.body);
@@ -351,8 +349,7 @@ app.post('/api/evaluation-sessions', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'endDate must be after startDate' });
     }
 
-    // Use the user ID from the JWT payload (req.user.id) as activatedBy
-    const activatedBy = req.user.id; // This should be an integer from the token
+    const activatedBy = req.user.id; 
     if (!activatedBy) {
       console.log('No user ID found in token:', req.user);
       return res.status(400).json({ error: 'No user ID available to set activatedBy' });
@@ -363,7 +360,7 @@ app.post('/api/evaluation-sessions', authenticateToken, async (req, res) => {
         title,
         startDate: start,
         endDate: end,
-        activatedBy: activatedBy, // Use the user ID directly
+        activatedBy: activatedBy, 
       },
     });
 
@@ -403,7 +400,7 @@ app.get('/api/evaluation-sessions/stats', authenticateToken, async (req, res) =>
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
-// Graceful shutdown
+
 process.on('SIGTERM', async () => {
   console.log('Shutting down server...');
   await prisma.$disconnect();
