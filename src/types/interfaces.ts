@@ -58,3 +58,10 @@ export interface Criteria {
   createdBy: number;
   createdDate: Date;
 }
+
+export interface Session {
+  id: number;
+  title: string;
+  startDate: string;
+  endDate: string;
+}

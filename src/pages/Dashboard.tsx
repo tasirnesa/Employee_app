@@ -33,7 +33,6 @@ ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Le
 const Dashboard: React.FC = () => {
   const token = localStorage.getItem('token');
 
-
   const { data: users, isLoading: usersLoading, error: usersError } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
@@ -46,7 +45,6 @@ const Dashboard: React.FC = () => {
     },
   });
 
-
   const { data: evaluations, isLoading: evaluationsLoading, error: evaluationsError } = useQuery({
     queryKey: ['evaluations'],
     queryFn: async () => {
@@ -58,7 +56,6 @@ const Dashboard: React.FC = () => {
       return response.data as Evaluation[];
     },
   });
-
 
   const { data: criteria, isLoading: criteriaLoading, error: criteriaError } = useQuery({
     queryKey: ['criteria'],
@@ -84,7 +81,6 @@ const Dashboard: React.FC = () => {
     },
   });
 
-
   const totalUsers = users?.length || 0;
   const usersByRole = users?.reduce((acc, user) => {
     acc[user.role] = (acc[user.role] || 0) + 1;
@@ -93,7 +89,6 @@ const Dashboard: React.FC = () => {
   const activeUsers = users?.filter((user) => user.activeStatus).length || 0;
   const inactiveUsers = totalUsers - activeUsers;
 
- 
   const roleChartData = {
     labels: Object.keys(usersByRole),
     datasets: [
@@ -105,7 +100,6 @@ const Dashboard: React.FC = () => {
     ],
   };
 
- 
   const averageScores = criteria?.map((criterion) => {
     const relevantResults = results?.filter((result) => result.criteriaID === criterion.criteriaID) || [];
     const avgScore =
@@ -143,13 +137,18 @@ const Dashboard: React.FC = () => {
     );
   }
 
+  // Sort evaluations by evaluationDate in descending order (newest first)
+  const recentEvaluations = evaluations
+    ?.slice()
+    .sort((a, b) => new Date(b.evaluationDate).getTime() - new Date(a.evaluationDate).getTime())
+    .slice(0, 5);
+
   return (
     <Container sx={{ mt: 8 }}>
       <Typography variant="h4" gutterBottom>
         Dashboard
       </Typography>
       <Grid container spacing={3}>
-        {}
         <Grid item xs={12} sm={6} md={4}>
           <Card>
             <CardContent>
@@ -158,7 +157,6 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        {}
         <Grid item xs={12} sm={6} md={4}>
           <Card>
             <CardContent>
@@ -168,7 +166,6 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        {}
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
@@ -179,7 +176,6 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        {}
         <Grid item xs={12}>
           <Card>
             <CardContent>
@@ -196,7 +192,7 @@ const Dashboard: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {evaluations?.slice(0, 5).map((evaluation) => (
+                    {recentEvaluations?.map((evaluation) => (
                       <TableRow key={evaluation.evaluationID}>
                         <TableCell>{evaluation.evaluationID}</TableCell>
                         <TableCell>{evaluation.evaluatorID}</TableCell>
@@ -211,7 +207,6 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        {}
         <Grid item xs={12}>
           <Card>
             <CardContent>

@@ -187,8 +187,6 @@ app.post('/api/evaluations', authenticateToken, async (req, res) => {
   console.log('Create evaluation request received with body:', req.body);
   try {
     const { evaluation, results } = req.body;
-
-    // Validate required evaluation fields
     const { evaluatorID, evaluateeID, evaluationType, sessionID } = evaluation;
     if (!evaluatorID || !evaluateeID || !evaluationType || !sessionID) {
       console.log('Missing required fields:', { evaluatorID, evaluateeID, evaluationType, sessionID });
@@ -200,7 +198,7 @@ app.post('/api/evaluations', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Evaluator and evaluatee cannot be the same person' });
     }
 
-    // Create the evaluation
+
     const evaluationResult = await prisma.evaluation.create({
       data: {
         evaluationID: undefined, // Let Prisma auto-increment
@@ -240,7 +238,7 @@ app.post('/api/evaluations', authenticateToken, async (req, res) => {
 
     res.status(201).json({
       ...evaluationResult,
-      resultsCount: validResults?.length || 0,
+      resultsCount: evaluationResults?.count || 0, // Changed from validResults to evaluationResults
     });
   } catch (error) {
     console.error('Create evaluation error:', error.message);
