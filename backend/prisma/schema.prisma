@@ -45,12 +45,14 @@ model EvaluationCriteria {
   createdDate  DateTime @map("CreatedDate") // Added to match database
 }
 
-model EvaluationResult {
-  resultID     Int      @id @default(autoincrement()) @map("ResultID")
-  evaluationID Int      @map("EvaluationID")
-  criteriaID   Int      @map("CriteriaID")
-  score        Float    @map("Score") // Changed to Float for double precision
-  feedback     String?  @map("Feedback")
+model Evaluation {
+  evaluationID   Int      @id @default(autoincrement()) @map("EvaluationID")
+  evaluatorID    Int      @map("EvaluatorID")
+  evaluateeID    Int      @map("EvaluateeID")
+  evaluationType String   @map("EvaluationType")
+  sessionID      Int      @map("SessionID")
+  evaluationDate DateTime @map("EvaluationDate")
+  results        EvaluationResult[]
 }
 
 model EvaluationSession {
@@ -59,4 +61,12 @@ model EvaluationSession {
   startDate    DateTime @map("StartDate") // Changed to DateTime to support date
   endDate      DateTime @map("EndDate") // Changed to DateTime to support date
   activatedBy  Int      @map("ActivatedBy")
+}
+
+model EvaluationResult {
+  resultID     Int      @id @default(autoincrement()) @map("ResultID")
+  evaluationID Int      @map("EvaluationID")
+  criteriaID   Int      @map("CriteriaID")
+  score        Float    @map("Score")
+  feedback     String?  @map("Feedback")
 }

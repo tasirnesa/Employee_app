@@ -52,9 +52,9 @@ export interface EvaluationSession {
 }
 
 export interface Criteria {
-  id: number;
+  criteriaID: number; // Match the log's field name
   title: string;
-  description?: string;
-  createdDate: string;
+  description: string;
   createdBy: number;
+  createdDate: Date;
 }

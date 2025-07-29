@@ -30,7 +30,7 @@ const getAuthHeader = (req) => {
 
 const SECRET_KEY = 'a-very-secure-secret-key-2025'; 
 
-
+// Middleware to authenticate token
 const authenticateToken = (req, res, next) => {
   const authHeader = getAuthHeader(req);
   console.log('Auth header received:', authHeader);
@@ -46,7 +46,7 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-
+// Login endpoint
 app.post('/api/auth/login', async (req, res) => {
   try {
     console.log('Login request received with body:', req.body);
@@ -186,8 +186,10 @@ app.get('/api/evaluations', authenticateToken, async (req, res) => {
 app.post('/api/evaluations', authenticateToken, async (req, res) => {
   console.log('Create evaluation request received with body:', req.body);
   try {
-    const { evaluatorID, evaluateeID, evaluationType, sessionID } = req.body;
+    const { evaluation, results } = req.body;
 
+    // Validate required evaluation fields
+    const { evaluatorID, evaluateeID, evaluationType, sessionID } = evaluation;
     if (!evaluatorID || !evaluateeID || !evaluationType || !sessionID) {
       console.log('Missing required fields:', { evaluatorID, evaluateeID, evaluationType, sessionID });
       return res.status(400).json({ error: 'Missing required fields: evaluatorID, evaluateeID, evaluationType, sessionID' });
@@ -198,9 +200,10 @@ app.post('/api/evaluations', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Evaluator and evaluatee cannot be the same person' });
     }
 
-    const evaluation = await prisma.evaluation.create({
+    // Create the evaluation
+    const evaluationResult = await prisma.evaluation.create({
       data: {
-        evaluationID: undefined, 
+        evaluationID: undefined, // Let Prisma auto-increment
         evaluatorID: parseInt(evaluatorID),
         evaluateeID: parseInt(evaluateeID),
         evaluationType,
@@ -209,14 +212,41 @@ app.post('/api/evaluations', authenticateToken, async (req, res) => {
       },
     });
 
-    console.log('Evaluation created:', evaluation);
-    res.status(201).json(evaluation);
+    console.log('Evaluation created:', evaluationResult);
+
+    // Create evaluation results if results array is provided
+    if (results && Array.isArray(results) && results.length > 0) {
+      // Validate each result
+      const validResults = results.filter(result => result.criteriaID !== undefined && result.criteriaID !== null);
+      if (validResults.length !== results.length) {
+        console.warn('Some results had invalid criteriaID, filtered out:', results.filter(r => r.criteriaID === undefined || r.criteriaID === null));
+      }
+      if (validResults.length > 0) {
+        const evaluationResults = await prisma.evaluationResult.createMany({
+          data: validResults.map(result => ({
+            evaluationID: evaluationResult.evaluationID,
+            criteriaID: result.criteriaID,
+            score: result.score,
+            feedback: result.feedback || null,
+          })),
+        });
+        console.log('Evaluation results created:', evaluationResults);
+      } else {
+        console.log('No valid evaluation results to create');
+      }
+    } else {
+      console.log('No evaluation results provided');
+    }
+
+    res.status(201).json({
+      ...evaluationResult,
+      resultsCount: validResults?.length || 0,
+    });
   } catch (error) {
     console.error('Create evaluation error:', error.message);
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
-
 app.get('/api/criteria', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/criteria:', req.headers);

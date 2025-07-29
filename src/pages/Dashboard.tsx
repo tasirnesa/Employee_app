@@ -33,7 +33,7 @@ ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Le
 const Dashboard: React.FC = () => {
   const token = localStorage.getItem('token');
 
-  // Fetch users
+
   const { data: users, isLoading: usersLoading, error: usersError } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
@@ -46,7 +46,7 @@ const Dashboard: React.FC = () => {
     },
   });
 
-  // Fetch evaluations
+
   const { data: evaluations, isLoading: evaluationsLoading, error: evaluationsError } = useQuery({
     queryKey: ['evaluations'],
     queryFn: async () => {
@@ -59,7 +59,7 @@ const Dashboard: React.FC = () => {
     },
   });
 
-  // Fetch criteria
+
   const { data: criteria, isLoading: criteriaLoading, error: criteriaError } = useQuery({
     queryKey: ['criteria'],
     queryFn: async () => {
@@ -72,7 +72,6 @@ const Dashboard: React.FC = () => {
     },
   });
 
-  // Fetch results
   const { data: results, isLoading: resultsLoading, error: resultsError } = useQuery({
     queryKey: ['results'],
     queryFn: async () => {
@@ -150,7 +149,7 @@ const Dashboard: React.FC = () => {
         Dashboard
       </Typography>
       <Grid container spacing={3}>
-        {/* Total Users Card */}
+        {}
         <Grid item xs={12} sm={6} md={4}>
           <Card>
             <CardContent>
@@ -159,7 +158,7 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        {/* Active/Inactive Users Card */}
+        {}
         <Grid item xs={12} sm={6} md={4}>
           <Card>
             <CardContent>
@@ -169,7 +168,7 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        {/* Users by Role Pie Chart */}
+        {}
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>

@@ -19,14 +19,22 @@ import {
   FormControlLabel,
   Radio,
   FormLabel,
+  TextareaAutosize,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  CircularProgress,
 } from '@mui/material';
-import type { Evaluation, User, Criteria } from '../types/interfaces';
+import type { Evaluation, User, Criteria, EvaluationResult } from '../types/interfaces';
 
 const CreateEvaluation: React.FC = () => {
   console.log('CreateEvaluation rendering');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedEvaluator, setSelectedEvaluator] = useState<number | null>(null);
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
 
   const { data: users, isLoading: usersLoading, error: usersError } = useQuery({
     queryKey: ['users'],
@@ -55,7 +63,7 @@ const CreateEvaluation: React.FC = () => {
   });
 
   const createEvaluationMutation = useMutation({
-    mutationFn: async (evaluationData: Partial<Evaluation>) => {
+    mutationFn: async (evaluationData: { evaluation: Partial<Evaluation>; results: Partial<EvaluationResult>[] }) => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
       const response = await axios.post('http://localhost:3000/api/evaluations', evaluationData, {
@@ -104,10 +112,30 @@ const CreateEvaluation: React.FC = () => {
           evaluationType: '',
           sessionID: 0,
           criteriaScores: {} as { [key: number]: number },
+          criteriaFeedback: {} as { [key: number]: string },
         }}
         validationSchema={validationSchema}
         onSubmit={(values, { setSubmitting }) => {
-          createEvaluationMutation.mutate(values);
+          if (!criteria || criteria.length === 0) {
+            console.error('Criteria data is missing or empty');
+            setSubmitting(false);
+            return;
+          }
+          const evaluationData = {
+            evaluation: {
+              evaluatorID: values.evaluatorID,
+              evaluateeID: values.evaluateeID,
+              evaluationType: values.evaluationType,
+              sessionID: values.sessionID,
+            },
+            results: criteria.map((criterion) => ({
+              criteriaID: criterion.criteriaID, // Matches Criteria type
+              score: values.criteriaScores[criterion.criteriaID] || 0,
+              feedback: values.criteriaFeedback[criterion.criteriaID] || '',
+            })),
+          };
+          console.log('Submitting evaluation data:', evaluationData);
+          createEvaluationMutation.mutate(evaluationData);
           setSubmitting(false);
         }}
       >
@@ -185,13 +213,13 @@ const CreateEvaluation: React.FC = () => {
               />
               <Box sx={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: 1, p: 1 }}>
                 {criteria?.map((criterion) => (
-                  <Box key={criterion.id} sx={{ mb: 2 }}>
+                  <Box key={criterion.criteriaID} sx={{ mb: 2 }}>
                     <FormLabel component="legend" sx={{ mb: 1, fontWeight: 'bold' }}>
                       {criterion.title}
                     </FormLabel>
-                    <Field name={`criteriaScores[${criterion.id}]`}>
+                    <Field name={`criteriaScores[${criterion.criteriaID}]`}>
                       {({ field }: FieldProps) => (
-                        <RadioGroup {...field} row onChange={(e) => setFieldValue(`criteriaScores[${criterion.id}]`, parseInt(e.target.value))}>
+                        <RadioGroup {...field} row onChange={(e) => setFieldValue(`criteriaScores[${criterion.criteriaID}]`, parseInt(e.target.value))}>
                           {[1, 2, 3, 4, 5].map((value) => (
                             <FormControlLabel
                               key={value}
@@ -203,7 +231,17 @@ const CreateEvaluation: React.FC = () => {
                         </RadioGroup>
                       )}
                     </Field>
-                    {touched.criteriaScores?.[criterion.id] && errors.criteriaScores && typeof errors.criteriaScores === 'string' && (
+                    <Field name={`criteriaFeedback[${criterion.criteriaID}]`}>
+                      {({ field }: FieldProps) => (
+                        <TextareaAutosize
+                          {...field}
+                          minRows={2}
+                          placeholder="Add feedback (optional)"
+                          style={{ width: '100%', marginTop: 8, padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
+                        />
+                      )}
+                    </Field>
+                    {touched.criteriaScores?.[criterion.criteriaID] && errors.criteriaScores && typeof errors.criteriaScores === 'string' && (
                       <Typography color="error" variant="caption">{errors.criteriaScores}</Typography>
                     )}
                   </Box>
@@ -218,10 +256,11 @@ const CreateEvaluation: React.FC = () => {
                 <Button
                   type="submit"
                   variant="contained"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || createEvaluationMutation.isPending} // Changed to isPending
                   fullWidth
+                  startIcon={isSubmitting || createEvaluationMutation.isPending ? <CircularProgress size={20} /> : null} // Changed to isPending
                 >
-                  Create
+                  {isSubmitting || createEvaluationMutation.isPending ? 'Creating...' : 'Create'} // Changed to isPending
                 </Button>
                 <Button
                   variant="outlined"
