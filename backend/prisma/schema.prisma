@@ -70,3 +70,12 @@ model EvaluationResult {
   score        Float    @map("Score")
   feedback     String?  @map("Feedback")
 }
+
+model Performance {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  metrics     Json     // { tasksCompleted: number, hoursWorked: number }
+  date        DateTime
+  ActivatedBy Int
+  user        User     @relation(fields: [ActivatedBy], references: [Id])
+}

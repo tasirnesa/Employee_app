@@ -212,9 +212,9 @@ app.post('/api/evaluations', authenticateToken, async (req, res) => {
 
     console.log('Evaluation created:', evaluationResult);
 
-    // Create evaluation results if results array is provided
+  
     if (results && Array.isArray(results) && results.length > 0) {
-      // Validate each result
+    
       const validResults = results.filter(result => result.criteriaID !== undefined && result.criteriaID !== null);
       if (validResults.length !== results.length) {
         console.warn('Some results had invalid criteriaID, filtered out:', results.filter(r => r.criteriaID === undefined || r.criteriaID === null));
@@ -238,7 +238,7 @@ app.post('/api/evaluations', authenticateToken, async (req, res) => {
 
     res.status(201).json({
       ...evaluationResult,
-      resultsCount: evaluationResults?.count || 0, // Changed from validResults to evaluationResults
+      resultsCount: evaluationResults?.count || 0, 
     });
   } catch (error) {
     console.error('Create evaluation error:', error.message);
@@ -404,14 +404,14 @@ app.post('/api/evaluation-sessions', authenticateToken, async (req, res) => {
 app.get('/api/evaluation-sessions/stats', authenticateToken, async (req, res) => {
   try {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Start of today
+    today.setHours(0, 0, 0, 0); 
     const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay()); // Start of the week (Sunday)
+    weekStart.setDate(today.getDate() - today.getDay()); 
 
     const stats = await prisma.$queryRaw`
       SELECT
         COUNT(*) FILTER (WHERE "StartDate" <= ${today} AND "EndDate" >= ${weekStart}) AS this_week,
-        COUNT(*) FILTER (WHERE "StartDate" <= ${today} AND "EndDate" = ${today}) AS today,
+        COUNT(*) FILTER (WHERE "EndDate" = ${today}) AS today,
         COUNT(*) FILTER (WHERE "EndDate" >= ${today}) AS pending
       FROM "EvaluationSession"
       WHERE "ActivatedBy" = ${req.user.id}
@@ -425,6 +425,22 @@ app.get('/api/evaluation-sessions/stats', authenticateToken, async (req, res) =>
     });
   } catch (error) {
     console.error('Error fetching session stats:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+
+
+app.get('/api/performance', authenticateToken, async (req, res) => {
+  console.log('Fetching performance data');
+  try {
+    const performanceData = await prisma.performance.findMany({
+      where: { ActivatedBy: parseInt(req.user.id) }, // Default to user's data
+    });
+    console.log('Performance data fetched:', performanceData);
+    res.status(200).json(performanceData);
+  } catch (error) {
+    console.error('Fetch performance data error:', error.message);
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });

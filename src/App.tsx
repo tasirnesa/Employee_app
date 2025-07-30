@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Box, CssBaseline, Typography, Button, Card } from '@mui/material';
+import { Box, CssBaseline, Typography, Button, Card, IconButton } from '@mui/material';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import axios from 'axios';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import CreateUser from './pages/CreateUser';
@@ -21,7 +22,8 @@ import { UserProvider, useUser } from './context/UserContext';
 import theme from './theme';
 import type { User } from './types/interfaces';
 import ScheduleMenu from './pages/ScheduleMenu';
-import GoalsMenu from './pages/GoalsPage'; // Ensure this matches your file name
+import GoalsMenu from './pages/GoalsPage';
+import PerformanceMenu from './pages/PerformanceMenu';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -52,11 +54,12 @@ const AppContent: React.FC = () => {
       return response.data as User;
     },
     enabled: isAuthenticated,
-    retry: 1, // Limit retries to avoid repeated 403 attempts
+    retry: 1,
   });
 
   const { setUser } = useUser();
-  const navigate = useNavigate(); // Add navigation for logout
+  const navigate = useNavigate();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -74,8 +77,12 @@ const AppContent: React.FC = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userProfile');
     setUser(null);
-    refetch(); // Clear query cache
+    refetch();
     navigate('/login');
+  };
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
   };
 
   if (isLoading) {
@@ -95,12 +102,7 @@ const AppContent: React.FC = () => {
         <Typography>
           Please try logging out and logging in again, or check the backend logs.
         </Typography>
-        <Button
-          variant="contained"
-          color="error"
-          onClick={handleLogout}
-          sx={{ mt: 2 }}
-        >
+        <Button variant="contained" color="error" onClick={handleLogout} sx={{ mt: 2 }}>
           Log Out
         </Button>
       </Box>
@@ -110,81 +112,44 @@ const AppContent: React.FC = () => {
   return (
     <Box sx={{ display: 'flex', bgcolor: 'background.default', minHeight: '100vh' }}>
       <CssBaseline />
-      {isAuthenticated && <Sidebar />}
+      {isAuthenticated && <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
           p: 3,
-          width: `calc(100% - ${240}px)`,
-          ml: `${240}px`,
+          width: `calc(100% - ${sidebarCollapsed ? 60 : 120}px)`,
+          ml: `${sidebarCollapsed ? 60 : 120}px`,
+          transition: 'width 0.3s, margin-left 0.3s',
         }}
       >
-        {isAuthenticated && <Header />}
+        {isAuthenticated && <Header collapsed={sidebarCollapsed} onToggle={toggleSidebar} />}
         <Card sx={{ p: 3, minHeight: 'calc(100vh - 120px)' }}>
           <Routes>
             <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
+            <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} />
+            <Route path="/users/create" element={isAuthenticated ? <CreateUser /> : <Navigate to="/login" />} />
+            <Route path="/users/view" element={isAuthenticated ? <ViewUsers /> : <Navigate to="/login" />} />
+            <Route path="/users/:id" element={isAuthenticated ? <UserDetail /> : <Navigate to="/login" />} />
+            <Route path="/criteria/create" element={isAuthenticated ? <CreateCriteria /> : <Navigate to="/login" />} />
+            <Route path="/criteria/view" element={isAuthenticated ? <ViewCriteria /> : <Navigate to="/login" />} />
+            <Route path="/evaluations/create" element={isAuthenticated ? <CreateEvaluation /> : <Navigate to="/login" />} />
+            <Route path="/evaluations/view" element={isAuthenticated ? <ViewEvaluations /> : <Navigate to="/login" />} />
+            <Route path="/reports" element={isAuthenticated ? <Reports /> : <Navigate to="/login" />} />
+            <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" />} />
+            <Route path="/schedule" element={isAuthenticated ? <ScheduleMenu /> : <Navigate to="/login" />} />
+            <Route path="/goals" element={isAuthenticated ? <GoalsMenu /> : <Navigate to="/login" />} />
             <Route
-              path="/dashboard"
-              element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />}
+              path="/analytics-performance"
+              element={isAuthenticated ? <PerformanceMenu /> : <Navigate to="/login" />}
             />
-            <Route
-              path="/users/create"
-              element={isAuthenticated ? <CreateUser /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/users/view"
-              element={isAuthenticated ? <ViewUsers /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/users/:id"
-              element={isAuthenticated ? <UserDetail /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/criteria/create"
-              element={isAuthenticated ? <CreateCriteria /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/criteria/view"
-              element={isAuthenticated ? <ViewCriteria /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/evaluations/create"
-              element={isAuthenticated ? <CreateEvaluation /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/evaluations/view"
-              element={isAuthenticated ? <ViewEvaluations /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/reports"
-              element={isAuthenticated ? <Reports /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/settings"
-              element={isAuthenticated ? <Settings /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/schedule"
-              element={isAuthenticated ? <ScheduleMenu /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/goals" 
-              element={isAuthenticated ? <GoalsMenu /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/"
-              element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />}
-            />
+            <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
           </Routes>
         </Card>
       </Box>
     </Box>
   );
 };
-
-
-import { useNavigate } from 'react-router-dom';
 
 function App() {
   return (

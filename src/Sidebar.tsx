@@ -21,10 +21,17 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import FlagIcon from '@mui/icons-material/Flag';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import EventIcon from '@mui/icons-material/Event';
+import MenuIcon from '@mui/icons-material/Menu';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 
-const drawerWidth = 240;
+interface SidebarProps {
+  collapsed?: boolean;
+  onToggle?: () => void;
+}
 
-const Sidebar: React.FC = () => {
+const drawerWidth = 240; // Define drawerWidth as a constant
+
+const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [userManagementAnchorEl, setUserManagementAnchorEl] = useState<null | HTMLElement>(null);
@@ -115,7 +122,7 @@ const Sidebar: React.FC = () => {
 
   const handleAnalyticsPerformance = () => {
     console.log('Navigating to analytics performance');
-    navigate('/analytics/performance');
+    navigate('/analytics-performance');
   };
 
   const handleSchedule = () => {
@@ -123,22 +130,43 @@ const Sidebar: React.FC = () => {
     navigate('/schedule');
   };
 
+  const handleToggle = () => {
+    console.log('Toggling sidebar');
+    if (onToggle) onToggle();
+  };
+
   return (
     <>
       <Drawer
         variant="permanent"
         sx={{
-          width: drawerWidth,
+          width: collapsed ? 60 : drawerWidth,
           flexShrink: 0,
-          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+          transition: 'width 0.3s',
+          [`& .MuiDrawer-paper`]: {
+            width: collapsed ? 60 : drawerWidth,
+            boxSizing: 'border-box',
+            transition: 'width 0.3s',
+            overflowX: 'hidden',
+          },
         }}
       >
         <List>
+          <ListItem disablePadding sx={{ justifyContent: 'center', py: 1 }}>
+            <IconButton
+              color="inherit"
+              aria-label="toggle sidebar"
+              onClick={handleToggle}
+              edge="start"
+            >
+              {collapsed ? <MenuIcon /> : <ChevronLeftIcon />}
+            </IconButton>
+          </ListItem>
           {userProfile && (
-            <ListItem disablePadding>
+            <ListItem disablePadding sx={{ justifyContent: collapsed ? 'center' : 'flex-start', py: 1 }}>
               <ListItemText
                 primary={`Logged in as: ${userProfile.fullName || 'Unknown User'}`}
-                sx={{ pl: 2, py: 1, fontWeight: 'bold', color: '#0288d1' }}
+                sx={{ pl: collapsed ? 0 : 2, opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }}
               />
             </ListItem>
           )}
@@ -146,102 +174,111 @@ const Sidebar: React.FC = () => {
             <ListItemButton
               selected={location.pathname === '/dashboard'}
               onClick={() => navigate('/dashboard')}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
             >
-              <ListItemIcon>
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
                 <DashboardIcon />
               </ListItemIcon>
-              <ListItemText primary="Dashboard" />
+              <ListItemText primary="Dashboard" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
             <ListItemButton
               selected={location.pathname.startsWith('/users')}
               onClick={handleUserManagementMenuOpen}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
             >
-              <ListItemIcon>
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
                 <PeopleIcon />
               </ListItemIcon>
-              <ListItemText primary="User Management" />
-              <ArrowDropDownIcon />
+              <ListItemText primary="User Management" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
+              {!collapsed && <ArrowDropDownIcon />}
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
             <ListItemButton
               selected={location.pathname.startsWith('/criteria')}
               onClick={handleCriteriaManagementMenuOpen}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
             >
-              <ListItemIcon>
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
                 <AssignmentIcon />
               </ListItemIcon>
-              <ListItemText primary="Criteria Management" />
-              <ArrowDropDownIcon />
+              <ListItemText primary="Criteria Management" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
+              {!collapsed && <ArrowDropDownIcon />}
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
             <ListItemButton
               selected={location.pathname.startsWith('/evaluations')}
               onClick={handleEvaluationsMenuOpen}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
             >
-              <ListItemIcon>
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
                 <RateReviewIcon />
               </ListItemIcon>
-              <ListItemText primary="Evaluations" />
-              <ArrowDropDownIcon />
+              <ListItemText primary="Evaluations" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
+              {!collapsed && <ArrowDropDownIcon />}
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
             <ListItemButton
               selected={location.pathname === '/goals'}
               onClick={handleGoals}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
             >
-              <ListItemIcon>
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
                 <FlagIcon />
               </ListItemIcon>
-              <ListItemText primary="Goals" />
+              <ListItemText primary="Goals" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
             <ListItemButton
-              selected={location.pathname === '/analytics/performance'}
+              selected={location.pathname === '/analytics-performance'}
               onClick={handleAnalyticsPerformance}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
             >
-              <ListItemIcon>
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
                 <AssessmentIcon />
               </ListItemIcon>
-              <ListItemText primary="Analytics Performance" />
+              <ListItemText primary="Analytics Performance" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
             <ListItemButton
               selected={location.pathname === '/schedule'}
               onClick={handleSchedule}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
             >
-              <ListItemIcon>
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
                 <EventIcon />
               </ListItemIcon>
-              <ListItemText primary="Schedule" />
+              <ListItemText primary="Schedule" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
             <ListItemButton
               selected={location.pathname === '/reports'}
               onClick={() => navigate('/reports')}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
             >
-              <ListItemIcon>
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
                 <BarChartIcon />
               </ListItemIcon>
-              <ListItemText primary="Reports" />
+              <ListItemText primary="Reports" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>
             <ListItemButton
               selected={location.pathname === '/settings'}
               onClick={() => navigate('/settings')}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
             >
-              <ListItemIcon>
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
                 <SettingsIcon />
               </ListItemIcon>
-              <ListItemText primary="Settings" />
+              <ListItemText primary="Settings" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
             </ListItemButton>
           </ListItem>
         </List>

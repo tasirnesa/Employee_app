@@ -3,8 +3,15 @@ import { AppBar, Toolbar, Typography, Avatar, Menu, MenuItem, IconButton, Box } 
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import type { User } from '../types/interfaces';
+import MenuIcon from '@mui/icons-material/Menu'; 
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'; 
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  collapsed?: boolean; 
+  onToggle?: () => void; 
+}
+
+const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggle }) => {
   console.log('Header rendering');
   const navigate = useNavigate();
   const { user } = useUser();
@@ -48,6 +55,15 @@ const Header: React.FC = () => {
       sx={{ width: `calc(100% - ${0}px)`, ml: `${0}px`, mb: 3 }}
     >
       <Toolbar>
+        <IconButton
+          color="inherit"
+          aria-label="toggle sidebar"
+          onClick={onToggle}
+          edge="start"
+          sx={{ mr: 2 }}
+        >
+          {collapsed ? <MenuIcon /> : <ChevronLeftIcon />}
+        </IconButton>
         <Typography variant="h6" sx={{ flexGrow: 1 }}>
           Employee Evaluation
         </Typography>
