@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import type { User } from '../types/interfaces';
 import MenuIcon from '@mui/icons-material/Menu'; 
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'; 
+import  DashboardCustomizeIcon  from '@mui/icons-material/ChevronLeft'; 
 
 interface HeaderProps {
   collapsed?: boolean; 
@@ -62,7 +62,7 @@ const Header: React.FC<HeaderProps> = ({ collapsed = false, onToggle }) => {
           edge="start"
           sx={{ mr: 2 }}
         >
-          {collapsed ? <MenuIcon /> : <ChevronLeftIcon />}
+          {collapsed ? <MenuIcon /> : < DashboardCustomizeIcon  />}
         </IconButton>
         <Typography variant="h6" sx={{ flexGrow: 1 }}>
           Employee Evaluation

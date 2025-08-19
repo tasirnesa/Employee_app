@@ -22,7 +22,7 @@ import FlagIcon from '@mui/icons-material/Flag';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import EventIcon from '@mui/icons-material/Event';
 import MenuIcon from '@mui/icons-material/Menu';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import  DashboardCustomizeIcon  from '@mui/icons-material/ChevronLeft';
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -159,7 +159,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
               onClick={handleToggle}
               edge="start"
             >
-              {collapsed ? <MenuIcon /> : <ChevronLeftIcon />}
+              {collapsed ? <MenuIcon /> : < DashboardCustomizeIcon  />}
             </IconButton>
           </ListItem>
           {userProfile && (

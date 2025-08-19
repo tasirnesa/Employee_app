@@ -50,7 +50,16 @@ export interface EvaluationSession {
   endDate: string;
   activatedBy: number;
 }
-
+export interface Goal {
+  gid: number;
+  objective: string;
+  keyResult?: string;
+  priority?: string;
+  status?: string;
+  progress?: string;
+  duedate: string;
+  category?: string;
+}
 export interface Criteria {
   criteriaID: number; // Match the log's field name
   title: string;
@@ -64,4 +73,5 @@ export interface Session {
   title: string;
   startDate: string;
   endDate: string;
+  completed?: boolean;
 }

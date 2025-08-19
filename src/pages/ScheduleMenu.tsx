@@ -14,6 +14,7 @@ const ScheduleMenu = () => {
   const [error, setError] = useState('');
   const [tabValue, setTabValue] = useState('1');
   const [openDialog, setOpenDialog] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // Track selected category
   const queryClient = useQueryClient();
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
@@ -75,7 +76,7 @@ const ScheduleMenu = () => {
       const response = await axios.get('http://localhost:3000/api/evaluation-sessions', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log('Fetched sessions:', response.data);
+      console.log('Fetched sessions:', response.data); // Debug: Check session data
       return response.data as Session[];
     },
     enabled: !!localStorage.getItem('token'),
@@ -92,27 +93,37 @@ const ScheduleMenu = () => {
   };
 
   const currentWeek = getCurrentWeekRange();
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const dayAfterTomorrow = new Date(tomorrow);
-  dayAfterTomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
-  const dayAfterTomorrowStr = dayAfterTomorrow.toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0];
 
-  // Filter sessions for current week
-  const weekSessions = sessions.filter(session => {
-    const start = new Date(session.startDate).toISOString().split('T')[0]; // Normalize date
-    const end = new Date(session.endDate).toISOString().split('T')[0]; // Normalize date
-    console.log(`Checking session: ${session.title}, start: ${start}, end: ${end}, week: ${currentWeek.start} to ${currentWeek.end}`);
-    return start >= currentWeek.start && end <= currentWeek.end;
-  });
+  // Filter sessions based on category
+  const getSessionsByCategory = (category: string) => {
+    const now = new Date().toISOString().split('T')[0];
+    switch (category) {
+      case 'This Week':
+        return sessions.filter(session => {
+          const start = new Date(session.startDate).toISOString().split('T')[0];
+          const end = new Date(session.endDate).toISOString().split('T')[0];
+          return start >= currentWeek.start && end <= currentWeek.end;
+        });
+      case 'Today':
+        return sessions.filter(session => {
+          const start = new Date(session.startDate).toISOString().split('T')[0];
+          const end = new Date(session.endDate).toISOString().split('T')[0];
+          return start <= now && end >= now;
+        });
+      case 'Meetings':
+        return sessions.filter(session => session.title.toLowerCase().includes('meeting')); 
+      case 'Pending':
+        return sessions.filter(session => new Date(session.endDate) > new Date());
+      default:
+        return [];
+    }
+  };
 
-  // Filter sessions for upcoming (tomorrow and day after)
-  const upcomingSessions = sessions.filter(session => {
-    const end = new Date(session.endDate).toISOString().split('T')[0]; // Normalize date
-    console.log(`Checking session: ${session.title}, end: ${end}, tomorrow: ${tomorrowStr}, day after: ${dayAfterTomorrowStr}`);
-    return end === tomorrowStr || end === dayAfterTomorrowStr;
-  });
+  const handleCategoryClick = (category: string) => {
+    console.log('Clicked category:', category, 'Selected:', selectedCategory); 
+    setSelectedCategory(category === selectedCategory ? null : category); 
+  };
 
   return (
     <div style={{ padding: '20px' }}>
@@ -134,24 +145,68 @@ const ScheduleMenu = () => {
           }
         />
         <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Card sx={{ width: '23%', p: 2 }}>
-              <Typography variant="subtitle1">This Week</Typography>
-              <Typography variant="h6">{stats?.thisWeek || 0}</Typography>
-            </Card>
-            <Card sx={{ width: '23%', p: 2 }}>
-              <Typography variant="subtitle1">Today</Typography>
-              <Typography variant="h6">{stats?.today || 0}</Typography>
-            </Card>
-            <Card sx={{ width: '23%', p: 2 }}>
-              <Typography variant="subtitle1">Meetings</Typography>
-              <Typography variant="h6">{stats?.meetings || 0}</Typography>
-            </Card>
-            <Card sx={{ width: '23%', p: 2 }}>
-              <Typography variant="subtitle1">Pending</Typography>
-              <Typography variant="h6">{stats?.pending || 0}</Typography>
-            </Card>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
+            <Button
+              variant={selectedCategory === 'This Week' ? 'contained' : 'outlined'}
+              color="primary"
+              onClick={() => handleCategoryClick('This Week')}
+              sx={{ width: '23%', p: 1 }}
+            >
+              <Box sx={{ textAlign: 'center', width: '100%' }}>
+                <Typography variant="subtitle1">This Week</Typography>
+                <Typography variant="h6">{stats?.thisWeek || 0}</Typography>
+              </Box>
+            </Button>
+            <Button
+              variant={selectedCategory === 'Today' ? 'contained' : 'outlined'}
+              color="primary"
+              onClick={() => handleCategoryClick('Today')}
+              sx={{ width: '23%', p: 1 }}
+            >
+              <Box sx={{ textAlign: 'center', width: '100%' }}>
+                <Typography variant="subtitle1">Today</Typography>
+                <Typography variant="h6">{stats?.today || 0}</Typography>
+              </Box>
+            </Button>
+            <Button
+              variant={selectedCategory === 'Meetings' ? 'contained' : 'outlined'}
+              color="primary"
+              onClick={() => handleCategoryClick('Meetings')}
+              sx={{ width: '23%', p: 1 }}
+            >
+              <Box sx={{ textAlign: 'center', width: '100%' }}>
+                <Typography variant="subtitle1">Meetings</Typography>
+                <Typography variant="h6">{stats?.meetings || 0}</Typography>
+              </Box>
+            </Button>
+            <Button
+              variant={selectedCategory === 'Pending' ? 'contained' : 'outlined'}
+              color="primary"
+              onClick={() => handleCategoryClick('Pending')}
+              sx={{ width: '23%', p: 1 }}
+            >
+              <Box sx={{ textAlign: 'center', width: '100%' }}>
+                <Typography variant="subtitle1">Pending</Typography>
+                <Typography variant="h6">{stats?.pending || 0}</Typography>
+              </Box>
+            </Button>
           </Box>
+          {selectedCategory && (
+            <Card sx={{ p: 2, mb: 2 }}>
+              <Typography variant="h6">{selectedCategory} Schedules</Typography>
+              {getSessionsByCategory(selectedCategory).length > 0 ? (
+                <ul>
+                  {getSessionsByCategory(selectedCategory).map((session) => (
+                    <li key={session.id}>
+                      {session.title} ({session.startDate} to {session.endDate})
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <Typography>No schedules for {selectedCategory.toLowerCase()}.</Typography>
+              )}
+            </Card>
+          )}
           <TabContext value={tabValue}>
             <Tabs value={tabValue} onChange={handleTabChange} aria-label="schedule tabs">
               <Tab label="Week View" value="1" />
@@ -159,9 +214,9 @@ const ScheduleMenu = () => {
               <Tab label="Calendar" value="3" />
             </Tabs>
             <TabPanel value="1">
-              {weekSessions.length > 0 ? (
+              {getSessionsByCategory('This Week').length > 0 ? (
                 <ul>
-                  {weekSessions.map((session) => (
+                  {getSessionsByCategory('This Week').map((session) => (
                     <li key={session.id}>
                       {session.title} ({session.startDate} to {session.endDate})
                     </li>
@@ -172,16 +227,16 @@ const ScheduleMenu = () => {
               )}
             </TabPanel>
             <TabPanel value="2">
-              {upcomingSessions.length > 0 ? (
+              {getSessionsByCategory('Today').length > 0 ? (
                 <ul>
-                  {upcomingSessions.map((session) => (
+                  {getSessionsByCategory('Today').map((session) => (
                     <li key={session.id}>
                       {session.title} (Ends: {session.endDate})
                     </li>
                   ))}
                 </ul>
               ) : (
-                <Typography>No upcoming schedules for tomorrow or the day after.</Typography>
+                <Typography>No upcoming schedules for today.</Typography>
               )}
             </TabPanel>
             <TabPanel value="3">

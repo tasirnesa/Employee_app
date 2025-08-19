@@ -399,7 +399,13 @@ app.post('/api/evaluation-sessions', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
-
+app.get('/api/evaluation-sessions', (req, res) => {
+  const sessions = [
+    { id: 1, title: "Team Meeting", startDate: "2025-07-30", endDate: "2025-07-31" },
+    { id: 2, title: "Evaluation", startDate: "2025-07-28", endDate: "2025-08-03" },
+  ];
+  res.json(sessions);
+});
 
 app.get('/api/evaluation-sessions/stats', authenticateToken, async (req, res) => {
   try {
@@ -445,6 +451,132 @@ app.get('/api/performance', authenticateToken, async (req, res) => {
   }
 });
 
+
+
+
+ // goals 
+
+ // GET all goals for the authenticated user
+app.get('/api/goals', authenticateToken, async (req, res) => {
+  try {
+    const goals = await prisma.goal.findMany({
+      where: {
+        activatedBy: req.user.id, // Filter by authenticated user
+      },
+    });
+    console.log('Fetched goals:', goals);
+    res.json(goals);
+  } catch (error) {
+    console.error('Error fetching goals:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+// POST a new goal
+app.post('/api/goals', authenticateToken, async (req, res) => {
+  console.log('Create goal request received with body:', req.body);
+  try {
+    const { objective, keyResult, priority, status, progress, duedate, category } = req.body;
+
+    if (!objective || !duedate) {
+      console.log('Missing required fields:', { objective, duedate });
+      return res.status(400).json({ error: 'Missing required fields: objective, duedate' });
+    }
+
+    const goal = await prisma.goal.create({
+      data: {
+        objective,
+        keyResult,
+        priority,
+        status,
+        progress,
+        duedate: new Date(duedate),
+        category,
+        activatedBy: req.user.id, // Link to authenticated user
+      },
+    });
+
+    console.log('Goal created:', goal);
+    res.status(201).json(goal);
+  } catch (error) {
+    console.error('Error creating goal:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+// PUT (edit) an existing goal
+app.put('/api/goals/:gid', authenticateToken, async (req, res) => {
+  console.log('Edit goal request received with params:', req.params, 'body:', req.body);
+  try {
+    const { gid } = req.params;
+    const { objective, keyResult, priority, status, progress, duedate, category } = req.body;
+
+    const existingGoal = await prisma.goal.findUnique({
+      where: { gid: parseInt(gid) },
+    });
+
+    if (!existingGoal) {
+      console.log('Goal not found:', gid);
+      return res.status(404).json({ error: 'Goal not found' });
+    }
+
+    if (existingGoal.activatedBy !== req.user.id) {
+      console.log('Unauthorized access to goal:', gid);
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const goal = await prisma.goal.update({
+      where: { gid: parseInt(gid) },
+      data: {
+        objective,
+        keyResult,
+        priority,
+        status,
+        progress,
+        duedate: duedate ? new Date(duedate) : undefined,
+        category,
+      },
+    });
+
+    console.log('Goal updated:', goal);
+    res.json(goal);
+  } catch (error) {
+    console.error('Error updating goal:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+// DELETE a goal
+app.delete('/api/goals/:gid', authenticateToken, async (req, res) => {
+  console.log('Delete goal request received with params:', req.params);
+  try {
+    const { gid } = req.params;
+
+    const existingGoal = await prisma.goal.findUnique({
+      where: { gid: parseInt(gid) },
+    });
+
+    if (!existingGoal) {
+      console.log('Goal not found:', gid);
+      return res.status(404).json({ error: 'Goal not found' });
+    }
+
+    if (existingGoal.activatedBy !== req.user.id) {
+      console.log('Unauthorized access to goal:', gid);
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    await prisma.goal.delete({
+      where: { gid: parseInt(gid) },
+    });
+
+    console.log('Goal deleted:', gid);
+    res.status(204).send(); // No content on successful delete
+  } catch (error) {
+    console.error('Error deleting goal:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
 process.on('SIGTERM', async () => {
   console.log('Shutting down server...');
   await prisma.$disconnect();

@@ -15,13 +15,13 @@ model User {
   password     String   @map("Password")
   gender       String?  @map("Gender")
   age          Int?     @map("Age")
-  status       String   @map("Status") // Changed to String for bit(1)
+  status       String   @map("Status")
   role         String   @map("Role")
-  locked       String   @map("Locked") // Changed to String for bit(1)
-  isFirstLogin String   @map("IsFirstLogin") // Changed to String for bit(1)
-  activeStatus String   @map("activeStatus") // Changed to String for bit(1)
-  createdDate  DateTime @map("CreatedDate") // Changed to DateTime to support date
-  createdBy    Int      @map("CreatedBy")
+  locked       String   @map("Locked")
+  isFirstLogin String   @map("IsFirstLogin")
+  activeStatus String   @map("activeStatus")
+  createdDate  DateTime @map("CreatedDate")
+  createdBy    Int      @map("Id")
   evaluationsAsEvaluator Evaluation[] @relation("evaluator")
   evaluationsAsEvaluatee Evaluation[] @relation("evaluatee")
 }
@@ -32,35 +32,26 @@ model Evaluation {
   evaluateeID    Int      @map("EvaluateeID")
   evaluationType String   @map("EvaluationType")
   sessionID      Int      @map("SessionID")
-  evaluationDate DateTime @map("EvaluationDate") // Changed to DateTime to support date
-  evaluator      User     @relation("evaluator", fields: [evaluatorID], references: [id])
-  evaluatee      User     @relation("evaluatee", fields: [evaluateeID], references: [id])
+  evaluationDate DateTime @map("EvaluationDate")
+  evaluator      User     @relation("evaluator", fields: [evaluatorID], references: [Id])
+  evaluatee      User     @relation("evaluatee", fields: [evaluateeID], references: [Id])
+  results        EvaluationResult[]
 }
 
 model EvaluationCriteria {
   criteriaID   Int      @id @default(autoincrement()) @map("CriteriaID")
   title        String   @map("Title")
   description  String?  @map("Description")
-  createdBy    Int      @map("CreatedBy")
-  createdDate  DateTime @map("CreatedDate") // Added to match database
-}
-
-model Evaluation {
-  evaluationID   Int      @id @default(autoincrement()) @map("EvaluationID")
-  evaluatorID    Int      @map("EvaluatorID")
-  evaluateeID    Int      @map("EvaluateeID")
-  evaluationType String   @map("EvaluationType")
-  sessionID      Int      @map("SessionID")
-  evaluationDate DateTime @map("EvaluationDate")
-  results        EvaluationResult[]
+  createdBy    Int      @map("Id")
+  createdDate  DateTime @map("CreatedDate")
 }
 
 model EvaluationSession {
   sessionID    Int      @id @default(autoincrement()) @map("SessionID")
   title        String   @map("Title")
-  startDate    DateTime @map("StartDate") // Changed to DateTime to support date
-  endDate      DateTime @map("EndDate") // Changed to DateTime to support date
-  activatedBy  Int      @map("ActivatedBy")
+  startDate    DateTime @map("StartDate")
+  endDate      DateTime @map("EndDate")
+  activatedBy  Int      @map("Id")
 }
 
 model EvaluationResult {
@@ -73,9 +64,9 @@ model EvaluationResult {
 
 model Performance {
   id          Int      @id @default(autoincrement())
-  userId      Int
-  metrics     Json     // { tasksCompleted: number, hoursWorked: number }
-  date        DateTime
-  ActivatedBy Int
-  user        User     @relation(fields: [ActivatedBy], references: [Id])
+  userId      Int      @map("userId")
+  metrics     Json     @map("metrics")
+  date        DateTime @map("date")
+  activatedBy Int      @map("Id")
+  user        User     @relation(fields: [activatedBy], references: [Id])
 }
