@@ -53,10 +53,10 @@ export interface EvaluationSession {
 export interface Goal {
   gid: number;
   objective: string;
-  keyResult?: string;
+  keyResult?: string[];
   priority?: string;
   status?: string;
-  progress?: string;
+  progress?: number;
   duedate: string;
   category?: string;
 }

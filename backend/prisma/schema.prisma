@@ -9,21 +9,24 @@ datasource db {
 }
 
 model User {
-  id           Int      @id @default(autoincrement()) @map("Id")
-  fullName     String   @map("FullName")
-  userName     String   @unique @map("UserName")
-  password     String   @map("Password")
-  gender       String?  @map("Gender")
-  age          Int?     @map("Age")
-  status       String   @map("Status")
-  role         String   @map("Role")
-  locked       String   @map("Locked")
-  isFirstLogin String   @map("IsFirstLogin")
-  activeStatus String   @map("activeStatus")
-  createdDate  DateTime @map("CreatedDate")
-  createdBy    Int      @map("Id")
-  evaluationsAsEvaluator Evaluation[] @relation("evaluator")
-  evaluationsAsEvaluatee Evaluation[] @relation("evaluatee")
+  id                 Int                 @id @default(autoincrement()) @map("Id")
+  fullName           String              @map("FullName")
+  userName           String              @unique @map("UserName")
+  password           String              @map("Password")
+  gender             String?             @map("Gender")
+  age                Int?                @map("Age")
+  status             String              @map("Status")
+  role               String              @map("Role")
+  locked             String              @map("Locked")
+  isFirstLogin       String              @map("IsFirstLogin")
+  activeStatus       String              @map("activeStatus")
+  createdDate        DateTime            @map("CreatedDate")
+  createdBy          Int                 @map("CreatedBy")
+  evaluationsAsEvaluator Evaluation[]    @relation("evaluator")
+  evaluationsAsEvaluatee Evaluation[]    @relation("evaluatee")
+  goals              Goal[]              @relation("userGoals")
+  evaluationSessions EvaluationSession[] @relation("userSessions")
+  createdCriteria    EvaluationCriteria[] @relation("creatorCriteria")
 }
 
 model Evaluation {
@@ -33,17 +36,20 @@ model Evaluation {
   evaluationType String   @map("EvaluationType")
   sessionID      Int      @map("SessionID")
   evaluationDate DateTime @map("EvaluationDate")
-  evaluator      User     @relation("evaluator", fields: [evaluatorID], references: [Id])
-  evaluatee      User     @relation("evaluatee", fields: [evaluateeID], references: [Id])
+  evaluator      User     @relation("evaluator", fields: [evaluatorID], references: [id])
+  evaluatee      User     @relation("evaluatee", fields: [evaluateeID], references: [id])
   results        EvaluationResult[]
+  session        EvaluationSession @relation(fields: [sessionID], references: [sessionID])
 }
 
 model EvaluationCriteria {
   criteriaID   Int      @id @default(autoincrement()) @map("CriteriaID")
   title        String   @map("Title")
   description  String?  @map("Description")
-  createdBy    Int      @map("Id")
+  createdBy    Int      @map("CreatedBy")
   createdDate  DateTime @map("CreatedDate")
+  results      EvaluationResult[]
+  creator      User?    @relation("creatorCriteria", fields: [createdBy], references: [id])
 }
 
 model EvaluationSession {
@@ -51,7 +57,10 @@ model EvaluationSession {
   title        String   @map("Title")
   startDate    DateTime @map("StartDate")
   endDate      DateTime @map("EndDate")
-  activatedBy  Int      @map("Id")
+  activatedBy  Int      @map("ActivatedBy")
+  type         String   @map("type") @default("")
+  evaluations  Evaluation[]
+  user         User     @relation("userSessions", fields: [activatedBy], references: [id])
 }
 
 model EvaluationResult {
@@ -60,13 +69,21 @@ model EvaluationResult {
   criteriaID   Int      @map("CriteriaID")
   score        Float    @map("Score")
   feedback     String?  @map("Feedback")
+  evaluation   Evaluation @relation(fields: [evaluationID], references: [evaluationID])
+  criteria     EvaluationCriteria @relation(fields: [criteriaID], references: [criteriaID])
 }
 
-model Performance {
-  id          Int      @id @default(autoincrement())
-  userId      Int      @map("userId")
-  metrics     Json     @map("metrics")
-  date        DateTime @map("date")
-  activatedBy Int      @map("Id")
-  user        User     @relation(fields: [activatedBy], references: [Id])
+model Goal {
+  gid        Int      @id @default(autoincrement())
+  objective  String
+  keyResult  Json?    @default("[]") // Store array of strings as JSON
+  priority   String?
+  status     String?
+  progress   Int?
+  duedate    DateTime?
+  category   String?
+  activatedBy Int?    @map("ActivatedBy")
+  user       User?    @relation(fields: [activatedBy], references: [id], name: "userGoals") // Added name to match
+
+  @@map("Goal")
 }

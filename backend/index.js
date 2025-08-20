@@ -83,7 +83,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/users/me', authenticateToken, async (req, res) => {
   try {
-    console.log('Headers for /api/users/me:', req.headers);
+    // console.log('Headers for /api/users/me:', req.headers);
     const userId = req.user.id; 
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -198,10 +198,9 @@ app.post('/api/evaluations', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Evaluator and evaluatee cannot be the same person' });
     }
 
-
     const evaluationResult = await prisma.evaluation.create({
       data: {
-        evaluationID: undefined, // Let Prisma auto-increment
+        evaluationID: undefined,
         evaluatorID: parseInt(evaluatorID),
         evaluateeID: parseInt(evaluateeID),
         evaluationType,
@@ -212,15 +211,14 @@ app.post('/api/evaluations', authenticateToken, async (req, res) => {
 
     console.log('Evaluation created:', evaluationResult);
 
-  
+    let evaluationResults = { count: 0 }; // Default value
     if (results && Array.isArray(results) && results.length > 0) {
-    
       const validResults = results.filter(result => result.criteriaID !== undefined && result.criteriaID !== null);
       if (validResults.length !== results.length) {
         console.warn('Some results had invalid criteriaID, filtered out:', results.filter(r => r.criteriaID === undefined || r.criteriaID === null));
       }
       if (validResults.length > 0) {
-        const evaluationResults = await prisma.evaluationResult.createMany({
+        evaluationResults = await prisma.evaluationResult.createMany({
           data: validResults.map(result => ({
             evaluationID: evaluationResult.evaluationID,
             criteriaID: result.criteriaID,
@@ -238,10 +236,16 @@ app.post('/api/evaluations', authenticateToken, async (req, res) => {
 
     res.status(201).json({
       ...evaluationResult,
-      resultsCount: evaluationResults?.count || 0, 
+      resultsCount: evaluationResults.count,
     });
   } catch (error) {
-    console.error('Create evaluation error:', error.message);
+    console.error('Create evaluation error:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      meta: error.meta,
+      requestBody: req.body,
+    });
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
@@ -483,16 +487,21 @@ app.post('/api/goals', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: objective, duedate' });
     }
 
+    if (!req.user || !req.user.id) {
+      console.log('No user ID found in token:', req.user);
+      return res.status(401).json({ error: 'Authentication error: No user ID available' });
+    }
+
     const goal = await prisma.goal.create({
       data: {
         objective,
-        keyResult,
+        keyResult: Array.isArray(keyResult) ? keyResult : [keyResult || ''], // Ensure it's an array
         priority,
         status,
-        progress,
+        progress: parseInt(progress) || 0,
         duedate: new Date(duedate),
         category,
-        activatedBy: req.user.id, // Link to authenticated user
+        activatedBy: req.user.id,
       },
     });
 
