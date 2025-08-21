@@ -171,7 +171,12 @@ const GoalsPage: React.FC = () => {
                     goal.keyResult.map((kr: string, index: number) => (
                       <ListItem key={index} disablePadding>
                         <ListItemText
-                          primary={<Typography variant="body1">Key Result: {kr || 'No key result'}</Typography>}
+                          primary={
+                            <Typography variant="body1">
+                              {index === 0 ? 'KeyResult 1: ' : `Key Result ${index + 1}: `}
+                              {kr || 'No key result'}
+                            </Typography>
+                          }
                           sx={{ pl: 1 }}
                         />
                       </ListItem>
