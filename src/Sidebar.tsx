@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import React, { useState } from 'react';
-=======
 import React, { useState, useEffect } from 'react';
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
 import {
   Drawer,
   List,
@@ -14,11 +10,7 @@ import {
   MenuItem,
   IconButton,
 } from '@mui/material';
-<<<<<<< HEAD
-import { useNavigate } from 'react-router-dom';
-=======
 import { useNavigate, useLocation } from 'react-router-dom';
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import AssignmentIcon from '@mui/icons-material/Assignment';
@@ -26,17 +18,6 @@ import RateReviewIcon from '@mui/icons-material/RateReview';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
-<<<<<<< HEAD
-
-const drawerWidth = 240;
-
-const Sidebar: React.FC = () => {
-  console.log('Sidebar rendering');
-  const navigate = useNavigate();
-  const [userManagementAnchorEl, setUserManagementAnchorEl] = useState<null | HTMLElement>(null);
-  const [criteriaManagementAnchorEl, setCriteriaManagementAnchorEl] = useState<null | HTMLElement>(null);
-  const [evaluationsAnchorEl, setEvaluationsAnchorEl] = useState<null | HTMLElement>(null);
-=======
 import FlagIcon from '@mui/icons-material/Flag';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import EventIcon from '@mui/icons-material/Event';
@@ -57,13 +38,10 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
   const [criteriaManagementAnchorEl, setCriteriaManagementAnchorEl] = useState<null | HTMLElement>(null);
   const [evaluationsAnchorEl, setEvaluationsAnchorEl] = useState<null | HTMLElement>(null);
   const [userProfile, setUserProfile] = useState<{ fullName?: string } | null>(null);
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
   const userManagementOpen = Boolean(userManagementAnchorEl);
   const criteriaManagementOpen = Boolean(criteriaManagementAnchorEl);
   const evaluationsOpen = Boolean(evaluationsAnchorEl);
 
-<<<<<<< HEAD
-=======
   useEffect(() => {
     const storedProfile = localStorage.getItem('userProfile');
     if (storedProfile) {
@@ -71,7 +49,6 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
     }
   }, []);
 
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
   const handleUserManagementMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     console.log('Opening user management menu');
     setUserManagementAnchorEl(event.currentTarget);
@@ -138,8 +115,6 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
     navigate('/evaluations/view');
   };
 
-<<<<<<< HEAD
-=======
   const handleGoals = () => {
     console.log('Navigating to goals');
     navigate('/goals');
@@ -160,69 +135,11 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
     if (onToggle) onToggle();
   };
 
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
   return (
     <>
       <Drawer
         variant="permanent"
         sx={{
-<<<<<<< HEAD
-          width: drawerWidth,
-          flexShrink: 0,
-          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
-        }}
-      >
-        <List>
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => navigate('/dashboard')}>
-              <ListItemIcon>
-                <DashboardIcon />
-              </ListItemIcon>
-              <ListItemText primary="Dashboard" />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton onClick={handleUserManagementMenuOpen}>
-              <ListItemIcon>
-                <PeopleIcon />
-              </ListItemIcon>
-              <ListItemText primary="User Management" />
-              <ArrowDropDownIcon />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton onClick={handleCriteriaManagementMenuOpen}>
-              <ListItemIcon>
-                <AssignmentIcon />
-              </ListItemIcon>
-              <ListItemText primary="Criteria Management" />
-              <ArrowDropDownIcon />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton onClick={handleEvaluationsMenuOpen}>
-              <ListItemIcon>
-                <RateReviewIcon />
-              </ListItemIcon>
-              <ListItemText primary="Evaluations" />
-              <ArrowDropDownIcon />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => navigate('/reports')}>
-              <ListItemIcon>
-                <BarChartIcon />
-              </ListItemIcon>
-              <ListItemText primary="Reports" />
-            </ListItemButton>
-          </ListItem>
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => navigate('/settings')}>
-              <ListItemIcon>
-                <SettingsIcon />
-              </ListItemIcon>
-              <ListItemText primary="Settings" />
-=======
           width: collapsed ? 60 : drawerWidth,
           flexShrink: 0,
           transition: 'width 0.3s',
@@ -362,7 +279,6 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
                 <SettingsIcon />
               </ListItemIcon>
               <ListItemText primary="Settings" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
             </ListItemButton>
           </ListItem>
         </List>
@@ -374,13 +290,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
-<<<<<<< HEAD
-        <MenuItem onClick={handleCreateUser}>Create User</MenuItem>
-        <MenuItem onClick={handleViewUsers}>View Users</MenuItem>
-=======
         <MenuItem onClick={handleCreateUser} selected={location.pathname === '/users/create'}>Create User</MenuItem>
         <MenuItem onClick={handleViewUsers} selected={location.pathname === '/users/view'}>View Users</MenuItem>
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
       </Menu>
       <Menu
         anchorEl={criteriaManagementAnchorEl}
@@ -389,13 +300,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
-<<<<<<< HEAD
-        <MenuItem onClick={handleCreateCriteria}>Create Criteria</MenuItem>
-        <MenuItem onClick={handleViewCriteria}>View Criteria</MenuItem>
-=======
         <MenuItem onClick={handleCreateCriteria} selected={location.pathname === '/criteria/create'}>Create Criteria</MenuItem>
         <MenuItem onClick={handleViewCriteria} selected={location.pathname === '/criteria/view'}>View Criteria</MenuItem>
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
       </Menu>
       <Menu
         anchorEl={evaluationsAnchorEl}
@@ -404,13 +310,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
-<<<<<<< HEAD
-        <MenuItem onClick={handleCreateEvaluation}>Create Evaluation</MenuItem>
-        <MenuItem onClick={handleViewEvaluations}>View Evaluations</MenuItem>
-=======
         <MenuItem onClick={handleCreateEvaluation} selected={location.pathname === '/evaluations/create'}>Create Evaluation</MenuItem>
         <MenuItem onClick={handleViewEvaluations} selected={location.pathname === '/evaluations/view'}>View Evaluations</MenuItem>
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
       </Menu>
     </>
   );

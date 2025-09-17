@@ -11,13 +11,10 @@ import {
   Button,
   Box,
   Alert,
-<<<<<<< HEAD
-=======
   FormControl,
   InputLabel,
   Select,
   MenuItem,
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
 } from '@mui/material';
 import type { User } from '../types/interfaces';
 
@@ -52,13 +49,8 @@ const CreateUser: React.FC = () => {
     fullName: Yup.string().required('Full Name is required'),
     userName: Yup.string().required('Username is required'),
     password: Yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
-<<<<<<< HEAD
-    role: Yup.string().required('Role is required'),
-    gender: Yup.string().nullable(),
-=======
     role: Yup.string().required('Role is required').oneOf(['Admin', 'SuperAdmin', 'Maker', 'Checker'], 'Please select a valid role'),
     gender: Yup.string().required('Gender is required').oneOf(['Male', 'Female'], 'Please select a valid gender'),
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
     age: Yup.number().nullable().min(18, 'Age must be at least 18'),
   });
 
@@ -72,15 +64,9 @@ const CreateUser: React.FC = () => {
           fullName: '',
           userName: '',
           password: '',
-<<<<<<< HEAD
-          gender: '',
-          age: '',
-          role: '',
-=======
           gender: '', // Default to empty string
           age: '',
           role: '',  // Default to empty string
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
         }}
         validationSchema={validationSchema}
         onSubmit={(values, { setSubmitting }) => {
@@ -91,11 +77,7 @@ const CreateUser: React.FC = () => {
           setSubmitting(false);
         }}
       >
-<<<<<<< HEAD
-        {({ errors, touched, isSubmitting }) => (
-=======
         {({ errors, touched, isSubmitting, setFieldValue, values }) => (
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
           <Form>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Field
@@ -124,15 +106,6 @@ const CreateUser: React.FC = () => {
                 helperText={touched.password && errors.password}
               />
               <Field
-<<<<<<< HEAD
-                as={TextField}
-                name="gender"
-                label="Gender"
-                fullWidth
-                error={touched.gender && !!errors.gender}
-                helperText={touched.gender && errors.gender}
-              />
-=======
                 as={FormControl}
                 fullWidth
                 error={touched.gender && !!errors.gender}
@@ -152,7 +125,6 @@ const CreateUser: React.FC = () => {
                   <Typography color="error" variant="caption">{errors.gender}</Typography>
                 )}
               </Field>
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
               <Field
                 as={TextField}
                 name="age"
@@ -163,15 +135,6 @@ const CreateUser: React.FC = () => {
                 helperText={touched.age && errors.age}
               />
               <Field
-<<<<<<< HEAD
-                as={TextField}
-                name="role"
-                label="Role"
-                fullWidth
-                error={touched.role && !!errors.role}
-                helperText={touched.role && errors.role}
-              />
-=======
                 as={FormControl}
                 fullWidth
                 error={touched.role && !!errors.role}
@@ -193,7 +156,6 @@ const CreateUser: React.FC = () => {
                   <Typography color="error" variant="caption">{errors.role}</Typography>
                 )}
               </Field>
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
               {createUserMutation.isError && (
                 <Alert severity="error">
                   Error creating user: {createUserMutation.error?.message || 'Unknown error'}

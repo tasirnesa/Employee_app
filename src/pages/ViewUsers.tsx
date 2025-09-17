@@ -154,21 +154,6 @@ const ViewUsers: React.FC = () => {
           <Table stickyHeader>
             <TableHead>
               <TableRow>
-<<<<<<< HEAD
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>ID</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Full Name</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Username</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Gender</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Age</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Role</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Locked</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>First Login</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Active</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Created Date</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Created By</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Action</TableCell>
-=======
                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>ID</TableCell>
                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Full Name</TableCell>
                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Username</TableCell>
@@ -182,7 +167,6 @@ const ViewUsers: React.FC = () => {
                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Created Date</TableCell>
                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Created By</TableCell>
                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Action</TableCell>
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
               </TableRow>
             </TableHead>
             <TableBody>

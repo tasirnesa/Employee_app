@@ -40,31 +40,11 @@ const ViewCriteria: React.FC = () => {
   if (error) return <Typography color="error">Error: {(error as Error).message}</Typography>;
 
   return (
-<<<<<<< HEAD
-    <Container sx={{ mt: 8 }}>
-=======
     <Container maxWidth="lg" sx={{ mt: 8, bgcolor: 'background.paper', p: 4, borderRadius: 2, boxShadow: 3 }}>
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
       <Typography variant="h4" gutterBottom>
         View Criteria
       </Typography>
       {criteria && criteria.length > 0 ? (
-<<<<<<< HEAD
-        <TableContainer component={Paper} sx={{ maxHeight: 400, maxWidth: '100%', overflow: 'auto' }}>
-          <Table stickyHeader>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Criteria ID</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Title</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Description</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Created Date</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Created By</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {criteria.map((criterion) => (
-                <TableRow key={criterion.criteriaID}>
-=======
         <TableContainer component={Paper} sx={{ maxHeight: 400, borderRadius: 2 }}>
           <Table stickyHeader>
             <TableHead>
@@ -83,7 +63,6 @@ const ViewCriteria: React.FC = () => {
                   key={criterion.criteriaID}
                   sx={{ backgroundColor: index % 2 === 0 ? '#fafafa' : '#ffffff' }}
                 >
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
                   <TableCell>{criterion.criteriaID}</TableCell>
                   <TableCell>{criterion.title}</TableCell>
                   <TableCell>{criterion.description || 'N/A'}</TableCell>
