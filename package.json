@@ -13,6 +13,7 @@
     "@emotion/styled": "^11.14.1",
     "@hookform/resolvers": "^3.10.0",
     "@mui/icons-material": "^7.2.0",
+<<<<<<< HEAD
     "@mui/material": "^5.17.1",
     "@tanstack/react-query": "^5.81.5",
     "@types/chart.js": "^2.9.41",
@@ -21,6 +22,19 @@
     "formik": "^2.4.6",
     "jsonwebtoken": "^9.0.2",
     "react": "^19.1.0",
+=======
+    "@mui/lab": "^7.0.0-beta.14",
+    "@mui/material": "^5.17.1",
+    "@tanstack/react-query": "^5.83.0",
+    "@types/chart.js": "^2.9.41",
+    "axios": "^1.11.0",
+    "chart.js": "^4.5.0",
+    "formik": "^2.4.6",
+    "jsonwebtoken": "^9.0.2",
+    "papaparse": "^5.5.3",
+    "react": "^19.1.0",
+    "react-calendar": "^6.0.0",
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.59.0",
@@ -28,6 +42,10 @@
     "yup": "^1.6.1"
   },
   "devDependencies": {
+<<<<<<< HEAD
+=======
+    "@types/papaparse": "^5.3.16",
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",

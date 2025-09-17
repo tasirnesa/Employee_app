@@ -33,7 +33,10 @@ ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Le
 const Dashboard: React.FC = () => {
   const token = localStorage.getItem('token');
 
+<<<<<<< HEAD
   // Fetch users
+=======
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
   const { data: users, isLoading: usersLoading, error: usersError } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
@@ -46,7 +49,10 @@ const Dashboard: React.FC = () => {
     },
   });
 
+<<<<<<< HEAD
   // Fetch evaluations
+=======
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
   const { data: evaluations, isLoading: evaluationsLoading, error: evaluationsError } = useQuery({
     queryKey: ['evaluations'],
     queryFn: async () => {
@@ -59,7 +65,10 @@ const Dashboard: React.FC = () => {
     },
   });
 
+<<<<<<< HEAD
   // Fetch criteria
+=======
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
   const { data: criteria, isLoading: criteriaLoading, error: criteriaError } = useQuery({
     queryKey: ['criteria'],
     queryFn: async () => {
@@ -72,7 +81,10 @@ const Dashboard: React.FC = () => {
     },
   });
 
+<<<<<<< HEAD
   // Fetch results
+=======
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
   const { data: results, isLoading: resultsLoading, error: resultsError } = useQuery({
     queryKey: ['results'],
     queryFn: async () => {
@@ -85,7 +97,10 @@ const Dashboard: React.FC = () => {
     },
   });
 
+<<<<<<< HEAD
   // Calculate metrics
+=======
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
   const totalUsers = users?.length || 0;
   const usersByRole = users?.reduce((acc, user) => {
     acc[user.role] = (acc[user.role] || 0) + 1;
@@ -94,7 +109,10 @@ const Dashboard: React.FC = () => {
   const activeUsers = users?.filter((user) => user.activeStatus).length || 0;
   const inactiveUsers = totalUsers - activeUsers;
 
+<<<<<<< HEAD
   // Pie chart data for users by role
+=======
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
   const roleChartData = {
     labels: Object.keys(usersByRole),
     datasets: [
@@ -106,7 +124,10 @@ const Dashboard: React.FC = () => {
     ],
   };
 
+<<<<<<< HEAD
   // Bar chart data for average scores per criteria
+=======
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
   const averageScores = criteria?.map((criterion) => {
     const relevantResults = results?.filter((result) => result.criteriaID === criterion.criteriaID) || [];
     const avgScore =
@@ -144,13 +165,25 @@ const Dashboard: React.FC = () => {
     );
   }
 
+<<<<<<< HEAD
+=======
+  // Sort evaluations by evaluationDate in descending order (newest first)
+  const recentEvaluations = evaluations
+    ?.slice()
+    .sort((a, b) => new Date(b.evaluationDate).getTime() - new Date(a.evaluationDate).getTime())
+    .slice(0, 5);
+
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
   return (
     <Container sx={{ mt: 8 }}>
       <Typography variant="h4" gutterBottom>
         Dashboard
       </Typography>
       <Grid container spacing={3}>
+<<<<<<< HEAD
         {/* Total Users Card */}
+=======
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
         <Grid item xs={12} sm={6} md={4}>
           <Card>
             <CardContent>
@@ -159,7 +192,10 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
+<<<<<<< HEAD
         {/* Active/Inactive Users Card */}
+=======
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
         <Grid item xs={12} sm={6} md={4}>
           <Card>
             <CardContent>
@@ -169,7 +205,10 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
+<<<<<<< HEAD
         {/* Users by Role Pie Chart */}
+=======
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
@@ -180,7 +219,10 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
+<<<<<<< HEAD
         {/* Recent Evaluations Table */}
+=======
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
         <Grid item xs={12}>
           <Card>
             <CardContent>
@@ -197,7 +239,11 @@ const Dashboard: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
+<<<<<<< HEAD
                     {evaluations?.slice(0, 5).map((evaluation) => (
+=======
+                    {recentEvaluations?.map((evaluation) => (
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
                       <TableRow key={evaluation.evaluationID}>
                         <TableCell>{evaluation.evaluationID}</TableCell>
                         <TableCell>{evaluation.evaluatorID}</TableCell>
@@ -212,7 +258,10 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
+<<<<<<< HEAD
         {/* Average Scores Bar Chart */}
+=======
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
         <Grid item xs={12}>
           <Card>
             <CardContent>

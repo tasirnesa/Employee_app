@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import React, { useState } from 'react';
+=======
+import React, { useState, useEffect } from 'react';
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
 import {
   Drawer,
   List,
@@ -10,7 +14,11 @@ import {
   MenuItem,
   IconButton,
 } from '@mui/material';
+<<<<<<< HEAD
 import { useNavigate } from 'react-router-dom';
+=======
+import { useNavigate, useLocation } from 'react-router-dom';
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import AssignmentIcon from '@mui/icons-material/Assignment';
@@ -18,6 +26,7 @@ import RateReviewIcon from '@mui/icons-material/RateReview';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+<<<<<<< HEAD
 
 const drawerWidth = 240;
 
@@ -27,10 +36,42 @@ const Sidebar: React.FC = () => {
   const [userManagementAnchorEl, setUserManagementAnchorEl] = useState<null | HTMLElement>(null);
   const [criteriaManagementAnchorEl, setCriteriaManagementAnchorEl] = useState<null | HTMLElement>(null);
   const [evaluationsAnchorEl, setEvaluationsAnchorEl] = useState<null | HTMLElement>(null);
+=======
+import FlagIcon from '@mui/icons-material/Flag';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import EventIcon from '@mui/icons-material/Event';
+import MenuIcon from '@mui/icons-material/Menu';
+import  DashboardCustomizeIcon  from '@mui/icons-material/ChevronLeft';
+
+interface SidebarProps {
+  collapsed?: boolean;
+  onToggle?: () => void;
+}
+
+const drawerWidth = 240; // Define drawerWidth as a constant
+
+const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [userManagementAnchorEl, setUserManagementAnchorEl] = useState<null | HTMLElement>(null);
+  const [criteriaManagementAnchorEl, setCriteriaManagementAnchorEl] = useState<null | HTMLElement>(null);
+  const [evaluationsAnchorEl, setEvaluationsAnchorEl] = useState<null | HTMLElement>(null);
+  const [userProfile, setUserProfile] = useState<{ fullName?: string } | null>(null);
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
   const userManagementOpen = Boolean(userManagementAnchorEl);
   const criteriaManagementOpen = Boolean(criteriaManagementAnchorEl);
   const evaluationsOpen = Boolean(evaluationsAnchorEl);
 
+<<<<<<< HEAD
+=======
+  useEffect(() => {
+    const storedProfile = localStorage.getItem('userProfile');
+    if (storedProfile) {
+      setUserProfile(JSON.parse(storedProfile));
+    }
+  }, []);
+
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
   const handleUserManagementMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     console.log('Opening user management menu');
     setUserManagementAnchorEl(event.currentTarget);
@@ -97,11 +138,35 @@ const Sidebar: React.FC = () => {
     navigate('/evaluations/view');
   };
 
+<<<<<<< HEAD
+=======
+  const handleGoals = () => {
+    console.log('Navigating to goals');
+    navigate('/goals');
+  };
+
+  const handleAnalyticsPerformance = () => {
+    console.log('Navigating to analytics performance');
+    navigate('/analytics-performance');
+  };
+
+  const handleSchedule = () => {
+    console.log('Navigating to schedule');
+    navigate('/schedule');
+  };
+
+  const handleToggle = () => {
+    console.log('Toggling sidebar');
+    if (onToggle) onToggle();
+  };
+
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
   return (
     <>
       <Drawer
         variant="permanent"
         sx={{
+<<<<<<< HEAD
           width: drawerWidth,
           flexShrink: 0,
           [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
@@ -157,6 +222,147 @@ const Sidebar: React.FC = () => {
                 <SettingsIcon />
               </ListItemIcon>
               <ListItemText primary="Settings" />
+=======
+          width: collapsed ? 60 : drawerWidth,
+          flexShrink: 0,
+          transition: 'width 0.3s',
+          [`& .MuiDrawer-paper`]: {
+            width: collapsed ? 60 : drawerWidth,
+            boxSizing: 'border-box',
+            transition: 'width 0.3s',
+            overflowX: 'hidden',
+          },
+        }}
+      >
+        <List>
+          <ListItem disablePadding sx={{ justifyContent: 'center', py: 1 }}>
+            <IconButton
+              color="inherit"
+              aria-label="toggle sidebar"
+              onClick={handleToggle}
+              edge="start"
+            >
+              {collapsed ? <MenuIcon /> : < DashboardCustomizeIcon  />}
+            </IconButton>
+          </ListItem>
+          {userProfile && (
+            <ListItem disablePadding sx={{ justifyContent: collapsed ? 'center' : 'flex-start', py: 1 }}>
+              <ListItemText
+                primary={`Logged in as: ${userProfile.fullName || 'Unknown User'}`}
+                sx={{ pl: collapsed ? 0 : 2, opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }}
+              />
+            </ListItem>
+          )}
+          <ListItem disablePadding>
+            <ListItemButton
+              selected={location.pathname === '/dashboard'}
+              onClick={() => navigate('/dashboard')}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
+            >
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
+                <DashboardIcon />
+              </ListItemIcon>
+              <ListItemText primary="Dashboard" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding>
+            <ListItemButton
+              selected={location.pathname.startsWith('/users')}
+              onClick={handleUserManagementMenuOpen}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
+            >
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
+                <PeopleIcon />
+              </ListItemIcon>
+              <ListItemText primary="User Management" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
+              {!collapsed && <ArrowDropDownIcon />}
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding>
+            <ListItemButton
+              selected={location.pathname.startsWith('/criteria')}
+              onClick={handleCriteriaManagementMenuOpen}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
+            >
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
+                <AssignmentIcon />
+              </ListItemIcon>
+              <ListItemText primary="Criteria Management" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
+              {!collapsed && <ArrowDropDownIcon />}
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding>
+            <ListItemButton
+              selected={location.pathname.startsWith('/evaluations')}
+              onClick={handleEvaluationsMenuOpen}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
+            >
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
+                <RateReviewIcon />
+              </ListItemIcon>
+              <ListItemText primary="Evaluations" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
+              {!collapsed && <ArrowDropDownIcon />}
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding>
+            <ListItemButton
+              selected={location.pathname === '/goals'}
+              onClick={handleGoals}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
+            >
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
+                <FlagIcon />
+              </ListItemIcon>
+              <ListItemText primary="Goals" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding>
+            <ListItemButton
+              selected={location.pathname === '/analytics-performance'}
+              onClick={handleAnalyticsPerformance}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
+            >
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
+                <AssessmentIcon />
+              </ListItemIcon>
+              <ListItemText primary="Analytics Performance" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding>
+            <ListItemButton
+              selected={location.pathname === '/schedule'}
+              onClick={handleSchedule}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
+            >
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
+                <EventIcon />
+              </ListItemIcon>
+              <ListItemText primary="Schedule" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding>
+            <ListItemButton
+              selected={location.pathname === '/reports'}
+              onClick={() => navigate('/reports')}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
+            >
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
+                <BarChartIcon />
+              </ListItemIcon>
+              <ListItemText primary="Reports" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding>
+            <ListItemButton
+              selected={location.pathname === '/settings'}
+              onClick={() => navigate('/settings')}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
+            >
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
+                <SettingsIcon />
+              </ListItemIcon>
+              <ListItemText primary="Settings" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
             </ListItemButton>
           </ListItem>
         </List>
@@ -168,8 +374,13 @@ const Sidebar: React.FC = () => {
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
+<<<<<<< HEAD
         <MenuItem onClick={handleCreateUser}>Create User</MenuItem>
         <MenuItem onClick={handleViewUsers}>View Users</MenuItem>
+=======
+        <MenuItem onClick={handleCreateUser} selected={location.pathname === '/users/create'}>Create User</MenuItem>
+        <MenuItem onClick={handleViewUsers} selected={location.pathname === '/users/view'}>View Users</MenuItem>
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
       </Menu>
       <Menu
         anchorEl={criteriaManagementAnchorEl}
@@ -178,8 +389,13 @@ const Sidebar: React.FC = () => {
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
+<<<<<<< HEAD
         <MenuItem onClick={handleCreateCriteria}>Create Criteria</MenuItem>
         <MenuItem onClick={handleViewCriteria}>View Criteria</MenuItem>
+=======
+        <MenuItem onClick={handleCreateCriteria} selected={location.pathname === '/criteria/create'}>Create Criteria</MenuItem>
+        <MenuItem onClick={handleViewCriteria} selected={location.pathname === '/criteria/view'}>View Criteria</MenuItem>
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
       </Menu>
       <Menu
         anchorEl={evaluationsAnchorEl}
@@ -188,8 +404,13 @@ const Sidebar: React.FC = () => {
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
+<<<<<<< HEAD
         <MenuItem onClick={handleCreateEvaluation}>Create Evaluation</MenuItem>
         <MenuItem onClick={handleViewEvaluations}>View Evaluations</MenuItem>
+=======
+        <MenuItem onClick={handleCreateEvaluation} selected={location.pathname === '/evaluations/create'}>Create Evaluation</MenuItem>
+        <MenuItem onClick={handleViewEvaluations} selected={location.pathname === '/evaluations/view'}>View Evaluations</MenuItem>
+>>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
       </Menu>
     </>
   );
