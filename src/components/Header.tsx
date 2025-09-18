@@ -64,9 +64,9 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
             <Typography variant="h6" noWrap>
               Employee Performance Evaluation
             </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.9 }} noWrap>
+            {/* <Typography variant="body2" sx={{ opacity: 0.9 }} noWrap>
               Assess, coach, and recognize employees to drive continuous improvement
-            </Typography>
+            </Typography> */}
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

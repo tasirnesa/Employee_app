@@ -87,15 +87,3 @@ model Goal {
 
   @@map("Goal")
 }
-
-model Evaluation {
-  evaluationID   Int      @id @default(autoincrement())
-  evaluatorID    Int
-  evaluateeID    Int
-  evaluationType String
-  sessionID      Int
-  evaluationDate DateTime
-
-  evaluator User @relation("Evaluator", fields: [evaluatorID], references: [id])
-  evaluatee User @relation("Evaluatee", fields: [evaluateeID], references: [id])
-}

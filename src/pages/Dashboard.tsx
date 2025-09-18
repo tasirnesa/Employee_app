@@ -81,11 +81,11 @@ const Dashboard: React.FC = () => {
   });
 
   const totalUsers = users?.length || 0;
-  const usersByRole = users?.reduce((acc, user) => {
+  const usersByRole = users?.reduce((acc: Record<string, number>, user: User) => {
     acc[user.role] = (acc[user.role] || 0) + 1;
     return acc;
   }, {} as Record<string, number>) || {};
-  const activeUsers = users?.filter((user) => user.activeStatus).length || 0;
+  const activeUsers = users?.filter((user: User) => user.activeStatus).length || 0;
   const inactiveUsers = totalUsers - activeUsers;
 
   const roleChartData = {
@@ -99,21 +99,21 @@ const Dashboard: React.FC = () => {
     ],
   };
 
-  const averageScores = criteria?.map((criterion) => {
-    const relevantResults = results?.filter((result) => result.criteriaID === criterion.criteriaID) || [];
+  const averageScores = criteria?.map((criterion: EvaluationCriteria) => {
+    const relevantResults = results?.filter((result: EvaluationResult) => result.criteriaID === criterion.criteriaID) || [];
     const avgScore =
       relevantResults.length > 0
-        ? relevantResults.reduce((sum, result) => sum + result.score, 0) / relevantResults.length
+        ? relevantResults.reduce((sum: number, result: EvaluationResult) => sum + result.score, 0) / relevantResults.length
         : 0;
     return { title: criterion.title, avgScore };
   }) || [];
 
   const scoreChartData = {
-    labels: averageScores.map((item) => item.title),
+    labels: averageScores.map((item: { title: string; avgScore: number }) => item.title),
     datasets: [
       {
         label: 'Average Score',
-        data: averageScores.map((item) => item.avgScore),
+        data: averageScores.map((item: { title: string; avgScore: number }) => item.avgScore),
         backgroundColor: '#36A2EB',
       },
     ],
@@ -138,7 +138,7 @@ const Dashboard: React.FC = () => {
 
   const recentEvaluations = evaluations
     ?.slice()
-    .sort((a, b) => new Date(b.evaluationDate).getTime() - new Date(a.evaluationDate).getTime())
+    .sort((a: Evaluation, b: Evaluation) => new Date(b.evaluationDate).getTime() - new Date(a.evaluationDate).getTime())
     .slice(0, 5);
 
   return (
@@ -190,7 +190,7 @@ const Dashboard: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {recentEvaluations?.map((evaluation) => (
+                    {recentEvaluations?.map((evaluation: Evaluation) => (
                       <TableRow key={evaluation.evaluationID}>
                         <TableCell>{evaluation.evaluationID}</TableCell>
                         <TableCell>{evaluation.evaluatorID}</TableCell>
