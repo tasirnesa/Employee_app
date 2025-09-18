@@ -9,21 +9,6 @@ datasource db {
 }
 
 model User {
-<<<<<<< HEAD
-  id           Int      @id @default(autoincrement()) @map("Id")
-  fullName     String   @map("FullName")
-  userName     String   @unique @map("UserName")
-  password     String   @map("Password")
-  gender       String?  @map("Gender")
-  age          Int?     @map("Age")
-  status       String   @map("Status") // Changed to String for bit(1)
-  role         String   @map("Role")
-  locked       String   @map("Locked") // Changed to String for bit(1)
-  isFirstLogin String   @map("IsFirstLogin") // Changed to String for bit(1)
-  activeStatus String   @map("activeStatus") // Changed to String for bit(1)
-  createdDate  DateTime @map("CreatedDate") // Changed to DateTime to support date
-  createdBy    Int      @map("CreatedBy")
-=======
   id                 Int                 @id @default(autoincrement()) @map("Id")
   fullName           String              @map("FullName")
   userName           String              @unique @map("UserName")
@@ -42,7 +27,6 @@ model User {
   goals              Goal[]              @relation("userGoals")
   evaluationSessions EvaluationSession[] @relation("userSessions")
   createdCriteria    EvaluationCriteria[] @relation("creatorCriteria")
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
 }
 
 model Evaluation {
@@ -51,15 +35,11 @@ model Evaluation {
   evaluateeID    Int      @map("EvaluateeID")
   evaluationType String   @map("EvaluationType")
   sessionID      Int      @map("SessionID")
-<<<<<<< HEAD
-  evaluationDate DateTime @map("EvaluationDate") // Changed to DateTime to support date
-=======
   evaluationDate DateTime @map("EvaluationDate")
   evaluator      User     @relation("evaluator", fields: [evaluatorID], references: [id])
   evaluatee      User     @relation("evaluatee", fields: [evaluateeID], references: [id])
   results        EvaluationResult[]
   session        EvaluationSession @relation(fields: [sessionID], references: [sessionID])
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
 }
 
 model EvaluationCriteria {
@@ -67,9 +47,6 @@ model EvaluationCriteria {
   title        String   @map("Title")
   description  String?  @map("Description")
   createdBy    Int      @map("CreatedBy")
-<<<<<<< HEAD
-  createdDate  DateTime @map("CreatedDate") // Added to match database
-=======
   createdDate  DateTime @map("CreatedDate")
   results      EvaluationResult[]
   creator      User?    @relation("creatorCriteria", fields: [createdBy], references: [id])
@@ -84,25 +61,12 @@ model EvaluationSession {
   type         String   @map("type") @default("")
   evaluations  Evaluation[]
   user         User     @relation("userSessions", fields: [activatedBy], references: [id])
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
 }
 
 model EvaluationResult {
   resultID     Int      @id @default(autoincrement()) @map("ResultID")
   evaluationID Int      @map("EvaluationID")
   criteriaID   Int      @map("CriteriaID")
-<<<<<<< HEAD
-  score        Float    @map("Score") // Changed to Float for double precision
-  feedback     String?  @map("Feedback")
-}
-
-model EvaluationSession {
-  sessionID    Int      @id @default(autoincrement()) @map("SessionID")
-  title        String   @map("Title")
-  startDate    DateTime @map("StartDate") // Changed to DateTime to support date
-  endDate      DateTime @map("EndDate") // Changed to DateTime to support date
-  activatedBy  Int      @map("ActivatedBy")
-=======
   score        Float    @map("Score")
   feedback     String?  @map("Feedback")
   evaluation   Evaluation @relation(fields: [evaluationID], references: [evaluationID])
@@ -122,5 +86,16 @@ model Goal {
   user       User?    @relation(fields: [activatedBy], references: [id], name: "userGoals") // Added name to match
 
   @@map("Goal")
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
+}
+
+model Evaluation {
+  evaluationID   Int      @id @default(autoincrement())
+  evaluatorID    Int
+  evaluateeID    Int
+  evaluationType String
+  sessionID      Int
+  evaluationDate DateTime
+
+  evaluator User @relation("Evaluator", fields: [evaluatorID], references: [id])
+  evaluatee User @relation("Evaluatee", fields: [evaluateeID], references: [id])
 }

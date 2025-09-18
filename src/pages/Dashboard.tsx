@@ -4,7 +4,6 @@ import axios from 'axios';
 import {
   Container,
   Typography,
-  Grid,
   Card,
   CardContent,
   Table,
@@ -147,16 +146,16 @@ const Dashboard: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         Dashboard
       </Typography>
-      <Grid container spacing={3}>
-        <Grid item xs={12} sm={6} md={4}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+        <Box sx={{ flex: '1 1 300px', minWidth: 260 }}>
           <Card>
             <CardContent>
               <Typography variant="h6">Total Registered Users</Typography>
               <Typography variant="h4">{totalUsers}</Typography>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
+        </Box>
+        <Box sx={{ flex: '1 1 300px', minWidth: 260 }}>
           <Card>
             <CardContent>
               <Typography variant="h6">User Status</Typography>
@@ -164,8 +163,8 @@ const Dashboard: React.FC = () => {
               <Typography>Inactive: {inactiveUsers}</Typography>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
+        </Box>
+        <Box sx={{ flex: '1 1 300px', minWidth: 260 }}>
           <Card>
             <CardContent>
               <Typography variant="h6">Users by Role</Typography>
@@ -174,8 +173,8 @@ const Dashboard: React.FC = () => {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12}>
+        </Box>
+        <Box sx={{ flex: '1 1 100%', minWidth: 260 }}>
           <Card>
             <CardContent>
               <Typography variant="h6">Recent Evaluations</Typography>
@@ -205,8 +204,8 @@ const Dashboard: React.FC = () => {
               </TableContainer>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12}>
+        </Box>
+        <Box sx={{ flex: '1 1 100%', minWidth: 260 }}>
           <Card>
             <CardContent>
               <Typography variant="h6">Average Evaluation Scores by Criteria</Typography>
@@ -215,8 +214,8 @@ const Dashboard: React.FC = () => {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Container>
   );
 };

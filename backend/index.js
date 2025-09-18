@@ -2,20 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const { PrismaClient } = require('@prisma/client');
-<<<<<<< HEAD
-=======
 const jwt = require('jsonwebtoken');
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-<<<<<<< HEAD
-// Initialize Prisma Client
-=======
-
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
 let prisma;
 try {
   prisma = new PrismaClient({
@@ -28,13 +20,6 @@ try {
   process.exit(1);
 }
 
-<<<<<<< HEAD
-// Middleware to normalize auth headers
-const getAuthHeader = (req) => {
-  const authHeader = req.headers['authorization'] || req.headers['auth'] || '';
-  console.log('getAuthHeader result:', authHeader);
-  return authHeader;
-=======
 const getAuthHeader = (req) => {
   const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
   console.log('Raw auth header:', authHeader);
@@ -58,7 +43,6 @@ const authenticateToken = (req, res, next) => {
     req.user = user;
     next();
   });
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
 };
 
 // Login endpoint
@@ -74,10 +58,7 @@ app.post('/api/auth/login', async (req, res) => {
       console.log('Missing username or password:', { username, password });
       return res.status(400).json({ error: 'Username and password are required' });
     }
-<<<<<<< HEAD
-=======
     
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
     console.log('Login attempt:', { username, password });
     const user = await prisma.user.findFirst({ where: { userName: username } });
     if (!user) {
@@ -89,36 +70,15 @@ app.post('/api/auth/login', async (req, res) => {
       console.log('Password mismatch for:', username);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-<<<<<<< HEAD
-    console.log('Login successful:', username);
-    res.json({ token: 'dummy-token', user });
-  } catch (error) {
-    console.error('Login error:', error.message);
-=======
     const token = jwt.sign({ id: user.id, username: user.userName }, SECRET_KEY, { expiresIn: '1h' });
     console.log('Login successful:', username);
     res.json({ token, user });
   } catch (error) {
     console.error('Login error:', error.message, error.stack); 
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
 
-<<<<<<< HEAD
-// Get current user
-app.get('/api/users/me', async (req, res) => {
-  try {
-    console.log('Headers for /api/users/me:', req.headers);
-    const authHeader = getAuthHeader(req);
-    if (!authHeader || authHeader !== 'Bearer dummy-token') {
-      console.log('Unauthorized: Invalid or missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    const user = await prisma.user.findUnique({ where: { id: 1 } });
-    if (!user) {
-      console.log('User not found for id: 1');
-=======
 
 app.get('/api/users/me', authenticateToken, async (req, res) => {
   try {
@@ -127,7 +87,6 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       console.log('User not found for id:', userId);
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
       return res.status(404).json({ error: 'User not found' });
     }
     console.log('Current user fetched:', user);
@@ -138,22 +97,10 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-// Update current user
-app.put('/api/users/me', async (req, res) => {
-  try {
-    console.log('Headers for /api/users/me:', req.headers);
-    const authHeader = getAuthHeader(req);
-    if (!authHeader || authHeader !== 'Bearer dummy-token') {
-      console.log('Unauthorized: Invalid or missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-=======
 app.put('/api/users/me', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/users/me:', req.headers);
     const userId = req.user.id; 
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
     const { fullName, userName, password } = req.body;
     if (!fullName || !userName) {
       console.log('Missing required fields:', { fullName, userName });
@@ -165,11 +112,7 @@ app.put('/api/users/me', authenticateToken, async (req, res) => {
       ...(password && { password: await bcrypt.hash(password, 10) }),
     };
     const user = await prisma.user.update({
-<<<<<<< HEAD
-      where: { id: 1 },
-=======
       where: { id: userId },
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
       data: updateData,
     });
     console.log('User updated:', user);
@@ -180,21 +123,9 @@ app.put('/api/users/me', authenticateToken, async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-// Get user by ID
-app.get('/api/users/:id', async (req, res) => {
-  try {
-    console.log('Headers for /api/users/:id:', req.headers);
-    const authHeader = getAuthHeader(req);
-    if (!authHeader || authHeader !== 'Bearer dummy-token') {
-      console.log('Unauthorized: Invalid or missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-=======
 app.get('/api/users/:id', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/users/:id:', req.headers);
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
     const userId = parseInt(req.params.id);
     if (isNaN(userId)) {
       console.log('Invalid user ID:', req.params.id);
@@ -213,22 +144,10 @@ app.get('/api/users/:id', authenticateToken, async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-// Get all users
-app.get('/api/users', async (req, res) => {
-  try {
-    console.log('Headers for /api/users:', req.headers);
-    const authHeader = getAuthHeader(req);
-    if (!authHeader || authHeader !== 'Bearer dummy-token') {
-      console.log('Unauthorized: Invalid or missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-=======
 
 app.get('/api/users', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/users:', req.headers);
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
     const users = await prisma.user.findMany();
     console.log('Users fetched:', users);
     res.json(users);
@@ -238,35 +157,6 @@ app.get('/api/users', authenticateToken, async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-// Get evaluations
-app.get('/api/evaluations', async (req, res) => {
-  try {
-    console.log('Headers for /api/evaluations:', req.headers);
-    const authHeader = getAuthHeader(req);
-    if (!authHeader || authHeader !== 'Bearer dummy-token') {
-      console.log('Unauthorized: Invalid or missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    const evaluations = await prisma.evaluation.findMany();
-    console.log('Evaluations fetched:', evaluations);
-    res.json(evaluations);
-  } catch (error) {
-    console.error('Fetch evaluations error:', error.message);
-    res.status(500).json({ error: 'Server error', details: error.message });
-  }
-});
-
-// Get criteria
-app.get('/api/criteria', async (req, res) => {
-  try {
-    console.log('Headers for /api/criteria:', req.headers);
-    const authHeader = getAuthHeader(req);
-    if (!authHeader || authHeader !== 'Bearer dummy-token') {
-      console.log('Unauthorized: Invalid or missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-=======
 app.get('/api/evaluations', authenticateToken, async (req, res) => {
   try {
     console.log('Fetching evaluations with headers:', req.headers);
@@ -361,7 +251,6 @@ app.post('/api/evaluations', authenticateToken, async (req, res) => {
 app.get('/api/criteria', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/criteria:', req.headers);
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
     const criteria = await prisma.evaluationCriteria.findMany();
     console.log('Criteria fetched:', criteria);
     res.json(criteria);
@@ -371,22 +260,10 @@ app.get('/api/criteria', authenticateToken, async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-// Get results
-app.get('/api/results', async (req, res) => {
-  try {
-    console.log('Headers for /api/results:', req.headers);
-    const authHeader = getAuthHeader(req);
-    if (!authHeader || authHeader !== 'Bearer dummy-token') {
-      console.log('Unauthorized: Invalid or missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-=======
 
 app.get('/api/results', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/results:', req.headers);
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
     const results = await prisma.evaluationResult.findMany();
     console.log('Results fetched:', results);
     res.json(results);
@@ -396,21 +273,9 @@ app.get('/api/results', authenticateToken, async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-// Get evaluation sessions
-app.get('/api/sessions', async (req, res) => {
-  try {
-    console.log('Headers for /api/sessions:', req.headers);
-    const authHeader = getAuthHeader(req);
-    if (!authHeader || authHeader !== 'Bearer dummy-token') {
-      console.log('Unauthorized: Invalid or missing token');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-=======
 app.get('/api/sessions', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/sessions:', req.headers);
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
     const sessions = await prisma.evaluationSession.findMany();
     console.log('Sessions fetched:', sessions);
     res.json(sessions);
@@ -420,12 +285,8 @@ app.get('/api/sessions', authenticateToken, async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-app.post('/api/users', async (req, res) => {
-=======
 
 app.post('/api/users', authenticateToken, async (req, res) => {
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
   console.log('Create user request received with body:', req.body);
   try {
     const {
@@ -442,23 +303,12 @@ app.post('/api/users', authenticateToken, async (req, res) => {
       createdBy,
     } = req.body;
 
-<<<<<<< HEAD
-    // Validate required fields
-=======
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
     if (!fullName || !userName || !password || !role || !createdBy) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-<<<<<<< HEAD
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
-=======
-    const hashedPassword = await bcrypt.hash(password, 10);
-
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
     const user = await prisma.user.create({
       data: {
         fullName,
@@ -484,13 +334,7 @@ app.post('/api/users', authenticateToken, async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-
-// New endpoint: Create Criteria
-app.post('/api/criteria', async (req, res) => {
-=======
 app.post('/api/criteria', authenticateToken, async (req, res) => {
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
   console.log('Create criteria request received with body:', req.body);
   try {
     const { title, description, createdBy } = req.body;
@@ -515,72 +359,6 @@ app.post('/api/criteria', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to create criteria' });
   }
 });
-<<<<<<< HEAD
-// New endpoint: Get Criteria
-app.get('/api/criteria', async (req, res) => {
-  console.log('Headers for /api/criteria:', req.headers);
-  try {
-    const criteria = await prisma.criteria.findMany();
-    console.log('Criteria fetched:', criteria);
-    res.json(criteria);
-  } catch (error) {
-    console.error('Fetch criteria error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch criteria' });
-  }
-});
-
-
-app.post('/api/evaluations', async (req, res) => {
-  console.log('Create evaluation request received with body:', req.body);
-  try {
-    const { evaluatorID, evaluateeID, evaluationType, sessionID } = req.body;
-
-    if (!evaluatorID || !evaluateeID || !evaluationType || !sessionID) {
-      return res.status(400).json({ error: 'Missing required fields: evaluatorID, evaluateeID, evaluationType, sessionID' });
-    }
-
-    if (evaluatorID === evaluateeID) {
-      return res.status(400).json({ error: 'Evaluator and evaluatee cannot be the same person' });
-    }
-
-    const evaluation = await prisma.evaluation.create({
-      data: {
-        evaluatorID: parseInt(evaluatorID),
-        evaluateeID: parseInt(evaluateeID),
-        evaluationType,
-        sessionID: parseInt(sessionID),
-        evaluationDate: new Date(),
-      },
-    });
-
-    console.log('Evaluation created:', evaluation);
-    res.status(201).json(evaluation);
-  } catch (error) {
-    console.error('Create evaluation error:', error.message);
-    res.status(500).json({ error: 'Failed to create evaluation' });
-  }
-});
-
-// Get evaluations endpoint
-app.get('/api/evaluations', async (req, res) => {
-  console.log('Headers for /api/evaluations:', req.headers);
-  try {
-    const evaluations = await prisma.evaluation.findMany({
-      include: {
-        evaluator: { select: { fullName: true } },
-        evaluatee: { select: { fullName: true } },
-      },
-    });
-    console.log('Evaluations fetched:', evaluations);
-    res.json(evaluations);
-  } catch (error) {
-    console.error('Fetch evaluations error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch evaluations' });
-  }
-});
-
-// Graceful shutdown
-=======
 
 
 
@@ -807,7 +585,6 @@ app.delete('/api/goals/:gid', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
->>>>>>> 52ad83bc437906e8444f927e1b189def214b11ed
 process.on('SIGTERM', async () => {
   console.log('Shutting down server...');
   await prisma.$disconnect();

@@ -8,7 +8,7 @@ import {
   ListItemText,
   Menu,
   MenuItem,
-  IconButton,
+  Button,
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -21,8 +21,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import FlagIcon from '@mui/icons-material/Flag';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import EventIcon from '@mui/icons-material/Event';
-import MenuIcon from '@mui/icons-material/Menu';
-import  DashboardCustomizeIcon  from '@mui/icons-material/ChevronLeft';
+// removed toggle icons in favor of text label "EES"
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -153,14 +152,14 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
       >
         <List>
           <ListItem disablePadding sx={{ justifyContent: 'center', py: 1 }}>
-            <IconButton
-              color="inherit"
-              aria-label="toggle sidebar"
+            <Button
               onClick={handleToggle}
-              edge="start"
+              color="inherit"
+              aria-label={collapsed ? 'Open sidebar' : 'Collapse sidebar'}
+              sx={{ fontWeight: 700, letterSpacing: 1 }}
             >
-              {collapsed ? <MenuIcon /> : < DashboardCustomizeIcon  />}
-            </IconButton>
+              EES
+            </Button>
           </ListItem>
           {userProfile && (
             <ListItem disablePadding sx={{ justifyContent: collapsed ? 'center' : 'flex-start', py: 1 }}>

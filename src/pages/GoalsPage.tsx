@@ -14,7 +14,6 @@ import {
   Button,
   TextField,
   Alert,
-  Grid,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -150,9 +149,9 @@ const GoalsPage: React.FC = () => {
           <Typography variant="h6">Avg Progress: <span style={{ color: '#0288d1' }}>{avgProgress}%</span></Typography>
         </Box>
       </Box>
-      <Grid container spacing={3}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
         {goals.map((goal) => (
-          <Grid item xs={12} sm={6} md={4} key={goal.gid}>
+          <Box key={goal.gid} sx={{ flex: '1 1 320px', minWidth: 280 }}>
             <Card
               sx={{
                 p: 2,
@@ -222,9 +221,9 @@ const GoalsPage: React.FC = () => {
                 </Box>
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
         ))}
-      </Grid>
+      </Box>
       <Box sx={{ mt: 4, textAlign: 'center' }}>
         <Button
           variant="contained"

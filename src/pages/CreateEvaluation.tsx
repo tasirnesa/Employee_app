@@ -27,7 +27,7 @@ import {
   DialogTitle,
   CircularProgress,
 } from '@mui/material';
-import type { Evaluation, User, Criteria, EvaluationResult } from '../types/interfaces';
+import type { Evaluation, User, EvaluationCriteria, EvaluationResult } from '../types/interfaces';
 
 const CreateEvaluation: React.FC = () => {
   console.log('CreateEvaluation rendering');
@@ -58,7 +58,7 @@ const CreateEvaluation: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log('Fetched criteria:', response.data);
-      return response.data as Criteria[];
+      return response.data as EvaluationCriteria[];
     },
   });
 
