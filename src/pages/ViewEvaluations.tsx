@@ -81,8 +81,8 @@ const ViewEvaluations: React.FC = () => {
                     }}
                   >
                     <TableCell>{evaluation.evaluationID}</TableCell>
-                    <TableCell>{evaluation.evaluatorID}</TableCell>
-                    <TableCell>{evaluation.evaluateeID}</TableCell>
+                    <TableCell>{evaluation.evaluator?.fullName || evaluation.evaluator?.FullName || evaluation.evaluatorID}</TableCell>
+                    <TableCell>{evaluation.evaluatee?.fullName || evaluation.evaluatee?.FullName || evaluation.evaluateeID}</TableCell>
                     <TableCell>{evaluation.evaluationType}</TableCell>
                     <TableCell>{evaluation.sessionID}</TableCell>
                     <TableCell>{new Date(evaluation.evaluationDate).toLocaleDateString()}</TableCell>

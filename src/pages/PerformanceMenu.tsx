@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../lib/axios';
 import { Box, Card, CardContent, Typography, Tab, Tabs, CardHeader } from '@mui/material';
 import { TabContext, TabPanel } from '@mui/lab'; // Correct import for TabPanel
 import { useQuery } from '@tanstack/react-query';
@@ -28,8 +28,19 @@ const PerformanceMenu = () => {
   };
 
   interface PerformanceData {
+    id: number;
     userId: number;
-    metrics: { tasksCompleted: number; hoursWorked: number };
+    evaluatorId: number;
+    tasksCompleted: number;
+    hoursWorked: number;
+    efficiencyScore?: number;
+    qualityScore?: number;
+    punctualityScore?: number;
+    collaborationScore?: number;
+    innovationScore?: number;
+    overallRating?: number;
+    feedback?: string;
+    evaluationPeriod: string;
     date: string;
   }
 
@@ -38,13 +49,10 @@ const PerformanceMenu = () => {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token available');
-      const response = await axios.get('http://localhost:3000/api/performance', {
+      const response = await api.get('/api/performance', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      let data = response.data;
-      if (userRole !== 'admin' && userRole !== 'superadmin') {
-        data = data.filter((item: PerformanceData) => item.userId === userId);
-      }
+      const data = response.data as PerformanceData[];
       return data;
     },
     enabled: !!localStorage.getItem('token'),
@@ -68,16 +76,20 @@ const PerformanceMenu = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>Date</TableCell>
-                    <TableCell>Tasks Completed</TableCell>
-                    <TableCell>Hours Worked</TableCell>
+                    <TableCell>Period</TableCell>
+                    <TableCell>Tasks</TableCell>
+                    <TableCell>Hours</TableCell>
+                    <TableCell>Overall</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {performanceData.map((item, index) => (
                     <TableRow key={index}>
-                      <TableCell>{item.date}</TableCell>
-                      <TableCell>{item.metrics.tasksCompleted}</TableCell>
-                      <TableCell>{item.metrics.hoursWorked}</TableCell>
+                      <TableCell>{new Date(item.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{item.evaluationPeriod}</TableCell>
+                      <TableCell>{item.tasksCompleted}</TableCell>
+                      <TableCell>{item.hoursWorked}</TableCell>
+                      <TableCell>{item.overallRating ?? '-'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -91,18 +103,24 @@ const PerformanceMenu = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell>User ID</TableCell>
+                      <TableCell>Evaluator ID</TableCell>
                       <TableCell>Date</TableCell>
-                      <TableCell>Tasks Completed</TableCell>
-                      <TableCell>Hours Worked</TableCell>
+                      <TableCell>Period</TableCell>
+                      <TableCell>Tasks</TableCell>
+                      <TableCell>Hours</TableCell>
+                      <TableCell>Overall</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {performanceData.map((item, index) => (
                       <TableRow key={index}>
                         <TableCell>{item.userId}</TableCell>
-                        <TableCell>{item.date}</TableCell>
-                        <TableCell>{item.metrics.tasksCompleted}</TableCell>
-                        <TableCell>{item.metrics.hoursWorked}</TableCell>
+                        <TableCell>{item.evaluatorId}</TableCell>
+                        <TableCell>{new Date(item.date).toLocaleDateString()}</TableCell>
+                        <TableCell>{item.evaluationPeriod}</TableCell>
+                        <TableCell>{item.tasksCompleted}</TableCell>
+                        <TableCell>{item.hoursWorked}</TableCell>
+                        <TableCell>{item.overallRating ?? '-'}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

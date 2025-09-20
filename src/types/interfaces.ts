@@ -21,8 +21,8 @@ export interface Evaluation {
   evaluationType: string;
   sessionID: number;
   evaluationDate: string;
-  evaluator: { FullName: string };
-  evaluatee: { FullName: string };
+  evaluator?: { fullName?: string; FullName?: string };
+  evaluatee?: { fullName?: string; FullName?: string };
 }
 
 export interface EvaluationCriteria {
@@ -31,6 +31,7 @@ export interface EvaluationCriteria {
   description?: string;
   createdBy: number;
   createdDate: string;
+  creator?: { fullName?: string; FullName?: string };
 }
 
 export interface EvaluationResult {

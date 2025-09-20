@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import axios, { AxiosError } from 'axios';
+import { AxiosError } from 'axios';
+import api from '../lib/axios';
 import { Box, Card, CardContent, TextField, Button, Typography, Alert, Tab, Tabs, CardHeader, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import { TabContext, TabPanel } from '@mui/lab';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -30,8 +31,8 @@ const ScheduleMenu = () => {
     }
 
     try {
-      const response = await axios.post(
-        'http://localhost:3000/api/evaluation-sessions',
+      const response = await api.post(
+        '/api/evaluation-sessions',
         { title, startDate, endDate },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -60,7 +61,7 @@ const ScheduleMenu = () => {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token available');
-      const response = await axios.get('http://localhost:3000/api/evaluation-sessions/stats', {
+      const response = await api.get('/api/evaluation-sessions/stats', {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;
@@ -73,43 +74,58 @@ const ScheduleMenu = () => {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token available');
-      const response = await axios.get('http://localhost:3000/api/evaluation-sessions', {
+      const response = await api.get('/api/evaluation-sessions', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log('Fetched sessions:', response.data); // Debug: Check session data
-      return response.data as Session[];
+      const raw = response.data as any[];
+      const normalized: Session[] = raw.map((s: any) => ({
+        id: s.sessionID ?? s.id,
+        title: s.title,
+        startDate: s.startDate,
+        endDate: s.endDate,
+        activatedBy: s.activatedBy ?? s.ActivatedBy ?? 0,
+      }));
+      console.log('Normalized sessions:', normalized);
+      return normalized as Session[];
     },
     enabled: !!localStorage.getItem('token'),
   });
 
   const getCurrentWeekRange = () => {
-    const now = new Date();
-    const dayOfWeek = now.getDay();
-    const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust to Monday
-    const monday = new Date(now.setDate(diff));
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    return { start: monday.toISOString().split('T')[0], end: sunday.toISOString().split('T')[0] };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const weekStart = new Date(today);
+    const day = weekStart.getDay();
+    const diffToMonday = (day + 6) % 7; // 0->6, 1->0 ... Monday as start
+    weekStart.setDate(weekStart.getDate() - diffToMonday);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    return { weekStart, weekEnd };
   };
 
-  const currentWeek = getCurrentWeekRange();
-  const today = new Date().toISOString().split('T')[0];
+  const { weekStart, weekEnd } = getCurrentWeekRange();
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
 
   // Filter sessions based on category
   const getSessionsByCategory = (category: string) => {
-    const now = new Date().toISOString().split('T')[0];
     switch (category) {
       case 'This Week':
         return sessions.filter(session => {
-          const start = new Date(session.startDate).toISOString().split('T')[0];
-          const end = new Date(session.endDate).toISOString().split('T')[0];
-          return start >= currentWeek.start && end <= currentWeek.end;
+          const start = new Date(session.startDate);
+          const end = new Date(session.endDate);
+          start.setHours(0, 0, 0, 0);
+          end.setHours(0, 0, 0, 0);
+          // Overlap with week range
+          return start.getTime() <= weekEnd.getTime() && end.getTime() >= weekStart.getTime();
         });
       case 'Today':
         return sessions.filter(session => {
-          const start = new Date(session.startDate).toISOString().split('T')[0];
-          const end = new Date(session.endDate).toISOString().split('T')[0];
-          return start <= now && end >= now;
+          const start = new Date(session.startDate);
+          const end = new Date(session.endDate);
+          start.setHours(0, 0, 0, 0);
+          end.setHours(0, 0, 0, 0);
+          return start.getTime() <= todayDate.getTime() && end.getTime() >= todayDate.getTime();
         });
       case 'Meetings':
         return sessions.filter(session => session.title.toLowerCase().includes('meeting')); 

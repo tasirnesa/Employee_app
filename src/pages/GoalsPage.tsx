@@ -232,7 +232,7 @@ const GoalsPage: React.FC = () => {
           onClick={() => setIsFormOpen(true)}
           sx={{ px: 3, py: 1.5, borderRadius: 2 }}
         >
-          + New Goal
+          New Goal
         </Button>
       </Box>
       {isFormOpen && (

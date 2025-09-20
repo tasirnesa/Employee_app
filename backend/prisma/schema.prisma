@@ -27,6 +27,8 @@ model User {
   goals              Goal[]              @relation("userGoals")
   evaluationSessions EvaluationSession[] @relation("userSessions")
   createdCriteria    EvaluationCriteria[] @relation("creatorCriteria")
+  performancesAsUser      Performance[]       @relation("UserPerformance")
+  performancesAsEvaluator Performance[]       @relation("EvaluatorPerformance")
 }
 
 model Evaluation {
@@ -86,4 +88,24 @@ model Goal {
   user       User?    @relation(fields: [activatedBy], references: [id], name: "userGoals") // Added name to match
 
   @@map("Goal")
+}
+model Performance {
+  id                Int      @id @default(autoincrement())
+  userId            Int
+  evaluatorId       Int
+  tasksCompleted    Int
+  hoursWorked       Int
+  efficiencyScore   Float?
+  qualityScore      Float?
+  punctualityScore  Float?
+  collaborationScore Float?
+  innovationScore   Float?
+  overallRating     Float?
+  feedback          String?
+  evaluationPeriod  String
+  date              DateTime
+  createdAt         DateTime @default(now())
+
+  user      User @relation("UserPerformance", fields: [userId], references: [id])
+  evaluator User @relation("EvaluatorPerformance", fields: [evaluatorId], references: [id])
 }

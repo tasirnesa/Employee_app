@@ -197,6 +197,23 @@ app.post('/api/evaluations', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Evaluator and evaluatee cannot be the same person' });
     }
 
+    // Validate foreign keys before create to avoid FK constraint errors
+    const [evaluatorExists, evaluateeExists, sessionExists] = await Promise.all([
+      prisma.user.findUnique({ where: { id: parseInt(evaluatorID) } }),
+      prisma.user.findUnique({ where: { id: parseInt(evaluateeID) } }),
+      prisma.evaluationSession.findUnique({ where: { sessionID: parseInt(sessionID) } }),
+    ]);
+
+    if (!evaluatorExists) {
+      return res.status(400).json({ error: `Evaluator with id ${evaluatorID} does not exist` });
+    }
+    if (!evaluateeExists) {
+      return res.status(400).json({ error: `Evaluatee with id ${evaluateeID} does not exist` });
+    }
+    if (!sessionExists) {
+      return res.status(400).json({ error: `Session with id ${sessionID} does not exist` });
+    }
+
     const evaluationResult = await prisma.evaluation.create({
       data: {
         evaluationID: undefined,
@@ -251,9 +268,24 @@ app.post('/api/evaluations', authenticateToken, async (req, res) => {
 app.get('/api/criteria', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/criteria:', req.headers);
-    const criteria = await prisma.evaluationCriteria.findMany();
-    console.log('Criteria fetched:', criteria);
-    res.json(criteria);
+    const criteria = await prisma.evaluationCriteria.findMany({
+      include: {
+        creator: { select: { fullName: true } },
+      },
+    });
+    // Fallback: if some rows have creator null but createdBy set, enrich names
+    const missing = criteria.filter(c => !c.creator && c.createdBy != null).map(c => c.createdBy);
+    let idToName = {};
+    if (missing.length) {
+      const users = await prisma.user.findMany({ where: { id: { in: Array.from(new Set(missing)) } }, select: { id: true, fullName: true } });
+      idToName = users.reduce((acc, u) => { acc[u.id] = u.fullName; return acc; }, {});
+    }
+    const enriched = criteria.map(c => ({
+      ...c,
+      creatorName: c.creator?.fullName || (idToName[c.createdBy] || null),
+    }));
+    console.log('Criteria fetched:', enriched);
+    res.json(enriched);
   } catch (error) {
     console.error('Fetch criteria error:', error.message);
     res.status(500).json({ error: 'Server error', details: error.message });
@@ -337,7 +369,7 @@ app.post('/api/users', authenticateToken, async (req, res) => {
 app.post('/api/criteria', authenticateToken, async (req, res) => {
   console.log('Create criteria request received with body:', req.body);
   try {
-    const { title, description, createdBy } = req.body;
+    const { title, description } = req.body;
 
     if (!title || !createdBy) {
       return res.status(400).json({ error: 'Missing required fields: title and createdBy' });
@@ -348,18 +380,78 @@ app.post('/api/criteria', authenticateToken, async (req, res) => {
         title,
         description,
         createdDate: new Date(),
-        createdBy: parseInt(createdBy),
+        createdBy: req.user.id,
       },
+      include: { creator: { select: { fullName: true } } }
     });
 
     console.log('Criteria created:', criteria);
-    res.status(201).json(criteria);
+    res.status(201).json({ ...criteria, creatorName: criteria.creator?.fullName || null });
   } catch (error) {
     console.error('Create criteria error:', error.message);
     res.status(500).json({ error: 'Failed to create criteria' });
   }
 });
 
+// Update criteria
+app.put('/api/criteria/:id', authenticateToken, async (req, res) => {
+  console.log('Update criteria request with params:', req.params, 'body:', req.body);
+  try {
+    const id = parseInt(req.params.id);
+    const { title, description } = req.body;
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid criteria id' });
+    if (!title) return res.status(400).json({ error: 'Title is required' });
+
+    const existing = await prisma.evaluationCriteria.findUnique({ where: { criteriaID: id } });
+    if (!existing) return res.status(404).json({ error: 'Criteria not found' });
+
+    const updated = await prisma.evaluationCriteria.update({
+      where: { criteriaID: id },
+      data: { title, description },
+    });
+    res.json(updated);
+  } catch (error) {
+    console.error('Update criteria error:', error.message);
+    res.status(500).json({ error: 'Failed to update criteria' });
+  }
+});
+
+// Delete criteria
+app.delete('/api/criteria/:id', authenticateToken, async (req, res) => {
+  console.log('Delete criteria request with params:', req.params);
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid criteria id' });
+    const existing = await prisma.evaluationCriteria.findUnique({ where: { criteriaID: id } });
+    if (!existing) return res.status(404).json({ error: 'Criteria not found' });
+
+    await prisma.evaluationCriteria.delete({ where: { criteriaID: id } });
+    res.status(204).send();
+  } catch (error) {
+    console.error('Delete criteria error:', error.message);
+    res.status(500).json({ error: 'Failed to delete criteria' });
+  }
+});
+
+// Authorize criteria (assign current user as creator)
+app.post('/api/criteria/:id/authorize', authenticateToken, async (req, res) => {
+  console.log('Authorize criteria request with params:', req.params);
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid criteria id' });
+    const existing = await prisma.evaluationCriteria.findUnique({ where: { criteriaID: id } });
+    if (!existing) return res.status(404).json({ error: 'Criteria not found' });
+
+    const updated = await prisma.evaluationCriteria.update({
+      where: { criteriaID: id },
+      data: { createdBy: req.user.id },
+    });
+    res.json({ message: 'Authorized', criteria: updated });
+  } catch (error) {
+    console.error('Authorize criteria error:', error.message);
+    res.status(500).json({ error: 'Failed to authorize criteria' });
+  }
+});
 
 
 
@@ -402,12 +494,17 @@ app.post('/api/evaluation-sessions', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
-app.get('/api/evaluation-sessions', (req, res) => {
-  const sessions = [
-    { id: 1, title: "Team Meeting", startDate: "2025-07-30", endDate: "2025-07-31" },
-    { id: 2, title: "Evaluation", startDate: "2025-07-28", endDate: "2025-08-03" },
-  ];
-  res.json(sessions);
+app.get('/api/evaluation-sessions', authenticateToken, async (req, res) => {
+  try {
+    const sessions = await prisma.evaluationSession.findMany({
+      where: { activatedBy: req.user.id },
+      orderBy: { startDate: 'desc' },
+    });
+    res.json(sessions);
+  } catch (error) {
+    console.error('Fetch sessions error:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
 });
 
 app.get('/api/evaluation-sessions/stats', authenticateToken, async (req, res) => {
@@ -444,13 +541,261 @@ app.get('/api/performance', authenticateToken, async (req, res) => {
   console.log('Fetching performance data');
   try {
     const performanceData = await prisma.performance.findMany({
-      where: { ActivatedBy: parseInt(req.user.id) }, // Default to user's data
+      where: { userId: req.user.id },
+      orderBy: { date: 'desc' },
     });
     console.log('Performance data fetched:', performanceData);
     res.status(200).json(performanceData);
   } catch (error) {
     console.error('Fetch performance data error:', error.message);
     res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+// Helpers for performance calculation
+const toStartOfDay = (d) => {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+};
+
+const coercePeriod = (body) => {
+  const now = new Date();
+  const start = body?.periodStart ? toStartOfDay(body.periodStart) : new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = body?.periodEnd ? toStartOfDay(body.periodEnd) : new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const label = body?.evaluationPeriod || `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
+  return { start, end, label };
+};
+
+const mapScoreTo100 = (score, min = 1, max = 5) => {
+  if (score == null) return null;
+  const clamped = Math.max(min, Math.min(max, Number(score)));
+  return ((clamped - min) / (max - min)) * 100;
+};
+
+const safeAvg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+
+// POST /api/performance/recalculate { userId, periodStart?, periodEnd?, evaluationPeriod? }
+app.post('/api/performance/recalculate', authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId is required' });
+    const { start, end, label } = coercePeriod(req.body);
+
+    // Verify user exists
+    const user = await prisma.user.findUnique({ where: { id: parseInt(userId) } });
+    if (!user) return res.status(400).json({ error: `User ${userId} does not exist` });
+
+    // 1) Evaluation score (normalize 1-5 to 0-100)
+    const evalResults = await prisma.evaluationResult.findMany({
+      where: {
+        evaluation: {
+          evaluateeID: parseInt(userId),
+          evaluationDate: { gte: start, lte: end },
+        },
+      },
+      select: { score: true },
+    });
+    const evalScores100 = evalResults.map((r) => mapScoreTo100(r.score)).filter((x) => x != null);
+    const evaluationScore = safeAvg(evalScores100); // 0..100
+
+    // 2) Goals score: use average progress (0..100) for goals with duedate in period (fallback all goals)
+    let goals = await prisma.goal.findMany({
+      where: {
+        activatedBy: parseInt(userId),
+        OR: [
+          { duedate: { gte: start, lte: end } },
+          { duedate: null },
+        ],
+      },
+      select: { progress: true },
+    });
+    const goalProgress = goals.map((g) => (g.progress == null ? 0 : Number(g.progress))).filter((n) => !Number.isNaN(n));
+    const goalsScore = safeAvg(goalProgress); // already 0..100 convention
+
+    // 3) Productivity: if raw perf records exist in period, derive a score vs benchmark
+    const rawPerf = await prisma.performance.findMany({
+      where: { userId: parseInt(userId), date: { gte: start, lte: end } },
+      select: { tasksCompleted: true, hoursWorked: true },
+    });
+    let productivityScore = null;
+    if (rawPerf.length) {
+      const totalTasks = rawPerf.reduce((s, r) => s + (r.tasksCompleted || 0), 0);
+      // Simple benchmark: 40 tasks per period → 100
+      const targetTasks = 40;
+      productivityScore = Math.min(100, (totalTasks / targetTasks) * 100);
+    }
+
+    // 4) Punctuality: placeholder unless you track it elsewhere
+    const punctualityScore = null;
+
+    // Weights (adjustable)
+    const weights = { evaluation: 0.5, goals: 0.25, productivity: 0.15, punctuality: 0.1 };
+    const components = {
+      evaluation: isNaN(evaluationScore) ? 0 : evaluationScore,
+      goals: isNaN(goalsScore) ? 0 : goalsScore,
+      productivity: productivityScore == null ? 0 : productivityScore,
+      punctuality: punctualityScore == null ? 0 : punctualityScore,
+    };
+    const overallRating =
+      components.evaluation * weights.evaluation +
+      components.goals * weights.goals +
+      components.productivity * weights.productivity +
+      components.punctuality * weights.punctuality;
+
+    // Upsert (find existing by userId + period label)
+    const existing = await prisma.performance.findFirst({ where: { userId: parseInt(userId), evaluationPeriod: label } });
+    let saved;
+    if (existing) {
+      saved = await prisma.performance.update({
+        where: { id: existing.id },
+        data: {
+          evaluatorId: req.user.id,
+          tasksCompleted: rawPerf.reduce((s, r) => s + (r.tasksCompleted || 0), 0),
+          hoursWorked: rawPerf.reduce((s, r) => s + (r.hoursWorked || 0), 0),
+          efficiencyScore: null,
+          qualityScore: null,
+          punctualityScore: punctualityScore,
+          collaborationScore: null,
+          innovationScore: null,
+          overallRating,
+          feedback: null,
+          evaluationPeriod: label,
+          date: end,
+        },
+      });
+    } else {
+      saved = await prisma.performance.create({
+        data: {
+          userId: parseInt(userId),
+          evaluatorId: req.user.id,
+          tasksCompleted: rawPerf.reduce((s, r) => s + (r.tasksCompleted || 0), 0),
+          hoursWorked: rawPerf.reduce((s, r) => s + (r.hoursWorked || 0), 0),
+          overallRating,
+          evaluationPeriod: label,
+          date: end,
+        },
+      });
+    }
+
+    return res.status(200).json({
+      message: 'Recalculated',
+      period: { start, end, label },
+      components,
+      overallRating,
+      performance: saved,
+    });
+  } catch (error) {
+    console.error('Recalculate performance error:', error.message);
+    return res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+// POST /api/performance/recalculate-all { periodStart?, periodEnd?, evaluationPeriod? }
+app.post('/api/performance/recalculate-all', authenticateToken, async (req, res) => {
+  try {
+    const { start, end, label } = coercePeriod(req.body);
+    const users = await prisma.user.findMany({ select: { id: true } });
+    const results = [];
+    for (const u of users) {
+      const r = await fetch(`http://localhost:3000/api/performance/recalculate`); // placeholder to satisfy linter
+      // Instead of HTTP, call the same logic inline for efficiency:
+      const evalResults = await prisma.evaluationResult.findMany({
+        where: { evaluation: { evaluateeID: u.id, evaluationDate: { gte: start, lte: end } } },
+        select: { score: true },
+      });
+      const evalScores100 = evalResults.map((r) => mapScoreTo100(r.score)).filter((x) => x != null);
+      const evaluationScore = safeAvg(evalScores100);
+      let goals = await prisma.goal.findMany({
+        where: { activatedBy: u.id, OR: [{ duedate: { gte: start, lte: end } }, { duedate: null }] },
+        select: { progress: true },
+      });
+      const goalProgress = goals.map((g) => (g.progress == null ? 0 : Number(g.progress))).filter((n) => !Number.isNaN(n));
+      const goalsScore = safeAvg(goalProgress);
+      const rawPerf = await prisma.performance.findMany({ where: { userId: u.id, date: { gte: start, lte: end } }, select: { tasksCompleted: true, hoursWorked: true } });
+      let productivityScore = null;
+      if (rawPerf.length) {
+        const totalTasks = rawPerf.reduce((s, r) => s + (r.tasksCompleted || 0), 0);
+        const targetTasks = 40;
+        productivityScore = Math.min(100, (totalTasks / targetTasks) * 100);
+      }
+      const components = {
+        evaluation: isNaN(evaluationScore) ? 0 : evaluationScore,
+        goals: isNaN(goalsScore) ? 0 : goalsScore,
+        productivity: productivityScore == null ? 0 : productivityScore,
+        punctuality: 0,
+      };
+      const weights = { evaluation: 0.5, goals: 0.25, productivity: 0.15, punctuality: 0.1 };
+      const overallRating =
+        components.evaluation * weights.evaluation +
+        components.goals * weights.goals +
+        components.productivity * weights.productivity +
+        components.punctuality * weights.punctuality;
+      const existing = await prisma.performance.findFirst({ where: { userId: u.id, evaluationPeriod: label } });
+      if (existing) {
+        await prisma.performance.update({ where: { id: existing.id }, data: { overallRating, evaluationPeriod: label, date: end } });
+      } else {
+        await prisma.performance.create({ data: { userId: u.id, evaluatorId: req.user.id, tasksCompleted: 0, hoursWorked: 0, overallRating, evaluationPeriod: label, date: end } });
+      }
+      results.push({ userId: u.id, overallRating });
+    }
+    return res.status(200).json({ message: 'Recalculated for all users', period: { start, end, label }, results });
+  } catch (error) {
+    console.error('Recalculate-all error:', error.message);
+    return res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+app.post('/api/performance', authenticateToken, async (req, res) => {
+  console.log('Create performance record with body:', req.body);
+  try {
+    const {
+      userId,
+      evaluatorId,
+      tasksCompleted,
+      hoursWorked,
+      efficiencyScore,
+      qualityScore,
+      punctualityScore,
+      collaborationScore,
+      innovationScore,
+      overallRating,
+      feedback,
+      evaluationPeriod,
+      date,
+    } = req.body;
+
+    if (!userId || !evaluatorId || tasksCompleted === undefined || hoursWorked === undefined || !evaluationPeriod || !date) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const [userExists, evaluatorExists] = await Promise.all([
+      prisma.user.findUnique({ where: { id: parseInt(userId) } }),
+      prisma.user.findUnique({ where: { id: parseInt(evaluatorId) } }),
+    ]);
+    if (!userExists) return res.status(400).json({ error: `User ${userId} does not exist` });
+    if (!evaluatorExists) return res.status(400).json({ error: `Evaluator ${evaluatorId} does not exist` });
+
+    const created = await prisma.performance.create({
+      data: {
+        userId: parseInt(userId),
+        evaluatorId: parseInt(evaluatorId),
+        tasksCompleted: parseInt(tasksCompleted),
+        hoursWorked: parseInt(hoursWorked),
+        efficiencyScore: efficiencyScore != null ? Number(efficiencyScore) : null,
+        qualityScore: qualityScore != null ? Number(qualityScore) : null,
+        punctualityScore: punctualityScore != null ? Number(punctualityScore) : null,
+        collaborationScore: collaborationScore != null ? Number(collaborationScore) : null,
+        innovationScore: innovationScore != null ? Number(innovationScore) : null,
+        overallRating: overallRating != null ? Number(overallRating) : null,
+        feedback: feedback || null,
+        evaluationPeriod,
+        date: new Date(date),
+      },
+    });
+    return res.status(201).json(created);
+  } catch (error) {
+    console.error('Create performance error:', error.message);
+    return res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
 

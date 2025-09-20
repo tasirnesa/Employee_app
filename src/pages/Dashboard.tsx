@@ -15,19 +15,21 @@ import {
   Paper,
   Box,
 } from '@mui/material';
-import { Pie, Bar } from 'react-chartjs-2';
+import { Pie, Bar, Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   ArcElement,
   BarElement,
   CategoryScale,
   LinearScale,
+  LineElement,
+  PointElement,
   Tooltip,
   Legend,
 } from 'chart.js';
 import type { User, Evaluation, EvaluationCriteria, EvaluationResult } from '../types/interfaces';
 
-ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, LineElement, PointElement, Tooltip, Legend);
 
 const Dashboard: React.FC = () => {
   const token = localStorage.getItem('token');
@@ -80,6 +82,18 @@ const Dashboard: React.FC = () => {
     },
   });
 
+  const { data: sessionStats } = useQuery({
+    queryKey: ['sessionStats'],
+    queryFn: async () => {
+      if (!token) throw new Error('No authentication token');
+      const response = await axios.get('http://localhost:3000/api/evaluation-sessions/stats', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log('Fetched session stats:', response.data);
+      return response.data as { thisWeek: number; today: number; pending: number; meetings: number };
+    },
+  });
+
   const totalUsers = users?.length || 0;
   const usersByRole = users?.reduce((acc: Record<string, number>, user: User) => {
     acc[user.role] = (acc[user.role] || 0) + 1;
@@ -115,6 +129,70 @@ const Dashboard: React.FC = () => {
         label: 'Average Score',
         data: averageScores.map((item: { title: string; avgScore: number }) => item.avgScore),
         backgroundColor: '#36A2EB',
+      },
+    ],
+  };
+
+  const totalEvaluations = evaluations?.length || 0;
+  const overallAverageScore = results && results.length > 0
+    ? results.reduce((sum: number, r: EvaluationResult) => sum + r.score, 0) / results.length
+    : 0;
+
+  const evaluationsByType = evaluations?.reduce((acc: Record<string, number>, e: Evaluation) => {
+    acc[e.evaluationType] = (acc[e.evaluationType] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>) || {};
+
+  const evalTypeChartData = {
+    labels: Object.keys(evaluationsByType),
+    datasets: [
+      {
+        data: Object.values(evaluationsByType),
+        backgroundColor: ['#4BC0C0', '#FF6384', '#9966FF', '#FFCE56', '#36A2EB'],
+        hoverBackgroundColor: ['#4BC0C0', '#FF6384', '#9966FF', '#FFCE56', '#36A2EB'],
+      },
+    ],
+  };
+
+  // Monthly evaluations trend (last 6 months)
+  const trendLabels: string[] = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    trendLabels.push(d.toLocaleString(undefined, { month: 'short', year: '2-digit' }));
+  }
+  const monthlyCounts = new Array(trendLabels.length).fill(0);
+  (evaluations || []).forEach((e: Evaluation) => {
+    const d = new Date(e.evaluationDate);
+    const label = d.toLocaleString(undefined, { month: 'short', year: '2-digit' });
+    const idx = trendLabels.indexOf(label);
+    if (idx !== -1) monthlyCounts[idx] += 1;
+  });
+  const trendChartData = {
+    labels: trendLabels,
+    datasets: [
+      {
+        label: 'Evaluations (last 6 months)',
+        data: monthlyCounts,
+        borderColor: '#36A2EB',
+        backgroundColor: 'rgba(54,162,235,0.2)',
+        tension: 0.35,
+        fill: true,
+        pointRadius: 3,
+      },
+    ],
+  };
+
+  // Score distribution (bins 1..5)
+  const scoreBins = [1, 2, 3, 4, 5];
+  const scoreCounts = scoreBins.map((b) => (results || []).filter((r) => Math.round(r.score) === b).length);
+  const scoreDistributionData = {
+    labels: scoreBins.map((b) => `Score ${b}`),
+    datasets: [
+      {
+        label: 'Responses',
+        data: scoreCounts,
+        backgroundColor: '#8E8CF3',
       },
     ],
   };
@@ -167,9 +245,38 @@ const Dashboard: React.FC = () => {
         <Box sx={{ flex: '1 1 300px', minWidth: 260 }}>
           <Card>
             <CardContent>
+              <Typography variant="h6">Evaluations</Typography>
+              <Typography>Total: {totalEvaluations}</Typography>
+              <Typography>Avg Score: {overallAverageScore.toFixed(2)}</Typography>
+            </CardContent>
+          </Card>
+        </Box>
+        <Box sx={{ flex: '1 1 300px', minWidth: 260 }}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6">Sessions</Typography>
+              <Typography>This week: {sessionStats?.thisWeek ?? 0}</Typography>
+              <Typography>Today: {sessionStats?.today ?? 0}</Typography>
+              <Typography>Pending: {sessionStats?.pending ?? 0}</Typography>
+            </CardContent>
+          </Card>
+        </Box>
+        <Box sx={{ flex: '1 1 300px', minWidth: 260 }}>
+          <Card>
+            <CardContent>
               <Typography variant="h6">Users by Role</Typography>
               <Box sx={{ height: 200 }}>
                 <Pie data={roleChartData} options={chartOptions} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
+        <Box sx={{ flex: '1 1 300px', minWidth: 260 }}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6">Evaluations by Type</Typography>
+              <Box sx={{ height: 200 }}>
+                <Pie data={evalTypeChartData} options={chartOptions} />
               </Box>
             </CardContent>
           </Card>
@@ -183,8 +290,8 @@ const Dashboard: React.FC = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>Evaluation ID</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Evaluator ID</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Evaluatee ID</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Evaluator</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Evaluatee</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
                     </TableRow>
@@ -193,8 +300,8 @@ const Dashboard: React.FC = () => {
                     {recentEvaluations?.map((evaluation: Evaluation) => (
                       <TableRow key={evaluation.evaluationID}>
                         <TableCell>{evaluation.evaluationID}</TableCell>
-                        <TableCell>{evaluation.evaluatorID}</TableCell>
-                        <TableCell>{evaluation.evaluateeID}</TableCell>
+                        <TableCell>{evaluation.evaluator?.fullName || evaluation.evaluator?.FullName || evaluation.evaluatorID}</TableCell>
+                        <TableCell>{evaluation.evaluatee?.fullName || evaluation.evaluatee?.FullName || evaluation.evaluateeID}</TableCell>
                         <TableCell>{evaluation.evaluationType}</TableCell>
                         <TableCell>{new Date(evaluation.evaluationDate).toLocaleDateString()}</TableCell>
                       </TableRow>
@@ -211,6 +318,26 @@ const Dashboard: React.FC = () => {
               <Typography variant="h6">Average Evaluation Scores by Criteria</Typography>
               <Box sx={{ height: 300 }}>
                 <Bar data={scoreChartData} options={chartOptions} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
+        <Box sx={{ flex: '1 1 100%', minWidth: 260 }}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6">Evaluations Trend</Typography>
+              <Box sx={{ height: 300 }}>
+                <Line data={trendChartData} options={chartOptions} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
+        <Box sx={{ flex: '1 1 100%', minWidth: 260 }}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6">Score Distribution</Typography>
+              <Box sx={{ height: 300 }}>
+                <Bar data={scoreDistributionData} options={chartOptions} />
               </Box>
             </CardContent>
           </Card>
