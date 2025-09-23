@@ -10,8 +10,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Routes
 const evalRoutes = require('./routes/evaluations');
+const empRoutes = require('./routes/employees');
 
 app.use('/api/evaluations', authenticateToken, evalRoutes);
+app.use('/api/employees', authenticateToken, empRoutes);
 
 module.exports = app;
 

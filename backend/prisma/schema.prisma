@@ -29,6 +29,7 @@ model User {
   createdCriteria    EvaluationCriteria[] @relation("creatorCriteria")
   performancesAsUser      Performance[]       @relation("UserPerformance")
   performancesAsEvaluator Performance[]       @relation("EvaluatorPerformance")
+  employees          Employee[]
 }
 
 model Evaluation {
@@ -108,4 +109,22 @@ model Performance {
 
   user      User @relation("UserPerformance", fields: [userId], references: [id])
   evaluator User @relation("EvaluatorPerformance", fields: [evaluatorId], references: [id])
+}
+
+model Employee {
+  id           Int       @id @default(autoincrement())
+  firstName    String
+  lastName     String
+  email        String    @unique
+  phone        String?
+  department   String?
+  position     String?
+  hireDate     DateTime?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  userId       Int?
+  user         User?     @relation(fields: [userId], references: [id])
+
+  @@map("Employee")
 }

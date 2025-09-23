@@ -186,15 +186,103 @@ app.post('/api/evaluations', authenticateToken, async (req, res) => {
   console.log('Create evaluation request received with body:', req.body);
   try {
     const { evaluation, results } = req.body;
-    const { evaluatorID, evaluateeID, evaluationType, sessionID } = evaluation;
-    if (!evaluatorID || !evaluateeID || !evaluationType || !sessionID) {
-      console.log('Missing required fields:', { evaluatorID, evaluateeID, evaluationType, sessionID });
-      return res.status(400).json({ error: 'Missing required fields: evaluatorID, evaluateeID, evaluationType, sessionID' });
+    let { evaluatorID, evaluateeID, evaluationType, sessionID, evaluateeEmployeeId } = evaluation;
+    if (!evaluatorID || (!evaluateeID && !evaluateeEmployeeId) || !evaluationType || !sessionID) {
+      console.log('Missing required fields:', { evaluatorID, evaluateeID, evaluateeEmployeeId, evaluationType, sessionID });
+      return res.status(400).json({ error: 'Missing required fields: evaluatorID, evaluateeID or evaluateeEmployeeId, evaluationType, sessionID' });
     }
 
     if (evaluatorID === evaluateeID) {
       console.log('Evaluator and evaluatee cannot be the same:', { evaluatorID, evaluateeID });
       return res.status(400).json({ error: 'Evaluator and evaluatee cannot be the same person' });
+    }
+
+    // If evaluatee supplied via employee, resolve to user id (auto-create and link if needed)
+    if (!evaluateeID && evaluateeEmployeeId) {
+      const empId = parseInt(evaluateeEmployeeId);
+      const employee = await prisma.employee.findUnique({ where: { id: empId } });
+      if (!employee) return res.status(400).json({ error: `Employee with id ${empId} does not exist` });
+      if (!employee.userId) {
+        // Auto-create a user for this employee and link
+        const baseUserName = (employee.email?.split('@')[0] || `${employee.firstName}.${employee.lastName}`).replace(/[^a-zA-Z0-9._-]/g, '').toLowerCase();
+        let userName = baseUserName || `emp${empId}`;
+        // ensure unique username
+        let suffix = 0;
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const exists = await prisma.user.findFirst({ where: { userName } });
+          if (!exists) break;
+          suffix += 1;
+          userName = `${baseUserName}${suffix}`;
+        }
+        const passwordPlain = Math.random().toString(36).slice(-8) + 'A1!';
+        const hashedPassword = await bcrypt.hash(passwordPlain, 10);
+        const createdUser = await prisma.user.create({
+          data: {
+            fullName: `${employee.firstName} ${employee.lastName}`.trim(),
+            userName,
+            password: hashedPassword,
+            gender: null,
+            age: null,
+            role: 'Employee',
+            status: 'true',
+            locked: 'false',
+            isFirstLogin: 'true',
+            activeStatus: 'true',
+            createdDate: new Date(),
+            createdBy: req.user.id,
+          },
+        });
+        await prisma.employee.update({ where: { id: empId }, data: { userId: createdUser.id } });
+        evaluateeID = createdUser.id;
+      } else {
+        evaluateeID = employee.userId;
+      }
+    }
+
+    // If evaluateeID is provided, but does not correspond to a user, treat it as an employee id
+    if (evaluateeID && !Number.isNaN(parseInt(evaluateeID))) {
+      const userCandidate = await prisma.user.findUnique({ where: { id: parseInt(evaluateeID) } });
+      if (!userCandidate) {
+        const empIdFromEvaluatee = parseInt(evaluateeID);
+        const employee = await prisma.employee.findUnique({ where: { id: empIdFromEvaluatee } });
+        if (employee) {
+          if (!employee.userId) {
+            const baseUserName = (employee.email?.split('@')[0] || `${employee.firstName}.${employee.lastName}`).replace(/[^a-zA-Z0-9._-]/g, '').toLowerCase() || `emp${empIdFromEvaluatee}`;
+            let userName = baseUserName;
+            let suffix = 0;
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+              const exists = await prisma.user.findFirst({ where: { userName } });
+              if (!exists) break;
+              suffix += 1;
+              userName = `${baseUserName}${suffix}`;
+            }
+            const passwordPlain = Math.random().toString(36).slice(-8) + 'A1!';
+            const hashedPassword = await bcrypt.hash(passwordPlain, 10);
+            const createdUser = await prisma.user.create({
+              data: {
+                fullName: `${employee.firstName} ${employee.lastName}`.trim(),
+                userName,
+                password: hashedPassword,
+                gender: null,
+                age: null,
+                role: 'Employee',
+                status: 'true',
+                locked: 'false',
+                isFirstLogin: 'true',
+                activeStatus: 'true',
+                createdDate: new Date(),
+                createdBy: req.user.id,
+              },
+            });
+            await prisma.employee.update({ where: { id: empIdFromEvaluatee }, data: { userId: createdUser.id } });
+            evaluateeID = createdUser.id;
+          } else {
+            evaluateeID = employee.userId;
+          }
+        }
+      }
     }
 
     // Validate foreign keys before create to avoid FK constraint errors
@@ -927,6 +1015,118 @@ app.delete('/api/goals/:gid', authenticateToken, async (req, res) => {
     res.status(204).send(); // No content on successful delete
   } catch (error) {
     console.error('Error deleting goal:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+// Employees CRUD and activation
+app.get('/api/employees', authenticateToken, async (req, res) => {
+  try {
+    const { isActive } = req.query;
+    const where = {};
+    if (isActive === 'true') where.isActive = true;
+    if (isActive === 'false') where.isActive = false;
+    const items = await prisma.employee.findMany({ where, orderBy: { id: 'desc' } });
+    res.json(items);
+  } catch (error) {
+    console.error('Fetch employees error:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+app.get('/api/employees/:id', authenticateToken, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+    const item = await prisma.employee.findUnique({ where: { id } });
+    if (!item) return res.status(404).json({ error: 'Employee not found' });
+    res.json(item);
+  } catch (error) {
+    console.error('Get employee error:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+app.post('/api/employees', authenticateToken, async (req, res) => {
+  console.log('Create employee request:', req.body);
+  try {
+    const { firstName, lastName, email, phone, department, position, hireDate, isActive, userId } = req.body;
+    if (!firstName || !lastName || !email) {
+      return res.status(400).json({ error: 'firstName, lastName, email are required' });
+    }
+    const created = await prisma.employee.create({
+      data: {
+        firstName,
+        lastName,
+        email,
+        phone: phone || null,
+        department: department || null,
+        position: position || null,
+        hireDate: hireDate ? new Date(hireDate) : null,
+        isActive: isActive == null ? true : Boolean(isActive),
+        userId: userId != null && !Number.isNaN(parseInt(userId)) ? parseInt(userId) : null,
+      },
+    });
+    res.status(201).json(created);
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(409).json({ error: 'Email already exists' });
+    }
+    console.error('Create employee error:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+app.put('/api/employees/:id', authenticateToken, async (req, res) => {
+  console.log('Update employee request:', req.params, req.body);
+  try {
+    const id = parseInt(req.params.id);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+    const existing = await prisma.employee.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Employee not found' });
+    const { firstName, lastName, email, phone, department, position, hireDate, isActive, userId } = req.body;
+    const updated = await prisma.employee.update({
+      where: { id },
+      data: {
+        firstName: firstName ?? existing.firstName,
+        lastName: lastName ?? existing.lastName,
+        email: email ?? existing.email,
+        phone: phone === undefined ? existing.phone : phone,
+        department: department === undefined ? existing.department : department,
+        position: position === undefined ? existing.position : position,
+        hireDate: hireDate === undefined ? existing.hireDate : (hireDate ? new Date(hireDate) : null),
+        isActive: isActive === undefined ? existing.isActive : Boolean(isActive),
+        userId: userId === undefined ? existing.userId : (userId != null ? parseInt(userId) : null),
+      },
+    });
+    res.json(updated);
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(409).json({ error: 'Email already exists' });
+    }
+    console.error('Update employee error:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+app.patch('/api/employees/:id/activate', authenticateToken, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const updated = await prisma.employee.update({ where: { id }, data: { isActive: true } });
+    res.json(updated);
+  } catch (error) {
+    console.error('Activate employee error:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+app.patch('/api/employees/:id/deactivate', authenticateToken, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const updated = await prisma.employee.update({ where: { id }, data: { isActive: false } });
+    res.json(updated);
+  } catch (error) {
+    console.error('Deactivate employee error:', error.message);
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });

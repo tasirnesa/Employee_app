@@ -24,6 +24,9 @@ import type { User } from './types/interfaces';
 import ScheduleMenu from './pages/ScheduleMenu';
 import GoalsMenu from './pages/GoalsPage';
 import PerformanceMenu from './pages/PerformanceMenu';
+import ViewEmployees from './pages/ViewEmployees';
+import CreateEmployee from './pages/CreateEmployee';
+import EditEmployee from './pages/EditEmployee';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -135,6 +138,9 @@ const AppContent: React.FC = () => {
             <Route path="/criteria/view" element={isAuthenticated ? <ViewCriteria /> : <Navigate to="/login" />} />
             <Route path="/evaluations/create" element={isAuthenticated ? <CreateEvaluation /> : <Navigate to="/login" />} />
             <Route path="/evaluations/view" element={isAuthenticated ? <ViewEvaluations /> : <Navigate to="/login" />} />
+            <Route path="/employees/view" element={isAuthenticated ? <ViewEmployees /> : <Navigate to="/login" />} />
+            <Route path="/employees/create" element={isAuthenticated ? <CreateEmployee /> : <Navigate to="/login" />} />
+            <Route path="/employees/:id/edit" element={isAuthenticated ? <EditEmployee /> : <Navigate to="/login" />} />
             <Route path="/reports" element={isAuthenticated ? <Reports /> : <Navigate to="/login" />} />
             <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" />} />
             <Route path="/schedule" element={isAuthenticated ? <ScheduleMenu /> : <Navigate to="/login" />} />

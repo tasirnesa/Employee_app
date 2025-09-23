@@ -21,6 +21,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import FlagIcon from '@mui/icons-material/Flag';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import EventIcon from '@mui/icons-material/Event';
+import BadgeIcon from '@mui/icons-material/Badge';
 // removed toggle icons in favor of text label "EES"
 
 interface SidebarProps {
@@ -205,6 +206,18 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
               </ListItemIcon>
               <ListItemText primary="Criteria Management" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
               {!collapsed && <ArrowDropDownIcon />}
+            </ListItemButton>
+          </ListItem>
+          <ListItem disablePadding>
+            <ListItemButton
+              selected={location.pathname.startsWith('/employees')}
+              onClick={() => navigate('/employees/view')}
+              sx={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
+            >
+              <ListItemIcon sx={{ minWidth: collapsed ? 0 : 56, justifyContent: 'center' }}>
+                <BadgeIcon />
+              </ListItemIcon>
+              <ListItemText primary="Employees" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
             </ListItemButton>
           </ListItem>
           <ListItem disablePadding>

@@ -27,7 +27,9 @@ import {
   DialogTitle,
   CircularProgress,
 } from '@mui/material';
-import type { Evaluation, User, EvaluationCriteria, EvaluationResult } from '../types/interfaces';
+import type { Evaluation, User, EvaluationCriteria, EvaluationResult, Employee } from '../types/interfaces';
+import { listEmployees } from '../api/employeeApi';
+import { useUser } from '../context/UserContext';
 
 const CreateEvaluation: React.FC = () => {
   console.log('CreateEvaluation rendering');
@@ -36,16 +38,14 @@ const CreateEvaluation: React.FC = () => {
   const [selectedEvaluator, setSelectedEvaluator] = useState<number | null>(null);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
 
-  const { data: users, isLoading: usersLoading, error: usersError } = useQuery({
-    queryKey: ['users'],
+  const { user } = useUser();
+  const currentUserId = user?.id || JSON.parse(localStorage.getItem('userProfile') || 'null')?.id;
+
+  const { data: employees, isLoading: employeesLoading, error: employeesError } = useQuery({
+    queryKey: ['employees', 'active-for-evaluation'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token');
-      const response = await axios.get('http://localhost:3000/api/users', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      console.log('Fetched users:', response.data);
-      return response.data as User[];
+      const res = await listEmployees();
+      return res as Employee[];
     },
   });
 
@@ -96,8 +96,8 @@ const CreateEvaluation: React.FC = () => {
     ),
   });
 
-  if (usersLoading || criteriaLoading) return <Typography>Loading data...</Typography>;
-  if (usersError) return <Typography color="error">Error: {(usersError as Error).message}</Typography>;
+  if (employeesLoading || criteriaLoading) return <Typography>Loading data...</Typography>;
+  if (employeesError) return <Typography color="error">Error: {(employeesError as Error).message}</Typography>;
   if (criteriaError) return <Typography color="error">Error: {(criteriaError as Error).message}</Typography>;
 
   return (
@@ -107,7 +107,7 @@ const CreateEvaluation: React.FC = () => {
       </Typography>
       <Formik
         initialValues={{
-          evaluatorID: 0,
+          evaluatorID: Number(currentUserId) || 0,
           evaluateeID: 0,
           evaluationType: '',
           sessionID: 0,
@@ -115,16 +115,25 @@ const CreateEvaluation: React.FC = () => {
           criteriaFeedback: {} as { [key: number]: string },
         }}
         validationSchema={validationSchema}
-        onSubmit={(values, { setSubmitting }) => {
+        onSubmit={(values, { setSubmitting, setFieldError }) => {
           if (!criteria || criteria.length === 0) {
             console.error('Criteria data is missing or empty');
             setSubmitting(false);
             return;
           }
+          // Normalize evaluateeID: allow selecting employee.id if userId missing; map to userId if available
+          let evaluateeIdToUse = values.evaluateeID;
+          let evaluateeEmployeeId: number | undefined = undefined;
+          const byEmp = employees?.find((e) => e.id === values.evaluateeID);
+          if (byEmp) {
+            evaluateeEmployeeId = byEmp.id;
+            evaluateeIdToUse = byEmp.userId || 0;
+          }
           const evaluationData = {
             evaluation: {
-              evaluatorID: values.evaluatorID,
-              evaluateeID: values.evaluateeID,
+              evaluatorID: Number(currentUserId),
+              evaluateeID: evaluateeIdToUse || undefined,
+              evaluateeEmployeeId,
               evaluationType: values.evaluationType,
               sessionID: values.sessionID,
             },
@@ -142,34 +151,13 @@ const CreateEvaluation: React.FC = () => {
         {({ errors, touched, isSubmitting, setFieldValue, values }) => (
           <Form>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <FormControl fullWidth error={touched.evaluatorID && !!errors.evaluatorID}>
-                <InputLabel id="evaluator-label">Evaluator</InputLabel>
-                <Field
-                  as={Select}
-                  name="evaluatorID"
-                  labelId="evaluator-label"
-                  label="Evaluator"
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                    const value = parseInt(e.target.value);
-                    setFieldValue('evaluatorID', value);
-                    setSelectedEvaluator(value);
-                    if (value === parseInt(values.evaluateeID.toString())) {
-                      setFieldValue('evaluateeID', 0);
-                    }
-                  }}
-                  sx={{ bgcolor: 'background.paper' }}
-                >
-                  <MenuItem value={0} disabled>Select Evaluator</MenuItem>
-                  {users?.map((user) => (
-                    <MenuItem key={user.id} value={user.id}>
-                      {user.fullName} ({user.userName})
-                    </MenuItem>
-                  ))}
-                </Field>
-                {touched.evaluatorID && errors.evaluatorID && (
-                  <Typography color="error" variant="caption">{errors.evaluatorID}</Typography>
-                )}
-              </FormControl>
+              <TextField
+                label="Evaluator"
+                value={user?.fullName || JSON.parse(localStorage.getItem('userProfile') || 'null')?.fullName || 'Current User'}
+                fullWidth
+                InputProps={{ readOnly: true }}
+                sx={{ bgcolor: 'background.paper' }}
+              />
               <FormControl fullWidth error={touched.evaluateeID && !!errors.evaluateeID}>
                 <InputLabel id="evaluatee-label">Evaluatee</InputLabel>
                 <Field
@@ -180,13 +168,17 @@ const CreateEvaluation: React.FC = () => {
                   sx={{ bgcolor: 'background.paper' }}
                 >
                   <MenuItem value={0} disabled>Select Evaluatee</MenuItem>
-                  {users
-                    ?.filter((user) => user.id !== selectedEvaluator)
-                    .map((user) => (
-                      <MenuItem key={user.id} value={user.id}>
-                        {user.fullName} ({user.userName})
-                      </MenuItem>
-                    ))}
+                  {employees && employees.length > 0 ? (
+                    employees
+                      ?.filter((e) => (e.userId || -1) !== currentUserId)
+                      .map((e) => (
+                        <MenuItem key={e.id} value={e.userId ? (e.userId as number) : e.id}>
+                          {e.firstName} {e.lastName} ({e.email})
+                        </MenuItem>
+                      ))
+                  ) : (
+                    <MenuItem value={0} disabled>No employees available</MenuItem>
+                  )}
                 </Field>
                 {touched.evaluateeID && errors.evaluateeID && (
                   <Typography color="error" variant="caption">{errors.evaluateeID}</Typography>
