@@ -13,6 +13,7 @@ import {
   Alert,
   Input,
 } from '@mui/material';
+import DownloadIcon from '@mui/icons-material/Download';
 import type { EvaluationCriteria } from '../types/interfaces';
 import Papa from 'papaparse'; 
 
@@ -21,6 +22,19 @@ const CreateCriteria: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [fileError, setFileError] = useState<string | null>(null);
+
+  const handleDownloadTemplate = () => {
+    const csvContent = ['title,description', 'Example Title,Optional description'].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'criteria_template.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const createCriteriaMutation = useMutation({
     mutationFn: async (criteriaData: Partial<EvaluationCriteria> | EvaluationCriteria[]) => {
@@ -54,12 +68,24 @@ const CreateCriteria: React.FC = () => {
     },
     onError: (error: any) => {
       console.error('Create criteria error:', error.response?.data || error.message);
-      setFileError(error.response?.data?.message || 'Unknown error during upload');
+      const server = error.response?.data;
+      const msg = server?.message || server?.error || server?.details || error.message || 'Unknown error during upload';
+      setFileError(msg);
     },
   });
 
   const validationSchema = Yup.object({
-    title: Yup.string().required('Criteria Title is required'),
+    bulkCriteria: Yup.array().of(
+      Yup.object({
+        title: Yup.string().required(),
+        description: Yup.string().nullable(),
+      })
+    ).default([]),
+    title: Yup.string().when('bulkCriteria', {
+      is: (arr: any[]) => !arr || arr.length === 0,
+      then: (schema) => schema.required('Criteria Title is required'),
+      otherwise: (schema) => schema.notRequired(),
+    }),
     description: Yup.string().nullable(),
   });
 
@@ -135,26 +161,34 @@ const CreateCriteria: React.FC = () => {
         {({ errors, touched, isSubmitting, setFieldValue, values }) => (
           <Form>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Field
-                as={TextField}
-                name="title"
-                label="Criteria Title"
-                fullWidth
-                error={touched.title && !!errors.title}
-                helperText={touched.title && errors.title}
-                sx={{ bgcolor: 'background.paper' }}
-              />
-              <Field
-                as={TextField}
-                name="description"
-                label="Description"
-                multiline
-                rows={4}
-                fullWidth
-                error={touched.description && !!errors.description}
-                helperText={touched.description && errors.description}
-                sx={{ bgcolor: 'background.paper' }}
-              />
+              {values.bulkCriteria.length === 0 ? (
+                <>
+                  <Field
+                    as={TextField}
+                    name="title"
+                    label="Criteria Title"
+                    fullWidth
+                    error={touched.title && !!errors.title}
+                    helperText={touched.title && (errors.title as string)}
+                    sx={{ bgcolor: 'background.paper' }}
+                  />
+                  <Field
+                    as={TextField}
+                    name="description"
+                    label="Description"
+                    multiline
+                    rows={4}
+                    fullWidth
+                    error={touched.description && !!errors.description}
+                    helperText={touched.description && (errors.description as string)}
+                    sx={{ bgcolor: 'background.paper' }}
+                  />
+                </>
+              ) : (
+                <Alert severity="info" sx={{ borderRadius: 2 }}>
+                  Bulk upload detected. Single criteria fields are not required.
+                </Alert>
+              )}
               <Box>
                 <Input
                   type="file"
@@ -162,9 +196,20 @@ const CreateCriteria: React.FC = () => {
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFileUpload(e, setFieldValue)}
                   sx={{ mb: 1 }}
                 />
+                <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                  <Button variant="outlined" size="small" startIcon={<DownloadIcon />} onClick={handleDownloadTemplate}>
+                    Download CSV Template
+                  </Button>
+                  <Typography variant="body2" sx={{ alignSelf: 'center', color: 'text.secondary' }}>
+                    CSV headers: title, description
+                  </Typography>
+                </Box>
                 {fileError && <Alert severity="error" sx={{ borderRadius: 2 }}>{fileError}</Alert>}
                 {values.bulkCriteria.length > 0 && (
-                  <Typography>Ready to upload {values.bulkCriteria.length} criteria.</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography>Ready to upload {values.bulkCriteria.length} criteria.</Typography>
+                    <Button size="small" onClick={() => setFieldValue('bulkCriteria', [])}>Remove CSV</Button>
+                  </Box>
                 )}
               </Box>
               {createCriteriaMutation.isError && (

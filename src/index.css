@@ -1,0 +1,171 @@
+/* Users page styles */
+.users-container {
+  display: block;
+}
+
+.users-table-container {
+  max-height: 400px;
+  max-width: 100%;
+  overflow: auto;
+  border-radius: 8px;
+}
+
+.users-table {
+  width: 100%;
+}
+
+.users-th {
+  font-weight: 700 !important;
+  background-color: #197bdcff !important; /* keeps the existing header color */
+  color: #ffffff !important;
+}
+
+.users-tr:hover {
+  background-color: rgba(25, 123, 220, 0.06);
+}
+
+.users-name {
+  font-weight: 600;
+}
+
+/* Action buttons */
+.users-actions .action-btn {
+  margin-right: 4px;
+}
+.users-actions .action-btn:last-child {
+  margin-right: 0;
+}
+
+.users-actions-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: nowrap;
+}
+
+/* Icon button variants */
+.users-actions .action-edit {
+  color: #1e40af; /* indigo-800 */
+}
+.users-actions .action-edit:hover {
+  background-color: rgba(30, 64, 175, 0.08);
+}
+
+.users-actions .action-delete {
+  color: #b42318; /* red-700 */
+}
+.users-actions .action-delete:hover {
+  background-color: rgba(180, 35, 24, 0.08);
+}
+
+.users-actions .action-detail {
+  color: #0369a1; /* sky-700 */
+}
+.users-actions .action-detail:hover {
+  background-color: rgba(3, 105, 161, 0.08);
+}
+
+.users-actions .action-authorize {
+  color: #027a48; /* green-700 */
+}
+.users-actions .action-authorize:hover {
+  background-color: rgba(2, 122, 72, 0.08);
+}
+
+/* Role badges */
+.role-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+.role-admin {
+  background-color: #fdecea;
+  color: #b42318;
+}
+.role-manager {
+  background-color: #eef4ff;
+  color: #1e40af;
+}
+.role-employee {
+  background-color: #ecfdf3;
+  color: #05603a;
+}
+
+/* Chips */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.8;
+}
+.chip-success {
+  background-color: #ecfdf3;
+  color: #027a48;
+}
+.chip-warning {
+  background-color: #fff7ed;
+  color: #b45309;
+}
+.chip-error {
+  background-color: #fdecea;
+  color: #b42318;
+}
+.chip-info {
+  background-color: #f0f9ff;
+  color: #026aa2;
+}
+.chip-neutral {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+/* Dialog spacing tweaks */
+.users-dialog .MuiDialogContent-root {
+  padding-top: 8px;
+}
+
+/* User detail styles */
+.user-detail-container {
+  display: block;
+}
+.user-detail-card {
+  max-width: 900px;
+  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.user-avatar {
+  width: 48px;
+  height: 48px;
+  font-weight: 700;
+}
+.user-title {
+  font-weight: 700;
+}
+.user-chips .MuiChip-root {
+  height: 24px;
+}
+.user-field {
+  margin-bottom: 8px;
+}
+.icon-success {
+  color: #027a48;
+}
+.icon-error {
+  color: #b42318;
+}
+.user-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+

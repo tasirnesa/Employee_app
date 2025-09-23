@@ -19,6 +19,7 @@ import {
   DialogTitle,
   TextField,
   IconButton,
+  Tooltip,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -53,6 +54,8 @@ const ViewUsers: React.FC = () => {
       }
     },
   });
+
+  const toBool = (v: unknown) => v === true || v === 'true' || v === 1 || v === '1';
 
   const deleteMutation = useMutation({
     mutationFn: async (userId: number) => {
@@ -145,58 +148,86 @@ const ViewUsers: React.FC = () => {
   if (error) return <Typography color="error">Error: {(error as Error).message}</Typography>;
 
   return (
-    <Container sx={{ mt: 8 }}>
+    <Container sx={{ mt: 8 }} className="users-container">
       <Typography variant="h4" gutterBottom>
         View Users
       </Typography>
       {users && users.length > 0 ? (
-        <TableContainer component={Paper} sx={{ maxHeight: 400, maxWidth: '100%', overflow: 'auto' }}>
-          <Table stickyHeader>
+        <TableContainer component={Paper} className="users-table-container">
+          <Table stickyHeader className="users-table">
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>ID</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Full Name</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Username</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Gender</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Age</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Role</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Locked</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>First Login</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Active</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Created Date</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Created By</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#197bdcff' }}>Action</TableCell>
+                <TableCell className="users-th">ID</TableCell>
+                <TableCell className="users-th">Full Name</TableCell>
+                <TableCell className="users-th">Username</TableCell>
+                <TableCell className="users-th">Gender</TableCell>
+                <TableCell className="users-th">Age</TableCell>
+                <TableCell className="users-th">Role</TableCell>
+                <TableCell className="users-th">Status</TableCell>
+                <TableCell className="users-th">Locked</TableCell>
+                <TableCell className="users-th">First Login</TableCell>
+                <TableCell className="users-th">Active</TableCell>
+                <TableCell className="users-th">Created Date</TableCell>
+                <TableCell className="users-th">Created By</TableCell>
+                <TableCell className="users-th">Action</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {users.map((user) => (
-                <TableRow key={user.id}>
+                <TableRow key={user.id} className="users-tr">
                   <TableCell>{user.id}</TableCell>
-                  <TableCell>{user.fullName}</TableCell>
+                  <TableCell className="users-name">{user.fullName}</TableCell>
                   <TableCell>{user.userName}</TableCell>
                   <TableCell>{user.gender}</TableCell>
                   <TableCell>{user.age}</TableCell>
-                  <TableCell>{user.role}</TableCell>
-                  <TableCell>{user.status ? 'Active' : 'Inactive'}</TableCell>
-                  <TableCell>{user.locked ? 'Yes' : 'No'}</TableCell>
-                  <TableCell>{user.isFirstLogin ? 'Yes' : 'No'}</TableCell>
-                  <TableCell>{user.activeStatus ? 'Yes' : 'No'}</TableCell>
+                  <TableCell>
+                    <span className={`role-badge role-${String(user.role).toLowerCase()}`}>{user.role}</span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={toBool(user.status) ? 'chip chip-success' : 'chip chip-warning'}>
+                      {toBool(user.status) ? 'Active' : 'Inactive'}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={toBool(user.locked) ? 'chip chip-error' : 'chip chip-neutral'}>
+                      {toBool(user.locked) ? 'Yes' : 'No'}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={toBool(user.isFirstLogin) ? 'chip chip-info' : 'chip chip-neutral'}>
+                      {toBool(user.isFirstLogin) ? 'Yes' : 'No'}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={toBool(user.activeStatus) ? 'chip chip-success' : 'chip chip-warning'}>
+                      {toBool(user.activeStatus) ? 'Yes' : 'No'}
+                    </span>
+                  </TableCell>
                   <TableCell>{new Date(user.createdDate).toLocaleDateString()}</TableCell>
                   <TableCell>{user.createdBy}</TableCell>
-                  <TableCell>
-                    <IconButton onClick={() => handleEditOpen(user)} aria-label="edit">
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton onClick={() => handleDeleteOpen(user)} aria-label="delete">
-                      <DeleteIcon />
-                    </IconButton>
-                    <IconButton onClick={() => navigate(`/users/${user.id}`)} aria-label="detail">
-                      <VisibilityIcon />
-                    </IconButton>
-                    <IconButton onClick={() => handleAuthorizeOpen(user)} aria-label="authorize">
-                      <CheckCircleIcon />
-                    </IconButton>
+                  <TableCell className="users-actions">
+                    <div className="users-actions-row">
+                      <Tooltip title="Edit" arrow>
+                        <IconButton size="small" className="action-btn action-edit" onClick={() => handleEditOpen(user)} aria-label="edit">
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete" arrow>
+                        <IconButton size="small" className="action-btn action-delete" onClick={() => handleDeleteOpen(user)} aria-label="delete">
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Detail" arrow>
+                        <IconButton size="small" className="action-btn action-detail" onClick={() => navigate(`/users/${user.id}`)} aria-label="detail">
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Authorize" arrow>
+                        <IconButton size="small" className="action-btn action-authorize" onClick={() => handleAuthorizeOpen(user)} aria-label="authorize">
+                          <CheckCircleIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -208,7 +239,7 @@ const ViewUsers: React.FC = () => {
       )}
 
       {/* Edit Dialog */}
-      <Dialog open={openEditDialog} onClose={handleEditClose}>
+      <Dialog open={openEditDialog} onClose={handleEditClose} className="users-dialog">
         <DialogTitle>Edit User</DialogTitle>
         <DialogContent>
           <TextField
@@ -255,7 +286,7 @@ const ViewUsers: React.FC = () => {
       </Dialog>
 
       {/* Delete Dialog */}
-      <Dialog open={openDeleteDialog} onClose={handleDeleteClose}>
+      <Dialog open={openDeleteDialog} onClose={handleDeleteClose} className="users-dialog">
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
           <Typography>Are you sure you want to delete user {selectedUser?.fullName}?</Typography>
@@ -273,7 +304,7 @@ const ViewUsers: React.FC = () => {
       </Dialog>
 
       {/* Authorize Dialog */}
-      <Dialog open={openAuthorizeDialog} onClose={handleAuthorizeClose}>
+      <Dialog open={openAuthorizeDialog} onClose={handleAuthorizeClose} className="users-dialog">
         <DialogTitle>Authorize User</DialogTitle>
         <DialogContent>
           <Typography>Authorize user {selectedUser?.fullName}?</Typography>

@@ -157,6 +157,87 @@ app.get('/api/users', authenticateToken, async (req, res) => {
   }
 });
 
+// Update user
+app.put('/api/users/:id', authenticateToken, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
+
+    const {
+      fullName,
+      userName,
+      password,
+      gender,
+      age,
+      role,
+      status,
+      locked,
+      isFirstLogin,
+      activeStatus,
+    } = req.body || {};
+
+    const updateData = {};
+    if (fullName !== undefined) updateData.fullName = fullName;
+    if (userName !== undefined) updateData.userName = userName;
+    if (password) updateData.password = await bcrypt.hash(password, 10);
+    if (gender !== undefined) updateData.gender = gender;
+    if (age !== undefined) updateData.age = age == null ? null : parseInt(age);
+    if (role !== undefined) updateData.role = role;
+    if (status !== undefined) updateData.status = String(status);
+    if (locked !== undefined) updateData.locked = String(locked);
+    if (isFirstLogin !== undefined) updateData.isFirstLogin = String(isFirstLogin);
+    if (activeStatus !== undefined) updateData.activeStatus = String(activeStatus);
+
+    const existing = await prisma.user.findUnique({ where: { id: userId } });
+    if (!existing) return res.status(404).json({ error: 'User not found' });
+
+    const updated = await prisma.user.update({ where: { id: userId }, data: updateData });
+    return res.json(updated);
+  } catch (error) {
+    console.error('Update user error:', error.message);
+    return res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+// Delete user
+app.delete('/api/users/:id', authenticateToken, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
+    const existing = await prisma.user.findUnique({ where: { id: userId } });
+    if (!existing) return res.status(404).json({ error: 'User not found' });
+    await prisma.user.delete({ where: { id: userId } });
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Delete user error:', error.message);
+    return res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+// Authorize user (activate & unlock)
+app.put('/api/users/:id/authorize', authenticateToken, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
+    const existing = await prisma.user.findUnique({ where: { id: userId } });
+    if (!existing) return res.status(404).json({ error: 'User not found' });
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        status: 'true',
+        activeStatus: 'true',
+        locked: 'false',
+        isFirstLogin: 'false',
+      },
+    });
+    return res.json({ message: 'User authorized', user: updated });
+  } catch (error) {
+    console.error('Authorize user error:', error.message);
+    return res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
 app.get('/api/evaluations', authenticateToken, async (req, res) => {
   try {
     console.log('Fetching evaluations with headers:', req.headers);
@@ -457,16 +538,16 @@ app.post('/api/users', authenticateToken, async (req, res) => {
 app.post('/api/criteria', authenticateToken, async (req, res) => {
   console.log('Create criteria request received with body:', req.body);
   try {
-    const { title, description } = req.body;
+    const { title, description } = req.body || {};
 
-    if (!title || !createdBy) {
-      return res.status(400).json({ error: 'Missing required fields: title and createdBy' });
+    if (!title || String(title).trim() === '') {
+      return res.status(400).json({ error: 'Title is required' });
     }
 
     const criteria = await prisma.evaluationCriteria.create({
       data: {
-        title,
-        description,
+        title: String(title).trim(),
+        description: description == null || String(description).trim() === '' ? null : String(description),
         createdDate: new Date(),
         createdBy: req.user.id,
       },
@@ -476,8 +557,40 @@ app.post('/api/criteria', authenticateToken, async (req, res) => {
     console.log('Criteria created:', criteria);
     res.status(201).json({ ...criteria, creatorName: criteria.creator?.fullName || null });
   } catch (error) {
-    console.error('Create criteria error:', error.message);
-    res.status(500).json({ error: 'Failed to create criteria' });
+    console.error('Create criteria error:', error.message, error.stack);
+    res.status(500).json({ error: 'Failed to create criteria', details: error.message });
+  }
+});
+
+// Bulk create criteria
+app.post('/api/criteria/bulk', authenticateToken, async (req, res) => {
+  console.log('Bulk create criteria request with body:', req.body?.length ?? 0, 'items');
+  try {
+    const items = Array.isArray(req.body) ? req.body : [];
+    if (!items.length) {
+      return res.status(400).json({ error: 'Request body must be a non-empty array' });
+    }
+    const now = new Date();
+    const payload = items
+      .map((it) => ({ title: it.title, description: it.description }))
+      .filter((it) => it.title && String(it.title).trim() !== '')
+      .map((it) => ({
+        title: String(it.title).trim(),
+        description: it.description == null || String(it.description).trim() === '' ? null : String(it.description),
+        createdDate: now,
+        createdBy: req.user.id,
+      }));
+
+    if (!payload.length) {
+      return res.status(400).json({ error: 'No valid criteria in payload' });
+    }
+
+    const result = await prisma.evaluationCriteria.createMany({ data: payload });
+    console.log('Bulk criteria created count:', result.count);
+    return res.status(201).json({ count: result.count });
+  } catch (error) {
+    console.error('Bulk create criteria error:', error.message, error.stack);
+    return res.status(500).json({ error: 'Failed to create criteria in bulk', details: error.message });
   }
 });
 

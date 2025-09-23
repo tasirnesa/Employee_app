@@ -11,9 +11,13 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Routes
 const evalRoutes = require('./routes/evaluations');
 const empRoutes = require('./routes/employees');
+const userRoutes = require('./routes/users');
+const criteriaRoutes = require('./routes/criteria');
 
 app.use('/api/evaluations', authenticateToken, evalRoutes);
 app.use('/api/employees', authenticateToken, empRoutes);
+app.use('/api/users', authenticateToken, userRoutes);
+app.use('/api/criteria', authenticateToken, criteriaRoutes);
 
 module.exports = app;
 
