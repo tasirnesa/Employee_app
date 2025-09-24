@@ -280,9 +280,9 @@ const CreateEvaluation: React.FC = () => {
                   </Box>
                 ))}
               </Box>
-              <Alert severity="info" sx={{ borderRadius: 2 }}>
+              {/* <Alert severity="info" sx={{ borderRadius: 2 }}>
                 The above criteria are applied the same way for all employees.
-              </Alert>
+              </Alert> */}
               {createEvaluationMutation.isError && (
                 <Alert severity="error" sx={{ borderRadius: 2 }}>
                   Error creating evaluation: {createEvaluationMutation.error?.message || 'Unknown error'}
@@ -296,7 +296,7 @@ const CreateEvaluation: React.FC = () => {
                   fullWidth
                   startIcon={isSubmitting || createEvaluationMutation.isPending ? <CircularProgress size={20} /> : null} // Changed to isPending
                 >
-                  {isSubmitting || createEvaluationMutation.isPending ? 'Creating...' : 'Create'} // Changed to isPending
+                  {isSubmitting || createEvaluationMutation.isPending ? 'Creating...' : 'Save'} 
                 </Button>
                 <Button
                   variant="outlined"
