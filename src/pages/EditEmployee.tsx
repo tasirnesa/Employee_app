@@ -11,7 +11,7 @@ const EditEmployee: React.FC = () => {
   const { id } = useParams();
   const employeeId = Number(id);
   const { data, isLoading } = useQuery({ queryKey: ['employee', employeeId], queryFn: () => getEmployee(employeeId), enabled: Number.isFinite(employeeId) });
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', department: '', position: '', hireDate: '', userId: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', department: '', position: '', hireDate: '', gender: '', age: '', birthDate: '', profileImageUrl: '', username: '', password: '', userId: '' });
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,6 +24,12 @@ const EditEmployee: React.FC = () => {
         department: data.department || '',
         position: data.position || '',
         hireDate: data.hireDate ? data.hireDate.substring(0, 10) : '',
+        gender: data.gender || '',
+        age: data.age != null ? String(data.age) : '',
+        birthDate: data.birthDate ? data.birthDate.substring(0, 10) : '',
+        profileImageUrl: data.profileImageUrl || '',
+        username: '',
+        password: '',
         userId: data.userId ? String(data.userId) : '',
       });
     }
@@ -38,6 +44,12 @@ const EditEmployee: React.FC = () => {
       department: form.department || null,
       position: form.position || null,
       hireDate: form.hireDate || null,
+      gender: form.gender || undefined,
+      age: form.age ? Number(form.age) : undefined,
+      birthDate: form.birthDate || undefined,
+      profileImageUrl: form.profileImageUrl || undefined,
+      username: form.username || undefined,
+      password: form.password || undefined,
       userId: form.userId ? Number(form.userId) : null,
     } as any),
     onSuccess: () => navigate('/employees/view'),
@@ -79,6 +91,19 @@ const EditEmployee: React.FC = () => {
       <Stack direction="row" spacing={2}>
         <TextField name="position" label="Position" value={form.position} onChange={handleChange} fullWidth />
         <TextField name="hireDate" label="Hire Date" type="date" value={form.hireDate} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} />
+      </Stack>
+      <Stack direction="row" spacing={2}>
+        <TextField name="gender" label="Gender" value={form.gender} onChange={handleChange} fullWidth />
+        <TextField name="age" label="Age" type="number" value={form.age} onChange={handleChange} fullWidth />
+      </Stack>
+      <Stack direction="row" spacing={2}>
+        <TextField name="birthDate" label="Birth Date" type="date" value={form.birthDate} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} />
+        <TextField name="profileImageUrl" label="Profile Image URL (optional)" value={form.profileImageUrl} onChange={handleChange} fullWidth />
+      </Stack>
+      <Typography variant="subtitle2">Optional App Login</Typography>
+      <Stack direction="row" spacing={2}>
+        <TextField name="username" label="Username" value={form.username} onChange={handleChange} fullWidth />
+        <TextField name="password" type="password" label="Password" value={form.password} onChange={handleChange} fullWidth />
       </Stack>
       <FormControl fullWidth>
         <InputLabel id="user-link-label">Linked User (for evaluations)</InputLabel>

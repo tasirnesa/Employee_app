@@ -35,6 +35,7 @@ const ViewEmployees: React.FC = () => {
               <Typography fontWeight={600}>{e.firstName} {e.lastName}</Typography>
               <Typography variant="body2">{e.email}</Typography>
               <Typography variant="body2" color="text.secondary">{e.department || '-'} • {e.position || '-'}</Typography>
+              <Typography variant="body2" color="text.secondary">{e.gender || '-'} • {e.age ?? '-'} • {e.birthDate ? new Date(e.birthDate).toLocaleDateString() : '-'}</Typography>
             </Stack>
             <Chip label={e.isActive ? 'Active' : 'Inactive'} color={e.isActive ? 'success' : 'default'} />
             {e.isActive ? (

@@ -27,7 +27,7 @@ import {
   DialogTitle,
   CircularProgress,
 } from '@mui/material';
-import type { Evaluation, User, EvaluationCriteria, EvaluationResult, Employee } from '../types/interfaces';
+import type { Evaluation, User, EvaluationCriteria, EvaluationResult, Employee, Goal } from '../types/interfaces';
 import { listEmployees } from '../api/employeeApi';
 import { useUser } from '../context/UserContext';
 
@@ -37,6 +37,7 @@ const CreateEvaluation: React.FC = () => {
   const queryClient = useQueryClient();
   const [selectedEvaluator, setSelectedEvaluator] = useState<number | null>(null);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [updatePerformance, setUpdatePerformance] = useState(true);
 
   const { user } = useUser();
   const currentUserId = user?.id || JSON.parse(localStorage.getItem('userProfile') || 'null')?.id;
@@ -62,6 +63,23 @@ const CreateEvaluation: React.FC = () => {
     },
   });
 
+  // Load goals for selected evaluatee (based on evaluatee selection)
+  const [evaluateeUserIdForGoals, setEvaluateeUserIdForGoals] = useState<number | null>(null);
+  const { data: evaluateeGoals } = useQuery({
+    queryKey: ['goals', evaluateeUserIdForGoals],
+    queryFn: async () => {
+      if (!evaluateeUserIdForGoals) return [] as Goal[];
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token');
+      const res = await axios.get('http://localhost:3000/api/goals', {
+        params: { userId: evaluateeUserIdForGoals },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.data as Goal[];
+    },
+    enabled: evaluateeUserIdForGoals != null,
+  });
+
   const createEvaluationMutation = useMutation({
     mutationFn: async (evaluationData: { evaluation: Partial<Evaluation>; results: Partial<EvaluationResult>[] }) => {
       const token = localStorage.getItem('token');
@@ -71,14 +89,33 @@ const CreateEvaluation: React.FC = () => {
       });
       return response.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['evaluations'] });
-      navigate('/evaluations/view');
+    onSuccess: async (_created, _vars, _ctx) => {
+      try {
+        queryClient.invalidateQueries({ queryKey: ['evaluations'] });
+        if (updatePerformance) {
+          const token = localStorage.getItem('token');
+          const evaluateeUserId = pendingEvaluateeUserIdRef.current;
+          if (token && evaluateeUserId) {
+            await axios.post(
+              'http://localhost:3000/api/performance/recalculate',
+              { userId: evaluateeUserId },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+          }
+        }
+      } catch (e) {
+        console.error('Performance recalc error:', (e as any).response?.data || (e as any).message);
+      } finally {
+        navigate('/evaluations/view');
+      }
     },
     onError: (error: any) => {
       console.error('Create evaluation error:', error.response?.data || error.message);
     },
   });
+  // Keep track of resolved evaluatee userId for optional performance recalculation
+  const pendingEvaluateeUserIdRef = React.useRef<number | null>(null);
+
 
   const validationSchema = Yup.object({
     evaluatorID: Yup.number().required('Evaluator is required'),
@@ -129,6 +166,9 @@ const CreateEvaluation: React.FC = () => {
             evaluateeEmployeeId = byEmp.id;
             evaluateeIdToUse = byEmp.userId || 0;
           }
+          pendingEvaluateeUserIdRef.current = evaluateeIdToUse || null;
+          setEvaluateeUserIdForGoals(evaluateeIdToUse || null);
+          const goalsResults = (evaluateeGoals || []).map((g) => ({ gid: g.gid, progress: g.progress ?? 0 }));
           const evaluationData = {
             evaluation: {
               evaluatorID: Number(currentUserId),
@@ -142,6 +182,7 @@ const CreateEvaluation: React.FC = () => {
               score: values.criteriaScores[criterion.criteriaID] || 0,
               feedback: values.criteriaFeedback[criterion.criteriaID] || '',
             })),
+            goalsResults,
           };
           console.log('Submitting evaluation data:', evaluationData);
           createEvaluationMutation.mutate(evaluationData);
@@ -239,6 +280,9 @@ const CreateEvaluation: React.FC = () => {
                   </Box>
                 ))}
               </Box>
+              <Alert severity="info" sx={{ borderRadius: 2 }}>
+                The above criteria are applied the same way for all employees.
+              </Alert>
               {createEvaluationMutation.isError && (
                 <Alert severity="error" sx={{ borderRadius: 2 }}>
                   Error creating evaluation: {createEvaluationMutation.error?.message || 'Unknown error'}

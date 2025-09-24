@@ -120,6 +120,10 @@ model Employee {
   department   String?
   position     String?
   hireDate     DateTime?
+  gender       String?
+  age          Int?
+  birthDate    DateTime?
+  profileImageUrl String?
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

@@ -17,10 +17,29 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get current user's evaluation summary as percentages
+router.get('/me/summary', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const results = await prisma.evaluationResult.findMany({
+      where: { evaluation: { evaluateeID: userId } },
+      select: { score: true },
+    });
+    if (!results.length) return res.json({ averagePercent: 0, count: 0 });
+    // Assuming score 1..5 → convert to percent
+    const to100 = (s) => ((Math.max(1, Math.min(5, Number(s))) - 1) / 4) * 100;
+    const percents = results.map(r => to100(r.score));
+    const avg = percents.reduce((a, b) => a + b, 0) / percents.length;
+    res.json({ averagePercent: Math.round(avg), count: results.length });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
 // Create evaluation; supports either evaluateeID (user) or evaluateeEmployeeId (employee)
 router.post('/', async (req, res) => {
   try {
-    const { evaluation, results } = req.body;
+    const { evaluation, results, goalsResults } = req.body;
     if (!evaluation) return res.status(400).json({ error: 'Missing evaluation payload' });
     let { evaluatorID, evaluateeID, evaluationType, sessionID, evaluateeEmployeeId } = evaluation;
     if (!evaluatorID || (!evaluateeID && !evaluateeEmployeeId) || !evaluationType || !sessionID) {
@@ -150,6 +169,14 @@ router.post('/', async (req, res) => {
           })),
         });
       }
+    }
+
+    // Optionally update goal progress if goalsResults provided: [{ gid, progress }]
+    if (Array.isArray(goalsResults) && goalsResults.length) {
+      const updates = goalsResults
+        .filter((g) => g.gid != null && g.progress != null)
+        .map((g) => prisma.goal.update({ where: { gid: parseInt(g.gid) }, data: { progress: Math.max(0, Math.min(100, Number(g.progress))) } }));
+      if (updates.length) await prisma.$transaction(updates);
     }
 
     return res.status(201).json({ ...evaluationResult, resultsCount: createManyResult.count });

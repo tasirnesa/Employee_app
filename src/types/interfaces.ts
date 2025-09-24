@@ -86,6 +86,10 @@ export interface Employee {
   department?: string | null;
   position?: string | null;
   hireDate?: string | null;
+  gender?: string | null;
+  age?: number | null;
+  birthDate?: string | null;
+  profileImageUrl?: string | null;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
