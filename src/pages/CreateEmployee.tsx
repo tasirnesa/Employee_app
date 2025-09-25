@@ -1,40 +1,57 @@
-import React, { useState } from 'react';
-import { Stack, TextField, Button, Typography, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import React, { useCallback, useState } from 'react';
+import { Stack, TextField, Button, Typography, FormControl, InputLabel, Select, MenuItem, Box } from '@mui/material';
 import { useMutation } from '@tanstack/react-query';
-import { createEmployee } from '../api/employeeApi';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/axios';
 import type { User } from '../types/interfaces';
 import { useQuery } from '@tanstack/react-query';
+import { useDropzone } from 'react-dropzone';
 
 const CreateEmployee: React.FC = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', department: '', position: '', hireDate: '', gender: '', age: '', birthDate: '', profileImageUrl: '', username: '', password: '', userId: '' });
+  const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mutation = useMutation({
-    mutationFn: () => createEmployee({
-      firstName: form.firstName,
-      lastName: form.lastName,
-      email: form.email,
-      phone: form.phone || undefined,
-      department: form.department || undefined,
-      position: form.position || undefined,
-      hireDate: form.hireDate || undefined,
-      gender: form.gender || undefined,
-      age: form.age ? Number(form.age) : undefined,
-      birthDate: form.birthDate || undefined,
-      profileImageUrl: form.profileImageUrl || undefined,
-      username: form.username || undefined,
-      password: form.password || undefined,
-      userId: form.userId ? Number(form.userId) : undefined,
-    } as any),
+    mutationFn: async () => {
+      const fd = new FormData();
+      fd.append('firstName', form.firstName);
+      fd.append('lastName', form.lastName);
+      fd.append('email', form.email);
+      if (form.phone) fd.append('phone', form.phone);
+      if (form.department) fd.append('department', form.department);
+      if (form.position) fd.append('position', form.position);
+      if (form.hireDate) fd.append('hireDate', form.hireDate);
+      if (form.gender) fd.append('gender', form.gender);
+      if (form.age) fd.append('age', form.age);
+      if (form.birthDate) fd.append('birthDate', form.birthDate);
+      if (form.profileImageUrl) fd.append('profileImageUrl', form.profileImageUrl);
+      if (form.username) fd.append('username', form.username);
+      if (form.password) fd.append('password', form.password);
+      if (form.userId) fd.append('userId', form.userId);
+      if (file) fd.append('profileImage', file);
+      const res = await api.post('/api/employees', fd);
+      return res.data;
+    },
     onSuccess: () => navigate('/employees/view'),
-    onError: () => setError('Failed to create employee'),
+    onError: (err: unknown) => {
+      const anyErr = err as any;
+      const msg = anyErr?.response?.data?.error || anyErr?.message || 'Failed to create employee';
+      setError(msg);
+    },
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles && acceptedFiles.length > 0) {
+      setFile(acceptedFiles[0]);
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, multiple: false, accept: { 'image/*': [] } });
 
   const { data: users } = useQuery({
     queryKey: ['users-for-linking'],
@@ -75,6 +92,14 @@ const CreateEmployee: React.FC = () => {
         <TextField name="birthDate" label="Birth Date" type="date" value={form.birthDate} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} />
         <TextField name="profileImageUrl" label="Profile Image URL (optional)" value={form.profileImageUrl} onChange={handleChange} fullWidth />
       </Stack>
+      <Box {...getRootProps()} sx={{ border: '2px dashed #ccc', borderRadius: 1, p: 2, textAlign: 'center', cursor: 'pointer' }}>
+        <input {...getInputProps()} />
+        {isDragActive ? (
+          <Typography>Drop the image here ...</Typography>
+        ) : (
+          <Typography>{file ? `Selected: ${file.name}` : 'Drag & drop profile image here, or click to browse'}</Typography>
+        )}
+      </Box>
       <Typography variant="subtitle2">Optional App Login</Typography>
      
       <FormControl fullWidth>

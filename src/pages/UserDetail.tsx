@@ -12,10 +12,10 @@ import {
   CardHeader,
   Avatar,
   Chip,
-  Grid,
   Divider,
   Stack,
 } from '@mui/material';
+// Removed Grid usage due to type issues; using Stack layout instead
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
@@ -77,20 +77,20 @@ const UserDetail: React.FC = () => {
             />
             <Divider />
             <CardContent>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <Box sx={{ flex: 1 }}>
                   <Typography className="user-field"><strong>ID:</strong> {user.id}</Typography>
                   <Typography className="user-field"><strong>Gender:</strong> {user.gender || '—'}</Typography>
                   <Typography className="user-field"><strong>Age:</strong> {user.age ?? '—'}</Typography>
                   <Typography className="user-field"><strong>Created By:</strong> {user.createdBy}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
+                </Box>
+                <Box sx={{ flex: 1 }}>
                   <Typography className="user-field"><strong>Locked:</strong> {toBool(user.locked) ? 'Yes' : 'No'} {toBool(user.locked) ? <LockIcon fontSize="small" className="icon-error" /> : <LockOpenIcon fontSize="small" className="icon-success" />}</Typography>
                   <Typography className="user-field"><strong>First Login:</strong> {toBool(user.isFirstLogin) ? 'Yes' : 'No'}</Typography>
                   <Typography className="user-field"><strong>Active:</strong> {toBool(user.activeStatus) ? 'Yes' : 'No'} {toBool(user.activeStatus) && <CheckCircleIcon fontSize="small" className="icon-success" />}</Typography>
                   <Typography className="user-field"><strong>Created Date:</strong> <EventIcon fontSize="small" /> {new Date(user.createdDate).toLocaleDateString()}</Typography>
-                </Grid>
-              </Grid>
+                </Box>
+              </Stack>
               <Box className="user-actions">
                 <Button variant="outlined" onClick={() => navigate('/users/view')}>Back to Users</Button>
               </Box>

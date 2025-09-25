@@ -3,10 +3,31 @@ const cors = require('cors');
 const bcrypt = require('bcrypt');
 const { PrismaClient } = require('@prisma/client');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Ensure uploads directory exists and serve statically
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
+
+// Multer storage for profile images
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname || '') || '';
+    cb(null, `employee-${unique}${ext}`);
+  },
+});
+const upload = multer({ storage });
 
 let prisma;
 try {
@@ -1160,44 +1181,111 @@ app.get('/api/employees/:id', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/employees', authenticateToken, async (req, res) => {
-  console.log('Create employee request:', req.body);
+app.post('/api/employees', authenticateToken, upload.fields([{ name: 'profileImage', maxCount: 1 }]), async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, department, position, hireDate, isActive, userId } = req.body;
-    if (!firstName || !lastName || !email) {
+    // Normalize multipart fields (handle array-form)
+    const pick = (v) => Array.isArray(v) ? v[0] : v;
+    const firstName = pick(req.body.firstName);
+    const lastName = pick(req.body.lastName);
+    const email = pick(req.body.email);
+    const phone = pick(req.body.phone);
+    const department = pick(req.body.department);
+    const position = pick(req.body.position);
+    const hireDate = pick(req.body.hireDate);
+    const isActive = pick(req.body.isActive);
+    const userId = pick(req.body.userId);
+    const gender = pick(req.body.gender);
+    const age = pick(req.body.age);
+    const birthDate = pick(req.body.birthDate);
+    const profileImageUrl = pick(req.body.profileImageUrl);
+    const username = pick(req.body.username);
+    const password = pick(req.body.password);
+
+    const firstNameTrim = typeof firstName === 'string' ? firstName.trim() : '';
+    const lastNameTrim = typeof lastName === 'string' ? lastName.trim() : '';
+    const emailTrim = typeof email === 'string' ? email.trim() : '';
+    if (!firstNameTrim || !lastNameTrim || !emailTrim) {
       return res.status(400).json({ error: 'firstName, lastName, email are required' });
     }
-    const created = await prisma.employee.create({
-      data: {
-        firstName,
-        lastName,
-        email,
-        phone: phone || null,
-        department: department || null,
-        position: position || null,
-        hireDate: hireDate ? new Date(hireDate) : null,
-        isActive: isActive == null ? true : Boolean(isActive),
-        userId: userId != null && !Number.isNaN(parseInt(userId)) ? parseInt(userId) : null,
-      },
-    });
+
+    const uploadedFile = Array.isArray(req.files?.profileImage) ? req.files.profileImage[0] : null;
+
+    const data = {
+      firstName: firstNameTrim,
+      lastName: lastNameTrim,
+      email: emailTrim,
+      phone: phone || null,
+      department: department || null,
+      position: position || null,
+      hireDate: hireDate ? new Date(hireDate) : null,
+      gender: gender || null,
+      age: age == null || age === '' ? null : parseInt(age, 10),
+      birthDate: birthDate ? new Date(birthDate) : null,
+      profileImageUrl: uploadedFile ? `/uploads/${path.basename(uploadedFile.path)}` : (profileImageUrl || null),
+      isActive: isActive == null ? true : (String(isActive).toLowerCase() === 'true'),
+      userId: userId != null && userId !== '' && !Number.isNaN(parseInt(userId, 10)) ? parseInt(userId, 10) : null,
+    };
+
+    // Optionally create linked user if username/password provided
+    if (!data.userId && username && password) {
+      let userName = String(username).trim().toLowerCase();
+      const exists = await prisma.user.findFirst({ where: { userName } });
+      if (exists) return res.status(409).json({ error: 'Username already exists' });
+      const hashed = await bcrypt.hash(String(password), 10);
+      const createdUser = await prisma.user.create({
+        data: {
+          fullName: `${data.firstName} ${data.lastName}`.trim(),
+          userName,
+          password: hashed,
+          gender: data.gender || null,
+          age: data.age == null ? null : Number(data.age),
+          role: 'Employee',
+          status: 'true',
+          locked: 'false',
+          isFirstLogin: 'true',
+          activeStatus: 'true',
+          createdDate: new Date(),
+          createdBy: req.user.id,
+        },
+      });
+      data.userId = createdUser.id;
+    }
+
+    const created = await prisma.employee.create({ data });
     res.status(201).json(created);
   } catch (error) {
     if (error.code === 'P2002') {
       return res.status(409).json({ error: 'Email already exists' });
     }
-    console.error('Create employee error:', error.message);
+    console.error('Create employee error:', error.message, error.stack);
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
 
-app.put('/api/employees/:id', authenticateToken, async (req, res) => {
-  console.log('Update employee request:', req.params, req.body);
+app.put('/api/employees/:id', authenticateToken, upload.fields([{ name: 'profileImage', maxCount: 1 }]), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
     const existing = await prisma.employee.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: 'Employee not found' });
-    const { firstName, lastName, email, phone, department, position, hireDate, isActive, userId } = req.body;
+
+    const pick = (v) => Array.isArray(v) ? v[0] : v;
+    const firstName = pick(req.body.firstName);
+    const lastName = pick(req.body.lastName);
+    const email = pick(req.body.email);
+    const phone = pick(req.body.phone);
+    const department = pick(req.body.department);
+    const position = pick(req.body.position);
+    const hireDate = pick(req.body.hireDate);
+    const isActive = pick(req.body.isActive);
+    const userId = pick(req.body.userId);
+    const gender = pick(req.body.gender);
+    const age = pick(req.body.age);
+    const birthDate = pick(req.body.birthDate);
+    const profileImageUrl = pick(req.body.profileImageUrl);
+
+    const uploadedFile = Array.isArray(req.files?.profileImage) ? req.files.profileImage[0] : null;
+
     const updated = await prisma.employee.update({
       where: { id },
       data: {
@@ -1208,8 +1296,12 @@ app.put('/api/employees/:id', authenticateToken, async (req, res) => {
         department: department === undefined ? existing.department : department,
         position: position === undefined ? existing.position : position,
         hireDate: hireDate === undefined ? existing.hireDate : (hireDate ? new Date(hireDate) : null),
-        isActive: isActive === undefined ? existing.isActive : Boolean(isActive),
-        userId: userId === undefined ? existing.userId : (userId != null ? parseInt(userId) : null),
+        gender: gender === undefined ? existing.gender : gender,
+        age: age === undefined ? existing.age : (age == null || age === '' ? null : parseInt(age, 10)),
+        birthDate: birthDate === undefined ? existing.birthDate : (birthDate ? new Date(birthDate) : null),
+        profileImageUrl: uploadedFile ? `/uploads/${path.basename(uploadedFile.path)}` : (profileImageUrl === undefined ? existing.profileImageUrl : profileImageUrl),
+        isActive: isActive === undefined ? existing.isActive : (String(isActive).toLowerCase() === 'true'),
+        userId: userId === undefined ? existing.userId : (userId != null && userId !== '' ? parseInt(userId, 10) : null),
       },
     });
     res.json(updated);
@@ -1217,7 +1309,7 @@ app.put('/api/employees/:id', authenticateToken, async (req, res) => {
     if (error.code === 'P2002') {
       return res.status(409).json({ error: 'Email already exists' });
     }
-    console.error('Update employee error:', error.message);
+    console.error('Update employee error:', error.message, error.stack);
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
