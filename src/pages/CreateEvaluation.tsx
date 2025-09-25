@@ -26,6 +26,7 @@ import {
   DialogContentText,
   DialogTitle,
   CircularProgress,
+  Checkbox,
 } from '@mui/material';
 import type { Evaluation, User, EvaluationCriteria, EvaluationResult, Employee, Goal } from '../types/interfaces';
 import { listEmployees } from '../api/employeeApi';
@@ -38,6 +39,10 @@ const CreateEvaluation: React.FC = () => {
   const [selectedEvaluator, setSelectedEvaluator] = useState<number | null>(null);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [updatePerformance, setUpdatePerformance] = useState(true);
+  const [pendingEvaluationData, setPendingEvaluationData] = useState<
+    | { evaluation: Partial<Evaluation>; results: Partial<EvaluationResult>[]; goalsResults: { gid: number; progress: number }[] }
+    | null
+  >(null);
 
   const { user } = useUser();
   const currentUserId = user?.id || JSON.parse(localStorage.getItem('userProfile') || 'null')?.id;
@@ -185,7 +190,8 @@ const CreateEvaluation: React.FC = () => {
             goalsResults,
           };
           console.log('Submitting evaluation data:', evaluationData);
-          createEvaluationMutation.mutate(evaluationData);
+          setPendingEvaluationData(evaluationData);
+          setOpenConfirmDialog(true);
           setSubmitting(false);
         }}
       >
@@ -306,6 +312,48 @@ const CreateEvaluation: React.FC = () => {
                   Cancel
                 </Button>
               </Box>
+
+              <Dialog
+                open={openConfirmDialog}
+                onClose={() => setOpenConfirmDialog(false)}
+                aria-labelledby="confirm-save-title"
+              >
+                <DialogTitle id="confirm-save-title">Confirm Save</DialogTitle>
+                <DialogContent>
+                  <DialogContentText>
+                    Are you sure you want to save this evaluation? You can optionally update the employee's performance score after saving.
+                  </DialogContentText>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={updatePerformance}
+                        onChange={(e) => setUpdatePerformance(e.target.checked)}
+                      />
+                    }
+                    label="Recalculate performance after saving"
+                    sx={{ mt: 2 }}
+                  />
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setOpenConfirmDialog(false)} disabled={createEvaluationMutation.isPending}>
+                    Back
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (pendingEvaluationData) {
+                        createEvaluationMutation.mutate(pendingEvaluationData);
+                      }
+                      setOpenConfirmDialog(false);
+                    }}
+                    variant="contained"
+                    color="primary"
+                    disabled={createEvaluationMutation.isPending}
+                    startIcon={createEvaluationMutation.isPending ? <CircularProgress size={20} /> : null}
+                  >
+                    {createEvaluationMutation.isPending ? 'Saving...' : 'Confirm'}
+                  </Button>
+                </DialogActions>
+              </Dialog>
             </Box>
           </Form>
         )}

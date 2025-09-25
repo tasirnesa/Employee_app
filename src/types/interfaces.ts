@@ -61,7 +61,8 @@ export interface Criteria {
 export interface Goal {
   gid: number;
   objective: string;
-  keyResult?: string[];
+  // Backward-compatible: keyResult can be array of strings or array of objects with per-KR progress
+  keyResult?: (string | { title: string; progress?: number })[];
   priority?: string;
   status?: string;
   progress?: number;
