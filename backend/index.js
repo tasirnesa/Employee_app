@@ -66,6 +66,19 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// Helper to require non-Employee role
+const requireNonEmployee = async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (user?.role === 'Employee') {
+      return res.status(403).json({ error: 'Forbidden: Employees are not allowed to perform this action' });
+    }
+    next();
+  } catch (e) {
+    return res.status(500).json({ error: 'Server error', details: e.message });
+  }
+};
+
 // Login endpoint
 app.post('/api/auth/login', async (req, res) => {
   try {
@@ -262,17 +275,16 @@ app.put('/api/users/:id/authorize', authenticateToken, async (req, res) => {
 app.get('/api/evaluations', authenticateToken, async (req, res) => {
   try {
     console.log('Fetching evaluations with headers:', req.headers);
+    const currentUser = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const whereClause = currentUser?.role === 'Employee' ? { evaluateeID: req.user.id } : {};
     const evaluations = await prisma.evaluation.findMany({
+      where: whereClause,
       include: {
-        evaluator: { select: { fullName: true } }, 
-        evaluatee: { select: { fullName: true } }, 
+        evaluator: { select: { fullName: true } },
+        evaluatee: { select: { fullName: true } },
       },
+      orderBy: { evaluationDate: 'desc' },
     });
-    console.log('Evaluations fetched:', JSON.stringify(evaluations, null, 2));
-    if (!evaluations.length) {
-      console.log('No evaluations found');
-      return res.status(404).json({ message: 'No evaluations found' });
-    }
     res.json(evaluations);
   } catch (error) {
     console.error('Get evaluations error:', {
@@ -284,7 +296,7 @@ app.get('/api/evaluations', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
-app.post('/api/evaluations', authenticateToken, async (req, res) => {
+app.post('/api/evaluations', authenticateToken, requireNonEmployee, async (req, res) => {
   console.log('Create evaluation request received with body:', req.body);
   try {
     const { evaluation, results } = req.body;
@@ -486,8 +498,13 @@ app.get('/api/criteria', authenticateToken, async (req, res) => {
 app.get('/api/results', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/results:', req.headers);
-    const results = await prisma.evaluationResult.findMany();
-    console.log('Results fetched:', results);
+    const currentUser = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const whereClause = currentUser?.role === 'Employee'
+      ? { evaluation: { evaluateeID: req.user.id } }
+      : {};
+    const results = await prisma.evaluationResult.findMany({
+      where: whereClause,
+    });
     res.json(results);
   } catch (error) {
     console.error('Fetch results error:', error.message);
@@ -556,7 +573,7 @@ app.post('/api/users', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/criteria', authenticateToken, async (req, res) => {
+app.post('/api/criteria', authenticateToken, requireNonEmployee, async (req, res) => {
   console.log('Create criteria request received with body:', req.body);
   try {
     const { title, description } = req.body || {};
@@ -584,7 +601,7 @@ app.post('/api/criteria', authenticateToken, async (req, res) => {
 });
 
 // Bulk create criteria
-app.post('/api/criteria/bulk', authenticateToken, async (req, res) => {
+app.post('/api/criteria/bulk', authenticateToken, requireNonEmployee, async (req, res) => {
   console.log('Bulk create criteria request with body:', req.body?.length ?? 0, 'items');
   try {
     const items = Array.isArray(req.body) ? req.body : [];
@@ -616,7 +633,7 @@ app.post('/api/criteria/bulk', authenticateToken, async (req, res) => {
 });
 
 // Update criteria
-app.put('/api/criteria/:id', authenticateToken, async (req, res) => {
+app.put('/api/criteria/:id', authenticateToken, requireNonEmployee, async (req, res) => {
   console.log('Update criteria request with params:', req.params, 'body:', req.body);
   try {
     const id = parseInt(req.params.id);
@@ -639,7 +656,7 @@ app.put('/api/criteria/:id', authenticateToken, async (req, res) => {
 });
 
 // Delete criteria
-app.delete('/api/criteria/:id', authenticateToken, async (req, res) => {
+app.delete('/api/criteria/:id', authenticateToken, requireNonEmployee, async (req, res) => {
   console.log('Delete criteria request with params:', req.params);
   try {
     const id = parseInt(req.params.id);
@@ -677,7 +694,7 @@ app.post('/api/criteria/:id/authorize', authenticateToken, async (req, res) => {
 
 
 
-app.post('/api/evaluation-sessions', authenticateToken, async (req, res) => {
+app.post('/api/evaluation-sessions', authenticateToken, requireNonEmployee, async (req, res) => {
   console.log('Create evaluation session request received with body:', req.body);
   try {
     const { title, startDate, endDate } = req.body;

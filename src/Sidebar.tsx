@@ -41,7 +41,23 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
   const userManagementOpen = Boolean(userManagementAnchorEl);
   const criteriaManagementOpen = Boolean(criteriaManagementAnchorEl);
   const evaluationsOpen = Boolean(evaluationsAnchorEl);
+const userRole = JSON.parse(localStorage.getItem('userProfile') || '{}').role;
 
+const isEmployee = userRole === 'Employee';
+
+const menuItems = [
+  { text: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
+  !isEmployee && { text: 'User Management', path: '/users', icon: <PeopleIcon /> },
+  { text: 'Evaluations', path: '/evaluations/view', icon: <AssignmentIcon /> },
+  !isEmployee && { text: 'Create Evaluation', path: '/evaluations/create', icon: <AssignmentIcon /> },
+  { text: 'Criteria Management', path: '/criteria/view', icon: <SettingsIcon /> },
+  !isEmployee && { text: 'Create Criteria', path: '/criteria/create', icon: <SettingsIcon /> },
+  { text: 'Goals', path: '/goals', icon: <FlagIcon /> },
+  { text: 'Performance', path: '/analytics-performance', icon: <AssessmentIcon /> },
+  { text: 'Schedule', path: '/schedule', icon: <EventIcon /> },
+  { text: 'Reports', path: '/reports', icon: <BarChartIcon /> },
+  { text: 'Settings', path: '/settings', icon: <SettingsIcon /> },
+].filter(Boolean);
   useEffect(() => {
     const storedProfile = localStorage.getItem('userProfile');
     if (storedProfile) {
@@ -182,6 +198,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
               <ListItemText primary="Dashboard" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
             </ListItemButton>
           </ListItem>
+          {!isEmployee && (
           <ListItem disablePadding>
             <ListItemButton
               selected={location.pathname.startsWith('/users')}
@@ -195,6 +212,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
               {!collapsed && <ArrowDropDownIcon />}
             </ListItemButton>
           </ListItem>
+          )}
           <ListItem disablePadding>
             <ListItemButton
               selected={location.pathname.startsWith('/criteria')}
@@ -295,6 +313,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
           </ListItem>
         </List>
       </Drawer>
+      {!isEmployee && (
       <Menu
         anchorEl={userManagementAnchorEl}
         open={userManagementOpen}
@@ -305,6 +324,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
         <MenuItem onClick={handleCreateUser} selected={location.pathname === '/users/create'}>Create User</MenuItem>
         <MenuItem onClick={handleViewUsers} selected={location.pathname === '/users/view'}>View Users</MenuItem>
       </Menu>
+      )}
       <Menu
         anchorEl={criteriaManagementAnchorEl}
         open={criteriaManagementOpen}
@@ -312,7 +332,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
-        <MenuItem onClick={handleCreateCriteria} selected={location.pathname === '/criteria/create'}>Create Criteria</MenuItem>
+        {!isEmployee && (
+          <MenuItem onClick={handleCreateCriteria} selected={location.pathname === '/criteria/create'}>Create Criteria</MenuItem>
+        )}
         <MenuItem onClick={handleViewCriteria} selected={location.pathname === '/criteria/view'}>View Criteria</MenuItem>
       </Menu>
       <Menu
@@ -322,7 +344,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
-        <MenuItem onClick={handleCreateEvaluation} selected={location.pathname === '/evaluations/create'}>Create Evaluation</MenuItem>
+        {!isEmployee && (
+          <MenuItem onClick={handleCreateEvaluation} selected={location.pathname === '/evaluations/create'}>Create Evaluation</MenuItem>
+        )}
         <MenuItem onClick={handleViewEvaluations} selected={location.pathname === '/evaluations/view'}>View Evaluations</MenuItem>
       </Menu>
     </>

@@ -22,6 +22,8 @@ const ScheduleMenu = () => {
     setTabValue(newValue);
   };
 
+const userRole = JSON.parse(localStorage.getItem('userProfile') || '{}').role;
+const isEmployee = userRole === 'Employee';
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
@@ -148,18 +150,20 @@ const ScheduleMenu = () => {
       </Typography>
       <Card elevation={3} sx={{ mb: 4 }}>
         <CardHeader
-          title={<Typography variant="h6" color="primary">Schedule</Typography>}
-          action={
-            <Box>
-              <Typography variant="body1" color="text.secondary" sx={{ mr: 2 }}>
-                Manage the Session and Events
-              </Typography>
-              <Button variant="contained" color="secondary" size="small" onClick={() => setOpenDialog(true)}>
-                + New Event
-              </Button>
-            </Box>
-          }
-        />
+  title={<Typography variant="h6" color="primary">Schedule</Typography>}
+  action={
+    <Box>
+      <Typography variant="body1" color="text.secondary" sx={{ mr: 2 }}>
+        Manage the Session and Events
+      </Typography>
+      {!isEmployee && (
+        <Button variant="contained" color="secondary" size="small" onClick={() => setOpenDialog(true)}>
+          + New Event
+        </Button>
+      )}
+    </Box>
+  }
+/>
         <CardContent>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
             <Button

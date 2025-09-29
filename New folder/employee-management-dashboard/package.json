@@ -1,0 +1,38 @@
+{
+  "name": "employee-management-dashboard",
+  "version": "1.0.0",
+  "description": "A dashboard for employee management with role-based access control.",
+  "main": "src/index.tsx",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "dependencies": {
+    "@mui/material": "^5.0.0",
+    "@tanstack/react-query": "^3.0.0",
+    "axios": "^0.21.1",
+    "chart.js": "^3.0.0",
+    "react": "^17.0.0",
+    "react-chartjs-2": "^3.0.0",
+    "react-dom": "^17.0.0",
+    "react-router-dom": "^5.2.0",
+    "typescript": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^17.0.0",
+    "@types/react-dom": "^17.0.0",
+    "@types/react-router-dom": "^5.1.7"
+  },
+  "keywords": [
+    "employee",
+    "management",
+    "dashboard",
+    "react",
+    "role-based",
+    "access control"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
