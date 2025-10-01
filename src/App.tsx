@@ -18,6 +18,7 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Header from './components/Header';
 import Sidebar from './Sidebar';
+import ProtectedRoute from './components/ProtectedRoute';
 import { UserProvider, useUser } from './context/UserContext';
 import theme from './theme';
 import type { User } from './types/interfaces';
@@ -130,25 +131,22 @@ const AppContent: React.FC = () => {
         <Card sx={{ p: 3, minHeight: 'calc(100vh - 120px)' }}>
           <Routes>
             <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
-            <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} />
-            <Route path="/users/create" element={isAuthenticated ? <CreateUser /> : <Navigate to="/login" />} />
-            <Route path="/users/view" element={isAuthenticated ? <ViewUsers /> : <Navigate to="/login" />} />
-            <Route path="/users/:id" element={isAuthenticated ? <UserDetail /> : <Navigate to="/login" />} />
-            <Route path="/criteria/create" element={isAuthenticated ? <CreateCriteria /> : <Navigate to="/login" />} />
-            <Route path="/criteria/view" element={isAuthenticated ? <ViewCriteria /> : <Navigate to="/login" />} />
-            <Route path="/evaluations/create" element={isAuthenticated ? <CreateEvaluation /> : <Navigate to="/login" />} />
-            <Route path="/evaluations/view" element={isAuthenticated ? <ViewEvaluations /> : <Navigate to="/login" />} />
-            <Route path="/employees/view" element={isAuthenticated ? <ViewEmployees /> : <Navigate to="/login" />} />
-            <Route path="/employees/create" element={isAuthenticated ? <CreateEmployee /> : <Navigate to="/login" />} />
-            <Route path="/employees/:id/edit" element={isAuthenticated ? <EditEmployee /> : <Navigate to="/login" />} />
-            <Route path="/reports" element={isAuthenticated ? <Reports /> : <Navigate to="/login" />} />
-            <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" />} />
-            <Route path="/schedule" element={isAuthenticated ? <ScheduleMenu /> : <Navigate to="/login" />} />
-            <Route path="/goals" element={isAuthenticated ? <GoalsMenu /> : <Navigate to="/login" />} />
-            <Route
-              path="/analytics-performance"
-              element={isAuthenticated ? <PerformanceMenu /> : <Navigate to="/login" />}
-            />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/users/create" element={<ProtectedRoute blockEmployee={true}><CreateUser /></ProtectedRoute>} />
+            <Route path="/users/view" element={<ProtectedRoute blockEmployee={true}><ViewUsers /></ProtectedRoute>} />
+            <Route path="/users/:id" element={<ProtectedRoute blockEmployee={true}><UserDetail /></ProtectedRoute>} />
+            <Route path="/criteria/create" element={<ProtectedRoute blockEmployee={true}><CreateCriteria /></ProtectedRoute>} />
+            <Route path="/criteria/view" element={<ProtectedRoute><ViewCriteria /></ProtectedRoute>} />
+            <Route path="/evaluations/create" element={<ProtectedRoute blockEmployee={true}><CreateEvaluation /></ProtectedRoute>} />
+            <Route path="/evaluations/view" element={<ProtectedRoute><ViewEvaluations /></ProtectedRoute>} />
+            <Route path="/employees/view" element={<ProtectedRoute blockEmployee={true}><ViewEmployees /></ProtectedRoute>} />
+            <Route path="/employees/create" element={<ProtectedRoute blockEmployee={true}><CreateEmployee /></ProtectedRoute>} />
+            <Route path="/employees/:id/edit" element={<ProtectedRoute blockEmployee={true}><EditEmployee /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/schedule" element={<ProtectedRoute><ScheduleMenu /></ProtectedRoute>} />
+            <Route path="/goals" element={<ProtectedRoute><GoalsMenu /></ProtectedRoute>} />
+            <Route path="/analytics-performance" element={<ProtectedRoute><PerformanceMenu /></ProtectedRoute>} />
             <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
           </Routes>
         </Card>

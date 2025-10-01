@@ -79,6 +79,19 @@ const requireNonEmployee = async (req, res, next) => {
   }
 };
 
+// Helper to block employee role (allow admin and superadmin)
+const blockEmployee = async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user || user.role === 'Employee') {
+      return res.status(403).json({ error: 'Forbidden: Employees are not allowed to perform this action' });
+    }
+    next();
+  } catch (e) {
+    return res.status(500).json({ error: 'Server error', details: e.message });
+  }
+};
+
 // Login endpoint
 app.post('/api/auth/login', async (req, res) => {
   try {
@@ -179,7 +192,7 @@ app.get('/api/users/:id', authenticateToken, async (req, res) => {
 });
 
 
-app.get('/api/users', authenticateToken, async (req, res) => {
+app.get('/api/users', authenticateToken, blockEmployee, async (req, res) => {
   try {
     console.log('Headers for /api/users:', req.headers);
     const users = await prisma.user.findMany();
@@ -192,7 +205,7 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 });
 
 // Update user
-app.put('/api/users/:id', authenticateToken, async (req, res) => {
+app.put('/api/users/:id', authenticateToken, blockEmployee, async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
     if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
@@ -234,7 +247,7 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
 });
 
 // Delete user
-app.delete('/api/users/:id', authenticateToken, async (req, res) => {
+app.delete('/api/users/:id', authenticateToken, blockEmployee, async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
     if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
@@ -249,7 +262,7 @@ app.delete('/api/users/:id', authenticateToken, async (req, res) => {
 });
 
 // Authorize user (activate & unlock)
-app.put('/api/users/:id/authorize', authenticateToken, async (req, res) => {
+app.put('/api/users/:id/authorize', authenticateToken, blockEmployee, async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
     if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
@@ -525,7 +538,7 @@ app.get('/api/sessions', authenticateToken, async (req, res) => {
 });
 
 
-app.post('/api/users', authenticateToken, async (req, res) => {
+app.post('/api/users', authenticateToken, blockEmployee, async (req, res) => {
   console.log('Create user request received with body:', req.body);
   try {
     const {
@@ -814,14 +827,14 @@ const mapScoreTo100 = (score, min = 1, max = 5) => {
 
 const safeAvg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
 
-// POST /api/performance/recalculate { userId, periodStart?, periodEnd?, evaluationPeriod? }
+
 app.post('/api/performance/recalculate', authenticateToken, async (req, res) => {
   try {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId is required' });
     const { start, end, label } = coercePeriod(req.body);
 
-    // Verify user exists
+    
     const user = await prisma.user.findUnique({ where: { id: parseInt(userId) } });
     if (!user) return res.status(400).json({ error: `User ${userId} does not exist` });
 
@@ -868,7 +881,7 @@ app.post('/api/performance/recalculate', authenticateToken, async (req, res) => 
     // 4) Punctuality: placeholder unless you track it elsewhere
     const punctualityScore = null;
 
-    // Weights (adjustable)
+    
     const weights = { evaluation: 0.5, goals: 0.25, productivity: 0.15, punctuality: 0.1 };
     const components = {
       evaluation: isNaN(evaluationScore) ? 0 : evaluationScore,
@@ -1171,7 +1184,7 @@ app.delete('/api/goals/:gid', authenticateToken, async (req, res) => {
 });
 
 // Employees CRUD and activation
-app.get('/api/employees', authenticateToken, async (req, res) => {
+app.get('/api/employees', authenticateToken, blockEmployee, async (req, res) => {
   try {
     const { isActive } = req.query;
     const where = {};
@@ -1185,7 +1198,7 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
   }
 });
 
-app.get('/api/employees/:id', authenticateToken, async (req, res) => {
+app.get('/api/employees/:id', authenticateToken, blockEmployee, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
@@ -1198,7 +1211,7 @@ app.get('/api/employees/:id', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/employees', authenticateToken, upload.fields([{ name: 'profileImage', maxCount: 1 }]), async (req, res) => {
+app.post('/api/employees', authenticateToken, blockEmployee, upload.fields([{ name: 'profileImage', maxCount: 1 }]), async (req, res) => {
   try {
     // Normalize multipart fields (handle array-form)
     const pick = (v) => Array.isArray(v) ? v[0] : v;
@@ -1279,7 +1292,7 @@ app.post('/api/employees', authenticateToken, upload.fields([{ name: 'profileIma
   }
 });
 
-app.put('/api/employees/:id', authenticateToken, upload.fields([{ name: 'profileImage', maxCount: 1 }]), async (req, res) => {
+app.put('/api/employees/:id', authenticateToken, blockEmployee, upload.fields([{ name: 'profileImage', maxCount: 1 }]), async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
@@ -1331,7 +1344,7 @@ app.put('/api/employees/:id', authenticateToken, upload.fields([{ name: 'profile
   }
 });
 
-app.patch('/api/employees/:id/activate', authenticateToken, async (req, res) => {
+app.patch('/api/employees/:id/activate', authenticateToken, blockEmployee, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const updated = await prisma.employee.update({ where: { id }, data: { isActive: true } });
@@ -1342,7 +1355,7 @@ app.patch('/api/employees/:id/activate', authenticateToken, async (req, res) => 
   }
 });
 
-app.patch('/api/employees/:id/deactivate', authenticateToken, async (req, res) => {
+app.patch('/api/employees/:id/deactivate', authenticateToken, blockEmployee, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const updated = await prisma.employee.update({ where: { id }, data: { isActive: false } });
