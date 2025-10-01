@@ -50,6 +50,17 @@ const getAuthHeader = (req) => {
 
 const SECRET_KEY = 'a-very-secure-secret-key-2025'; 
 
+// Helpers to normalize boolean-like strings stored in DB (e.g. 'true','false','1','0','yes','no','active','inactive')
+const toLowerString = (v) => (v == null ? '' : String(v).trim().toLowerCase());
+const isTrueLike = (v) => {
+  const s = toLowerString(v);
+  return s === 'true' || s === '1' || s === 'yes' || s === 'y' || s === 'on' || s === 'active';
+};
+const isFalseLike = (v) => {
+  const s = toLowerString(v);
+  return s === 'false' || s === '0' || s === 'no' || s === 'n' || s === 'off' || s === 'inactive';
+};
+
 // Middleware to authenticate token
 const authenticateToken = (req, res, next) => {
   const authHeader = getAuthHeader(req);
@@ -116,6 +127,26 @@ app.post('/api/auth/login', async (req, res) => {
     if (!passwordMatch) {
       console.log('Password mismatch for:', username);
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    // Block inactive/locked users from logging in
+    const isInactive = isFalseLike(user.status) || isFalseLike(user.activeStatus);
+    const isLocked = isTrueLike(user.locked);
+    if (isInactive || isLocked) {
+      return res.status(403).json({ error: 'Your account is Deactiveted. Contact system administrator.' });
+    }
+    // Additionally, if this user is linked to an employee record that is inactive, block login
+    const linkedEmployee = await prisma.employee.findFirst({ where: { userId: user.id } });
+    if (linkedEmployee && linkedEmployee.isActive === false) {
+      // Auto-sync user flags if inconsistent with employee
+      try {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { activeStatus: 'false', status: 'false', locked: 'true' },
+        });
+      } catch (syncErr) {
+        console.warn('User flag sync on login failed:', syncErr?.message);
+      }
+      return res.status(403).json({ error: 'Your account is Deactiveted. Contact system administrator.' });
     }
     const token = jwt.sign({ id: user.id, username: user.userName }, SECRET_KEY, { expiresIn: '1h' });
     console.log('Login successful:', username);
@@ -1252,7 +1283,7 @@ app.post('/api/employees', authenticateToken, blockEmployee, upload.fields([{ na
       age: age == null || age === '' ? null : parseInt(age, 10),
       birthDate: birthDate ? new Date(birthDate) : null,
       profileImageUrl: uploadedFile ? `/uploads/${path.basename(uploadedFile.path)}` : (profileImageUrl || null),
-      isActive: isActive == null ? true : (String(isActive).toLowerCase() === 'true'),
+      isActive: isActive == null ? true : isTrueLike(isActive),
       userId: userId != null && userId !== '' && !Number.isNaN(parseInt(userId, 10)) ? parseInt(userId, 10) : null,
     };
 
@@ -1282,6 +1313,15 @@ app.post('/api/employees', authenticateToken, blockEmployee, upload.fields([{ na
     }
 
     const created = await prisma.employee.create({ data });
+    // If employee starts inactive and linked to a user, sync user flags
+    if (created.userId) {
+      await prisma.user.update({
+        where: { id: created.userId },
+        data: created.isActive
+          ? { activeStatus: 'true', status: 'true', locked: 'false' }
+          : { activeStatus: 'false', status: 'false', locked: 'true' },
+      });
+    }
     res.status(201).json(created);
   } catch (error) {
     if (error.code === 'P2002') {
@@ -1330,10 +1370,19 @@ app.put('/api/employees/:id', authenticateToken, blockEmployee, upload.fields([{
         age: age === undefined ? existing.age : (age == null || age === '' ? null : parseInt(age, 10)),
         birthDate: birthDate === undefined ? existing.birthDate : (birthDate ? new Date(birthDate) : null),
         profileImageUrl: uploadedFile ? `/uploads/${path.basename(uploadedFile.path)}` : (profileImageUrl === undefined ? existing.profileImageUrl : profileImageUrl),
-        isActive: isActive === undefined ? existing.isActive : (String(isActive).toLowerCase() === 'true'),
+        isActive: isActive === undefined ? existing.isActive : isTrueLike(isActive),
         userId: userId === undefined ? existing.userId : (userId != null && userId !== '' ? parseInt(userId, 10) : null),
       },
     });
+    // If active flag changed and linked to user, sync user flags
+    if (updated.userId != null && updated.isActive !== existing.isActive) {
+      await prisma.user.update({
+        where: { id: updated.userId },
+        data: updated.isActive
+          ? { activeStatus: 'true', status: 'true', locked: 'false' }
+          : { activeStatus: 'false', status: 'false', locked: 'true' },
+      });
+    }
     res.json(updated);
   } catch (error) {
     if (error.code === 'P2002') {
@@ -1348,6 +1397,17 @@ app.patch('/api/employees/:id/activate', authenticateToken, blockEmployee, async
   try {
     const id = parseInt(req.params.id);
     const updated = await prisma.employee.update({ where: { id }, data: { isActive: true } });
+    // If employee linked to a user, set user's activeStatus/status/locked appropriately
+    if (updated.userId) {
+      await prisma.user.update({
+        where: { id: updated.userId },
+        data: {
+          activeStatus: 'true',
+          status: 'true',
+          locked: 'false',
+        },
+      });
+    }
     res.json(updated);
   } catch (error) {
     console.error('Activate employee error:', error.message);
@@ -1359,6 +1419,17 @@ app.patch('/api/employees/:id/deactivate', authenticateToken, blockEmployee, asy
   try {
     const id = parseInt(req.params.id);
     const updated = await prisma.employee.update({ where: { id }, data: { isActive: false } });
+    // If employee linked to a user, set user's activeStatus/status/locked accordingly
+    if (updated.userId) {
+      await prisma.user.update({
+        where: { id: updated.userId },
+        data: {
+          activeStatus: 'false',
+          status: 'false',
+          locked: 'true',
+        },
+      });
+    }
     res.json(updated);
   } catch (error) {
     console.error('Deactivate employee error:', error.message);

@@ -33,17 +33,35 @@ ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, LineElement
 
 const Dashboard: React.FC = () => {
   const token = localStorage.getItem('token');
+  const currentUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('userProfile') || '{}');
+    } catch {
+      return {} as any;
+    }
+  })();
+  const isEmployee = currentUser?.role === 'Employee';
 
   const { data: users, isLoading: usersLoading, error: usersError } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
       if (!token) throw new Error('No authentication token');
-      const response = await axios.get('http://localhost:3000/api/users', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      console.log('Fetched users:', response.data);
-      return response.data as User[];
+      try {
+        const response = await axios.get('http://localhost:3000/api/users', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        console.log('Fetched users:', response.data);
+        return response.data as User[];
+      } catch (err: any) {
+        // If forbidden (e.g., Employee role), return empty list so dashboard still loads
+        if (err?.response?.status === 403) {
+          console.warn('Users fetch forbidden; returning empty list for dashboard');
+          return [] as User[];
+        }
+        throw err;
+      }
     },
+    enabled: !!token && !isEmployee,
   });
 
   const { data: evaluations, isLoading: evaluationsLoading, error: evaluationsError } = useQuery({
@@ -206,10 +224,10 @@ const Dashboard: React.FC = () => {
     return <Typography>Loading...</Typography>;
   }
 
-  if (usersError || evaluationsError || criteriaError || resultsError) {
+  if (evaluationsError || criteriaError || resultsError) {
     return (
       <Typography color="error">
-        Error: {(usersError as Error)?.message || (evaluationsError as Error)?.message || (criteriaError as Error)?.message || (resultsError as Error)?.message}
+        Error: {(evaluationsError as Error)?.message || (criteriaError as Error)?.message || (resultsError as Error)?.message}
       </Typography>
     );
   }

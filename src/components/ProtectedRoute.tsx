@@ -21,9 +21,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" replace />;
   }
 
-  // Check if employee should be blocked
   if (blockEmployee && user && user.role === 'Employee') {
-    // Redirect to dashboard if employee tries to access admin-only routes
+
     return <Navigate to="/dashboard" replace />;
   }
 

@@ -20,8 +20,9 @@ const Login: React.FC = () => {
       console.log('Token stored:', localStorage.getItem('token'));
       navigate('/dashboard');
     } catch (err: any) {
+      const serverMsg = err?.response?.data?.error || 'Invalid credentials';
       console.error('Login error:', err.response?.data || err.message);
-      setError('Invalid credentials');
+      setError(serverMsg);
     }
   };
 

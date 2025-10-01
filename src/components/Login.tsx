@@ -22,7 +22,8 @@ const Login: React.FC = () => {
       setUser(response.data.user); 
       navigate('/dashboard');
     } catch (err: any) {
-      setError('Invalid credentials');
+      const serverMsg = err?.response?.data?.error || 'Invalid credentials';
+      setError(serverMsg);
       console.error('Login error:', err);
     }
   };
