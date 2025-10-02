@@ -88,7 +88,24 @@ model Goal {
   activatedBy Int?    @map("ActivatedBy")
   user       User?    @relation(fields: [activatedBy], references: [id], name: "userGoals") // Added name to match
 
+  // Relations
+  keyResultProgress KeyResultProgress[]
+
   @@map("Goal")
+}
+
+model KeyResultProgress {
+  id         Int      @id @default(autoincrement())
+  goalId     Int
+  keyIndex   Int      // index into Goal.keyResult array
+  progress   Int      // 0..100
+  notedAt    DateTime @default(now())
+  notedBy    Int      // user id who recorded progress
+
+  goal       Goal     @relation(fields: [goalId], references: [gid])
+  user       User     @relation(fields: [notedBy], references: [id])
+
+  @@index([goalId, keyIndex, notedAt])
 }
 model Performance {
   id                Int      @id @default(autoincrement())

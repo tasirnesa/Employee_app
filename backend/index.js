@@ -1182,6 +1182,86 @@ app.put('/api/goals/:gid', authenticateToken, async (req, res) => {
   }
 });
 
+// Record progress for a specific key result under a goal
+// POST /api/goals/:gid/key-results/:keyIndex/progress { progress }
+app.post('/api/goals/:gid/key-results/:keyIndex/progress', authenticateToken, async (req, res) => {
+  try {
+    const gid = parseInt(req.params.gid);
+    const keyIndex = parseInt(req.params.keyIndex);
+    const { progress } = req.body;
+
+    if (Number.isNaN(gid) || Number.isNaN(keyIndex)) {
+      return res.status(400).json({ error: 'Invalid goal id or key index' });
+    }
+    const progressInt = parseInt(progress);
+    if (Number.isNaN(progressInt) || progressInt < 0 || progressInt > 100) {
+      return res.status(400).json({ error: 'Progress must be an integer 0..100' });
+    }
+
+    const goal = await prisma.goal.findUnique({ where: { gid } });
+    if (!goal) return res.status(404).json({ error: 'Goal not found' });
+    if (goal.activatedBy !== req.user.id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const keyResults = Array.isArray(goal.keyResult) ? goal.keyResult : [];
+    if (keyIndex < 0 || keyIndex >= keyResults.length) {
+      return res.status(400).json({ error: 'keyIndex out of range' });
+    }
+
+    const created = await prisma.keyResultProgress.create({
+      data: {
+        goalId: gid,
+        keyIndex,
+        progress: progressInt,
+        notedBy: req.user.id,
+      },
+    });
+
+    // Recalculate goal.progress as average of latest progress per key
+    const latestByKey = await prisma.$queryRaw`
+      SELECT DISTINCT ON ("keyIndex") "keyIndex", "progress"
+      FROM "KeyResultProgress"
+      WHERE "goalId" = ${gid}
+      ORDER BY "keyIndex", "notedAt" DESC
+    `;
+    const values = (latestByKey || []).map(r => Number(r.progress)).filter(n => !Number.isNaN(n));
+    const avg = values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null;
+    await prisma.goal.update({ where: { gid }, data: { progress: avg } });
+
+    res.status(201).json({ progress: created, goalProgress: avg });
+  } catch (error) {
+    console.error('Record key result progress error:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+// Get latest per-key progress for a goal
+// GET /api/goals/:gid/key-results/progress
+app.get('/api/goals/:gid/key-results/progress', authenticateToken, async (req, res) => {
+  try {
+    const gid = parseInt(req.params.gid);
+    if (Number.isNaN(gid)) return res.status(400).json({ error: 'Invalid goal id' });
+
+    const goal = await prisma.goal.findUnique({ where: { gid } });
+    if (!goal) return res.status(404).json({ error: 'Goal not found' });
+    if (goal.activatedBy !== req.user.id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const latestByKey = await prisma.$queryRaw`
+      SELECT DISTINCT ON ("keyIndex") "keyIndex", "progress", "notedAt"
+      FROM "KeyResultProgress"
+      WHERE "goalId" = ${gid}
+      ORDER BY "keyIndex", "notedAt" DESC
+    `;
+    res.json({ keyResults: goal.keyResult || [], latestProgress: latestByKey });
+  } catch (error) {
+    console.error('Get key result progress error:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
 // DELETE a goal
 app.delete('/api/goals/:gid', authenticateToken, async (req, res) => {
   console.log('Delete goal request received with params:', req.params);
