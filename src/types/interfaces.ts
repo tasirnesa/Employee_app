@@ -58,16 +58,22 @@ export interface Criteria {
   createdBy: number;
 }
 
+// ../types/interfaces.ts
+export interface KeyResult {
+  title: string;
+  progress?: number;
+}
+
 export interface Goal {
   gid: number;
   objective: string;
-  // Backward-compatible: keyResult can be array of strings or array of objects with per-KR progress
-  keyResult?: (string | { title: string; progress?: number })[];
+  keyResult: (string | KeyResult)[] | null; // Allow mixed array of strings or KeyResult objects
   priority?: string;
   status?: string;
   progress?: number;
-  duedate: string;
+  duedate?: string;
   category?: string;
+  activatedBy?: number;
 }
 
 export interface Session {

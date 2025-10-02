@@ -47,9 +47,10 @@ const GoalsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Progress dialog state
+  // Progress dialog state for key results
   const [progressDialogOpen, setProgressDialogOpen] = useState(false);
   const [progressGoal, setProgressGoal] = useState<Goal | null>(null);
+  const [progressKeyIndex, setProgressKeyIndex] = useState<number | null>(null);
   const [progressValue, setProgressValue] = useState<number>(0);
 
   // Edit dialog state
@@ -106,7 +107,10 @@ const GoalsPage: React.FC = () => {
     setEditGoal(goal);
     setEditObjective(goal.objective || '');
     const raw = Array.isArray(goal.keyResult) ? goal.keyResult : (goal.keyResult ? [goal.keyResult] : []);
-    const keyResultsArr = raw.map((kr: any) => (typeof kr === 'string' ? { title: kr, progress: 0 } : { title: kr?.title || '', progress: kr?.progress ?? 0 }));
+    const keyResultsArr = raw.map((kr: any, idx: number) => ({
+      title: typeof kr === 'string' ? kr : kr?.title || '',
+      progress: typeof kr === 'object' && kr?.progress != null ? kr.progress : 0,
+    }));
     setEditKeyResults(keyResultsArr.length ? keyResultsArr : [{ title: '', progress: 0 }]);
     setEditDueDate(goal.duedate ? new Date(goal.duedate).toISOString().slice(0, 10) : '');
     setEditPriority(goal.priority || 'Medium');
@@ -116,12 +120,22 @@ const GoalsPage: React.FC = () => {
     setEditDialogOpen(true);
   };
 
-  const handleUpdateProgress = (gid: number) => {
+  const handleUpdateProgress = (gid: number, keyIndex: number) => {
     const goal = goals.find(g => g.gid === gid);
-    if (!goal) return;
+    if (!goal || !isDateValid(goal.duedate)) return;
     setProgressGoal(goal);
-    setProgressValue(goal.progress ?? 0);
+    setProgressKeyIndex(keyIndex);
+    const keyResult = Array.isArray(goal.keyResult) ? goal.keyResult[keyIndex] : goal.keyResult;
+    setProgressValue(typeof keyResult === 'object' && keyResult?.progress != null ? keyResult.progress : 0);
     setProgressDialogOpen(true);
+  };
+
+  const isDateValid = (duedate: string | undefined) => {
+    if (!duedate) return true; // No due date, allow updates
+    const due = new Date(duedate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to start of day
+    return due >= today;
   };
 
   const addNewKeyResult = () => {
@@ -140,22 +154,54 @@ const GoalsPage: React.FC = () => {
   };
 
   const saveProgress = async () => {
-    if (!progressGoal) return;
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token found');
-      await axios.put(`http://localhost:3000/api/goals/${progressGoal.gid}`,
-        { progress: progressValue },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setGoals(prev => prev.map(g => g.gid === progressGoal.gid ? { ...g, progress: progressValue } : g));
-      setProgressDialogOpen(false);
-      setProgressGoal(null);
-    } catch (err) {
-      console.error('Failed to update progress', err);
-      alert('Failed to update progress.');
-    }
-  };
+  if (!progressGoal || progressKeyIndex === null) return;
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No authentication token found');
+    const userId = JSON.parse(localStorage.getItem('userProfile') || '{}').id; // Assuming userId is stored
+    await axios.post(
+      `http://localhost:3000/api/key-result-progress`,
+      {
+        goalId: progressGoal.gid,
+        keyIndex: progressKeyIndex,
+        progress: progressValue,
+        notedBy: userId,
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    // Safely update local state
+    setGoals(prev =>
+      prev.map(g =>
+        g.gid === progressGoal.gid
+          ? {
+              ...g,
+              keyResult: Array.isArray(g.keyResult)
+                ? g.keyResult.map((kr, idx) => {
+                    if (idx === progressKeyIndex) {
+                      if (typeof kr === 'object' && kr !== null) {
+                        return { ...kr, progress: progressValue }; // Safe spread on object
+                      } else if (typeof kr === 'string') {
+                        return { title: kr, progress: progressValue }; // Convert string to object
+                      }
+                      return kr; // Preserve other types
+                    }
+                    return kr;
+                  })
+                : g.keyResult === null || g.keyResult === undefined
+                ? [{ title: '', progress: progressValue }] // Fallback for null/undefined
+                : [{ title: g.keyResult as string || '', progress: progressValue }], // Fallback for single string
+            }
+          : g
+      )
+    );
+    setProgressDialogOpen(false);
+    setProgressGoal(null);
+    setProgressKeyIndex(null);
+  } catch (err) {
+    console.error('Failed to update key result progress', err);
+    alert('Failed to update progress.');
+  }
+};
 
   const saveEdit = async () => {
     if (!editGoal) return;
@@ -220,7 +266,6 @@ const GoalsPage: React.FC = () => {
           keyResult: newKeyResults.filter(kr => kr.title.trim()),
           priority: 'Medium',
           status: 'Active',
-          // progress computed server-side from KR percentages
           duedate: newDueDate,
           category: 'General',
         },
@@ -285,6 +330,14 @@ const GoalsPage: React.FC = () => {
                   {Array.isArray(goal.keyResult) ? (
                     goal.keyResult.map((kr: any, index: number) => (
                       <ListItem key={index} disablePadding>
+                        <IconButton
+                          color="primary"
+                          onClick={() => handleUpdateProgress(goal.gid, index)}
+                          disabled={!isDateValid(goal.duedate)}
+                          sx={{ mr: 1 }}
+                        >
+                          <BarChartIcon />
+                        </IconButton>
                         <ListItemText
                           primary={
                             <Typography variant="body1">
@@ -293,7 +346,7 @@ const GoalsPage: React.FC = () => {
                               {typeof kr === 'object' && kr?.progress != null ? ` — ${kr.progress}%` : ''}
                             </Typography>
                           }
-                          sx={{ pl: 1 }}
+                          sx={{ pl: 1, flexGrow: 1 }}
                         />
                       </ListItem>
                     ))
@@ -314,15 +367,6 @@ const GoalsPage: React.FC = () => {
                   <Chip label={`Category: ${goal.category || 'N/A'}`} color="secondary" variant="outlined" />
                 </Box>
                 <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={() => handleUpdateProgress(goal.gid)}
-                    startIcon={<BarChartIcon />}
-                    sx={{ textTransform: 'none' }}
-                  >
-                    Update Progress
-                  </Button>
                   <Button
                     variant="contained"
                     color="secondary"
@@ -437,12 +481,12 @@ const GoalsPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Progress Dialog */}
+      {/* Progress Dialog for Key Result */}
       <Dialog open={progressDialogOpen} onClose={() => setProgressDialogOpen(false)}>
-        <DialogTitle>Update Progress</DialogTitle>
+        <DialogTitle>Update Key Result Progress</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Set the progress percentage for "{progressGoal?.objective}".
+            Set the progress percentage for "{progressGoal?.objective}" - Key Result {progressKeyIndex !== null ? progressKeyIndex + 1 : ''}.
           </DialogContentText>
           <Box sx={{ mt: 2, px: 1 }}>
             <Slider
@@ -464,7 +508,9 @@ const GoalsPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setProgressDialogOpen(false)}>Cancel</Button>
-          <Button onClick={saveProgress} variant="contained">Save</Button>
+          <Button onClick={saveProgress} variant="contained" disabled={!isDateValid(progressGoal?.duedate)}>
+            Save
+          </Button>
         </DialogActions>
       </Dialog>
 

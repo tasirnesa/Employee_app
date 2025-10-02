@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "windows"]
 }
 
@@ -9,84 +9,85 @@ datasource db {
 }
 
 model User {
-  id                 Int                 @id @default(autoincrement()) @map("Id")
-  fullName           String              @map("FullName")
-  userName           String              @unique @map("UserName")
-  password           String              @map("Password")
-  gender             String?             @map("Gender")
-  age                Int?                @map("Age")
-  status             String              @map("Status")
-  role               String              @map("Role")
-  locked             String              @map("Locked")
-  isFirstLogin       String              @map("IsFirstLogin")
-  activeStatus       String              @map("activeStatus")
-  createdDate        DateTime            @map("CreatedDate")
-  createdBy          Int                 @map("CreatedBy")
-  evaluationsAsEvaluator Evaluation[]    @relation("evaluator")
-  evaluationsAsEvaluatee Evaluation[]    @relation("evaluatee")
-  goals              Goal[]              @relation("userGoals")
-  evaluationSessions EvaluationSession[] @relation("userSessions")
-  createdCriteria    EvaluationCriteria[] @relation("creatorCriteria")
-  performancesAsUser      Performance[]       @relation("UserPerformance")
-  performancesAsEvaluator Performance[]       @relation("EvaluatorPerformance")
-  employees          Employee[]
+  id                      Int                  @id @default(autoincrement()) @map("Id")
+  fullName                String               @map("FullName")
+  userName                String               @unique @map("UserName")
+  password                String               @map("Password")
+  gender                  String?              @map("Gender")
+  age                     Int?                 @map("Age")
+  status                  String               @map("Status")
+  role                    String               @map("Role")
+  locked                  String               @map("Locked")
+  isFirstLogin            String               @map("IsFirstLogin")
+  activeStatus            String               @map("activeStatus")
+  createdDate             DateTime             @map("CreatedDate")
+  createdBy               Int                  @map("CreatedBy")
+  evaluationsAsEvaluator  Evaluation[]         @relation("evaluator")
+  evaluationsAsEvaluatee  Evaluation[]         @relation("evaluatee")
+  goals                   Goal[]               @relation("userGoals")
+  evaluationSessions      EvaluationSession[]  @relation("userSessions")
+  createdCriteria         EvaluationCriteria[] @relation("creatorCriteria")
+  performancesAsUser      Performance[]        @relation("UserPerformance")
+  performancesAsEvaluator Performance[]        @relation("EvaluatorPerformance")
+  employees               Employee[]
+  keyResultProgress  KeyResultProgress[] @relation("notedBy")
 }
 
 model Evaluation {
-  evaluationID   Int      @id @default(autoincrement()) @map("EvaluationID")
-  evaluatorID    Int      @map("EvaluatorID")
-  evaluateeID    Int      @map("EvaluateeID")
-  evaluationType String   @map("EvaluationType")
-  sessionID      Int      @map("SessionID")
-  evaluationDate DateTime @map("EvaluationDate")
-  evaluator      User     @relation("evaluator", fields: [evaluatorID], references: [id])
-  evaluatee      User     @relation("evaluatee", fields: [evaluateeID], references: [id])
+  evaluationID   Int                @id @default(autoincrement()) @map("EvaluationID")
+  evaluatorID    Int                @map("EvaluatorID")
+  evaluateeID    Int                @map("EvaluateeID")
+  evaluationType String             @map("EvaluationType")
+  sessionID      Int                @map("SessionID")
+  evaluationDate DateTime           @map("EvaluationDate")
+  evaluator      User               @relation("evaluator", fields: [evaluatorID], references: [id])
+  evaluatee      User               @relation("evaluatee", fields: [evaluateeID], references: [id])
   results        EvaluationResult[]
-  session        EvaluationSession @relation(fields: [sessionID], references: [sessionID])
+  session        EvaluationSession  @relation(fields: [sessionID], references: [sessionID])
 }
 
 model EvaluationCriteria {
-  criteriaID   Int      @id @default(autoincrement()) @map("CriteriaID")
-  title        String   @map("Title")
-  description  String?  @map("Description")
-  createdBy    Int      @map("CreatedBy")
-  createdDate  DateTime @map("CreatedDate")
-  results      EvaluationResult[]
-  creator      User?    @relation("creatorCriteria", fields: [createdBy], references: [id])
+  criteriaID  Int                @id @default(autoincrement()) @map("CriteriaID")
+  title       String             @map("Title")
+  description String?            @map("Description")
+  createdBy   Int                @map("CreatedBy")
+  createdDate DateTime           @map("CreatedDate")
+  results     EvaluationResult[]
+  creator     User?              @relation("creatorCriteria", fields: [createdBy], references: [id])
 }
 
 model EvaluationSession {
-  sessionID    Int      @id @default(autoincrement()) @map("SessionID")
-  title        String   @map("Title")
-  startDate    DateTime @map("StartDate")
-  endDate      DateTime @map("EndDate")
-  activatedBy  Int      @map("ActivatedBy")
-  type         String   @map("type") @default("")
-  evaluations  Evaluation[]
-  user         User     @relation("userSessions", fields: [activatedBy], references: [id])
+  sessionID   Int          @id @default(autoincrement()) @map("SessionID")
+  title       String       @map("Title")
+  startDate   DateTime     @map("StartDate")
+  endDate     DateTime     @map("EndDate")
+  activatedBy Int          @map("ActivatedBy")
+  type        String       @default("") @map("type")
+  evaluations Evaluation[]
+  user        User         @relation("userSessions", fields: [activatedBy], references: [id])
 }
 
 model EvaluationResult {
-  resultID     Int      @id @default(autoincrement()) @map("ResultID")
-  evaluationID Int      @map("EvaluationID")
-  criteriaID   Int      @map("CriteriaID")
-  score        Float    @map("Score")
-  feedback     String?  @map("Feedback")
-  evaluation   Evaluation @relation(fields: [evaluationID], references: [evaluationID])
+  resultID     Int                @id @default(autoincrement()) @map("ResultID")
+  evaluationID Int                @map("EvaluationID")
+  criteriaID   Int                @map("CriteriaID")
+  score        Float              @map("Score")
+  feedback     String?            @map("Feedback")
+  evaluation   Evaluation         @relation(fields: [evaluationID], references: [evaluationID])
   criteria     EvaluationCriteria @relation(fields: [criteriaID], references: [criteriaID])
 }
 
 model Goal {
-  gid        Int      @id @default(autoincrement())
-  objective  String
-  keyResult  Json?    @default("[]") // Store array of strings as JSON
-  priority   String?
-  status     String?
-  progress   Int?
-  duedate    DateTime?
-  category   String?
-  activatedBy Int?    @map("ActivatedBy")
-  user       User?    @relation(fields: [activatedBy], references: [id], name: "userGoals") // Added name to match
+  gid         Int       @id @default(autoincrement())
+  objective   String
+  keyResult   Json?     @default("[]") // Store array of strings as JSON
+  priority    String?
+  status      String?
+  progress    Int?
+  duedate     DateTime?
+  category    String?
+  activatedBy Int?      @map("ActivatedBy")
+  user        User?     @relation(fields: [activatedBy], references: [id], name: "userGoals") // Added name to match
 
   // Relations
   keyResultProgress KeyResultProgress[]
@@ -95,57 +96,58 @@ model Goal {
 }
 
 model KeyResultProgress {
-  id         Int      @id @default(autoincrement())
-  goalId     Int
-  keyIndex   Int      // index into Goal.keyResult array
-  progress   Int      // 0..100
-  notedAt    DateTime @default(now())
-  notedBy    Int      // user id who recorded progress
+  id       Int      @id @default(autoincrement())
+  goalId   Int
+  keyIndex Int 
+  progress Int
+  notedAt  DateTime @default(now())
+  notedBy  Int 
 
-  goal       Goal     @relation(fields: [goalId], references: [gid])
-  user       User     @relation(fields: [notedBy], references: [id])
+  goal Goal @relation(fields: [goalId], references: [gid])
+ user       User     @relation(fields: [notedBy], references: [id], name: "notedBy")
 
   @@index([goalId, keyIndex, notedAt])
 }
+
 model Performance {
-  id                Int      @id @default(autoincrement())
-  userId            Int
-  evaluatorId       Int
-  tasksCompleted    Int
-  hoursWorked       Int
-  efficiencyScore   Float?
-  qualityScore      Float?
-  punctualityScore  Float?
+  id                 Int      @id @default(autoincrement())
+  userId             Int
+  evaluatorId        Int
+  tasksCompleted     Int
+  hoursWorked        Int
+  efficiencyScore    Float?
+  qualityScore       Float?
+  punctualityScore   Float?
   collaborationScore Float?
-  innovationScore   Float?
-  overallRating     Float?
-  feedback          String?
-  evaluationPeriod  String
-  date              DateTime
-  createdAt         DateTime @default(now())
+  innovationScore    Float?
+  overallRating      Float?
+  feedback           String?
+  evaluationPeriod   String
+  date               DateTime
+  createdAt          DateTime @default(now())
 
   user      User @relation("UserPerformance", fields: [userId], references: [id])
   evaluator User @relation("EvaluatorPerformance", fields: [evaluatorId], references: [id])
 }
 
 model Employee {
-  id           Int       @id @default(autoincrement())
-  firstName    String
-  lastName     String
-  email        String    @unique
-  phone        String?
-  department   String?
-  position     String?
-  hireDate     DateTime?
-  gender       String?
-  age          Int?
-  birthDate    DateTime?
+  id              Int       @id @default(autoincrement())
+  firstName       String
+  lastName        String
+  email           String    @unique
+  phone           String?
+  department      String?
+  position        String?
+  hireDate        DateTime?
+  gender          String?
+  age             Int?
+  birthDate       DateTime?
   profileImageUrl String?
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  userId       Int?
-  user         User?     @relation(fields: [userId], references: [id])
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  userId          Int?
+  user            User?     @relation(fields: [userId], references: [id])
 
   @@map("Employee")
 }
