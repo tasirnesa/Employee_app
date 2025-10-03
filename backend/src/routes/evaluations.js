@@ -17,6 +17,39 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get single evaluation details: criteria results and related goals progress at time
+router.get('/:evaluationId/details', async (req, res) => {
+  try {
+    const evaluationId = parseInt(req.params.evaluationId);
+    if (Number.isNaN(evaluationId)) return res.status(400).json({ error: 'Invalid evaluationId' });
+
+    const evaluation = await prisma.evaluation.findUnique({
+      where: { evaluationID: evaluationId },
+      include: {
+        evaluator: { select: { fullName: true, id: true } },
+        evaluatee: { select: { fullName: true, id: true } },
+      },
+    });
+    if (!evaluation) return res.status(404).json({ error: 'Evaluation not found' });
+
+    const [results, goals] = await Promise.all([
+      prisma.evaluationResult.findMany({
+        where: { evaluationID: evaluationId },
+        include: { criteria: { select: { title: true, description: true, criteriaID: true } } },
+        orderBy: { resultID: 'asc' },
+      }),
+      prisma.goal.findMany({
+        where: { activatedBy: evaluation.evaluateeID },
+        orderBy: { gid: 'desc' },
+      }),
+    ]);
+
+    return res.json({ evaluation, results, goals });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
 // Get current user's evaluation summary as percentages
 router.get('/me/summary', async (req, res) => {
   try {

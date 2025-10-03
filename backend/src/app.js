@@ -18,12 +18,14 @@ const empRoutes = require('./routes/employees');
 const userRoutes = require('./routes/users');
 const criteriaRoutes = require('./routes/criteria');
 const goalsRoutes = require('./routes/goals');
+const keyResultProgressRoutes = require('./routes/keyResultProgress');
 
 app.use('/api/evaluations', authenticateToken, evalRoutes);
 app.use('/api/employees', authenticateToken, empRoutes);
 app.use('/api/users', authenticateToken, userRoutes);
 app.use('/api/criteria', authenticateToken, criteriaRoutes);
 app.use('/api/goals', authenticateToken, goalsRoutes);
+app.use('/api/key-result-progress', authenticateToken, keyResultProgressRoutes);
 
 module.exports = app;
 

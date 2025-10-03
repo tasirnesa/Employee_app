@@ -32,15 +32,18 @@ router.post('/', async (req, res) => {
 
     if (!objective) return res.status(400).json({ error: 'objective is required' });
 
-    // Compute progress as TOTAL of keyResult percentages (capped to 100) if not provided
+    // Compute progress as AVERAGE of keyResult percentages (0 for missing), 0..100, if not provided
     let computedProgress = progress;
     if ((computedProgress == null || Number.isNaN(Number(computedProgress))) && Array.isArray(keyResult)) {
-      const krWithPerc = keyResult.filter((kr) => kr && typeof kr === 'object' && kr.progress != null);
-      if (krWithPerc.length) {
-        const total = Math.round(
-          krWithPerc.reduce((sum, kr) => sum + Math.max(0, Math.min(100, Number(kr.progress) || 0)), 0)
-        );
-        computedProgress = Math.min(100, total);
+      const values = keyResult.map((kr) => {
+        if (kr && typeof kr === 'object' && kr.progress != null) {
+          return Math.max(0, Math.min(100, Number(kr.progress) || 0));
+        }
+        return 0;
+      });
+      if (values.length) {
+        const avg = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+        computedProgress = Math.max(0, Math.min(100, avg));
       }
     }
 
@@ -85,15 +88,18 @@ router.put('/:gid', async (req, res) => {
     if (category != null) data.category = category;
     if (duedate != null) data.duedate = duedate ? new Date(duedate) : null;
 
-    // Derive progress as TOTAL from keyResult if not explicitly provided but keyResult provided
+    // Derive progress as AVERAGE from keyResult if not explicitly provided but keyResult provided
     let nextProgress = progress;
     if (nextProgress == null && Array.isArray(keyResult)) {
-      const krWithPerc = keyResult.filter((kr) => kr && typeof kr === 'object' && kr.progress != null);
-      if (krWithPerc.length) {
-        const total = Math.round(
-          krWithPerc.reduce((sum, kr) => sum + Math.max(0, Math.min(100, Number(kr.progress) || 0)), 0)
-        );
-        nextProgress = Math.min(100, total);
+      const values = keyResult.map((kr) => {
+        if (kr && typeof kr === 'object' && kr.progress != null) {
+          return Math.max(0, Math.min(100, Number(kr.progress) || 0));
+        }
+        return 0;
+      });
+      if (values.length) {
+        const avg = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+        nextProgress = Math.max(0, Math.min(100, avg));
       }
     }
     if (nextProgress != null) data.progress = Math.max(0, Math.min(100, Number(nextProgress)));

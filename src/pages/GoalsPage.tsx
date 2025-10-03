@@ -64,6 +64,28 @@ const GoalsPage: React.FC = () => {
   const [editProgress, setEditProgress] = useState<number>(0);
   const [editCategory, setEditCategory] = useState('General');
 
+  // Details dialog
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsGoal, setDetailsGoal] = useState<Goal | null>(null);
+  const [detailsLogs, setDetailsLogs] = useState<Array<{ id: number; keyIndex: number; progress: number; notedAt: string; notedBy: number }>>([]);
+  const openDetails = async (gid: number) => {
+    const goal = goals.find(g => g.gid === gid) || null;
+    setDetailsGoal(goal);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token found');
+      const res = await axios.get(`http://localhost:3000/api/key-result-progress/${gid}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDetailsLogs(res.data.logs || []);
+      setDetailsOpen(true);
+    } catch (e) {
+      console.error('Failed to fetch details', e);
+      setDetailsLogs([]);
+      setDetailsOpen(true);
+    }
+  };
+
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteGoal, setDeleteGoal] = useState<Goal | null>(null);
@@ -136,6 +158,48 @@ const GoalsPage: React.FC = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Normalize to start of day
     return due >= today;
+  };
+
+  // Compute schedule health based on due date and current progress
+  const getScheduleStatus = (dueDateStr?: string, progress?: number) => {
+    const pct = Number(progress ?? 0);
+    if (!dueDateStr) return { label: 'No Due Date', color: 'default' as const };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDateStr);
+    due.setHours(0, 0, 0, 0);
+
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const daysLeft = Math.floor((due.getTime() - today.getTime()) / msPerDay);
+
+    if (daysLeft < 0) {
+      return pct >= 100
+        ? { label: 'Completed (Overdue)', color: 'success' as const }
+        : { label: 'Overdue', color: 'error' as const };
+    }
+
+    // Simple heuristic: tighten expectations closer to due date
+    if (daysLeft <= 3 && pct < 90) return { label: 'At Risk', color: 'warning' as const };
+    if (daysLeft <= 7 && pct < 80) return { label: 'At Risk', color: 'warning' as const };
+    if (daysLeft <= 14 && pct < 50) return { label: 'At Risk', color: 'warning' as const };
+
+    return { label: 'On Track', color: 'info' as const };
+  };
+
+  const getRequiredDailyProgressSentence = (dueDateStr?: string, progress?: number) => {
+    const pct = Number(progress ?? 0);
+    if (!dueDateStr) return 'No due date set.';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDateStr);
+    due.setHours(0, 0, 0, 0);
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const daysLeft = Math.floor((due.getTime() - today.getTime()) / msPerDay);
+    if (pct >= 100) return 'Objective completed.';
+    if (daysLeft <= 0) return `Overdue — remaining ${(100 - pct).toFixed(0)}%.`;
+    const remaining = Math.max(0, 100 - pct);
+    const perDay = remaining / daysLeft;
+    return `Need ${perDay.toFixed(1)}%/day for ${daysLeft} day(s) to reach 100%.`;
   };
 
   const addNewKeyResult = () => {
@@ -330,14 +394,17 @@ const GoalsPage: React.FC = () => {
                   {Array.isArray(goal.keyResult) ? (
                     goal.keyResult.map((kr: any, index: number) => (
                       <ListItem key={index} disablePadding>
-                        <IconButton
+                        <Button
+                          variant="outlined"
+                          size="small"
                           color="primary"
                           onClick={() => handleUpdateProgress(goal.gid, index)}
                           disabled={!isDateValid(goal.duedate)}
-                          sx={{ mr: 1 }}
+                          sx={{ mr: 1, textTransform: 'none' }}
+                          startIcon={<BarChartIcon />}
                         >
-                          <BarChartIcon />
-                        </IconButton>
+                          Add Progress
+                        </Button>
                         <ListItemText
                           primary={
                             <Typography variant="body1">
@@ -364,21 +431,32 @@ const GoalsPage: React.FC = () => {
                   <Chip label={`Status: ${goal.status || 'N/A'}`} color={goal.status === 'Completed' ? 'success' : 'warning'} variant="outlined" />
                   <Chip label={`Progress: ${goal.progress || 0}%`} color="info" variant="outlined" />
                   <Chip label={`Due: ${goal.duedate ? new Date(goal.duedate).toLocaleDateString() : 'N/A'}`} color="default" variant="outlined" />
+                  {(() => {
+                    const sch = getScheduleStatus(goal.duedate as any, goal.progress ?? 0);
+                    return <Chip label={`Schedule: ${sch.label}`} color={sch.color} variant="outlined" />;
+                  })()}
                   <Chip label={`Category: ${goal.category || 'N/A'}`} color="secondary" variant="outlined" />
                 </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  {getRequiredDailyProgressSentence(goal.duedate as any, goal.progress ?? 0)}
+                </Typography>
                 <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
                   <Button
                     variant="contained"
                     color="secondary"
                     onClick={() => handleEdit(goal.gid)}
+                    disabled={!isDateValid(goal.duedate)}
                     startIcon={<EditIcon />}
                     sx={{ textTransform: 'none' }}
                   >
                     Edit
                   </Button>
-                  <IconButton color="error" onClick={() => handleDelete(goal.gid)} sx={{ p: 1 }}>
+                  <IconButton color="error" onClick={() => handleDelete(goal.gid)} disabled={!isDateValid(goal.duedate)} sx={{ p: 1 }}>
                     <DeleteIcon />
                   </IconButton>
+                  <Button variant="outlined" onClick={() => openDetails(goal.gid)} sx={{ textTransform: 'none' }}>
+                    Details
+                  </Button>
                 </Box>
               </CardContent>
             </Card>
@@ -588,6 +666,67 @@ const GoalsPage: React.FC = () => {
         <DialogActions>
           <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
           <Button onClick={saveEdit} variant="contained">Save</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Details Dialog */}
+      <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Objective Details</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="h6" gutterBottom>
+            {detailsGoal?.objective}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            {getRequiredDailyProgressSentence(detailsGoal?.duedate as any, detailsGoal?.progress ?? 0)}
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+            {(() => {
+              const sch = getScheduleStatus(detailsGoal?.duedate as any, detailsGoal?.progress ?? 0);
+              return <Chip label={`Schedule: ${sch.label}`} color={sch.color} variant="outlined" />;
+            })()}
+            <Chip label={`Progress: ${detailsGoal?.progress ?? 0}%`} color="info" variant="outlined" />
+            <Chip label={`Due: ${detailsGoal?.duedate ? new Date(detailsGoal.duedate as any).toLocaleDateString() : 'N/A'}`} variant="outlined" />
+            <Chip label={`Priority: ${detailsGoal?.priority || 'N/A'}`} variant="outlined" />
+            <Chip label={`Status: ${detailsGoal?.status || 'N/A'}`} variant="outlined" />
+            <Chip label={`Category: ${detailsGoal?.category || 'N/A'}`} variant="outlined" />
+          </Box>
+
+          <Typography variant="subtitle1" gutterBottom>Key Results</Typography>
+          <List dense>
+            {Array.isArray(detailsGoal?.keyResult) ? (
+              detailsGoal!.keyResult.map((kr: any, idx: number) => (
+                <ListItem key={idx} disableGutters>
+                  <ListItemText
+                    primary={`${idx + 1}. ${typeof kr === 'string' ? kr : kr?.title || 'Untitled'}`}
+                    secondary={`Progress: ${typeof kr === 'object' && kr?.progress != null ? kr.progress : 0}%`}
+                  />
+                </ListItem>
+              ))
+            ) : (
+              <ListItem disableGutters>
+                <ListItemText primary={String(detailsGoal?.keyResult || 'No key results')} />
+              </ListItem>
+            )}
+          </List>
+
+          <Typography variant="subtitle1" sx={{ mt: 2 }} gutterBottom>Recent Progress Logs</Typography>
+          {detailsLogs.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">No progress logs yet.</Typography>
+          ) : (
+            <List dense>
+              {detailsLogs.slice(0, 20).map((log) => (
+                <ListItem key={log.id} disableGutters>
+                  <ListItemText
+                    primary={`KR ${log.keyIndex + 1}: ${log.progress}%`}
+                    secondary={`Noted at: ${new Date(log.notedAt).toLocaleString()} by User #${log.notedBy}`}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailsOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
 

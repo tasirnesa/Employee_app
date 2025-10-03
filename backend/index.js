@@ -103,6 +103,10 @@ const blockEmployee = async (req, res, next) => {
   }
 };
 
+// Mount modular routes from src where this index.js server is used
+const keyResultProgressRoutes = require('./src/routes/keyResultProgress');
+app.use('/api/key-result-progress', authenticateToken, keyResultProgressRoutes);
+
 // Login endpoint
 app.post('/api/auth/login', async (req, res) => {
   try {
@@ -337,6 +341,40 @@ app.get('/api/evaluations', authenticateToken, async (req, res) => {
       code: error.code,
       meta: error.meta,
     });
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+// Evaluation details: results with criteria and current goals for evaluatee
+app.get('/api/evaluations/:evaluationId/details', authenticateToken, async (req, res) => {
+  try {
+    const evaluationId = parseInt(req.params.evaluationId);
+    if (Number.isNaN(evaluationId)) return res.status(400).json({ error: 'Invalid evaluationId' });
+
+    const evaluation = await prisma.evaluation.findUnique({
+      where: { evaluationID: evaluationId },
+      include: {
+        evaluator: { select: { fullName: true, id: true } },
+        evaluatee: { select: { fullName: true, id: true } },
+      },
+    });
+    if (!evaluation) return res.status(404).json({ error: 'Evaluation not found' });
+
+    const [results, goals] = await Promise.all([
+      prisma.evaluationResult.findMany({
+        where: { evaluationID: evaluationId },
+        include: { criteria: { select: { title: true, description: true, criteriaID: true } } },
+        orderBy: { resultID: 'asc' },
+      }),
+      prisma.goal.findMany({
+        where: { activatedBy: evaluation.evaluateeID },
+        orderBy: { gid: 'desc' },
+      }),
+    ]);
+
+    return res.json({ evaluation, results, goals });
+  } catch (error) {
+    console.error('Evaluation details error:', error);
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
@@ -1517,44 +1555,7 @@ app.patch('/api/employees/:id/deactivate', authenticateToken, blockEmployee, asy
   }
 });
 
-app.post('/api/key-result-progress', authenticateToken, async (req, res) => {
-  const { goalId, keyIndex, progress, notedBy } = req.body;
-  try {
-    const newProgress = await prisma.keyResultProgress.create({
-      data: {
-        goalId: parseInt(goalId),
-        keyIndex: parseInt(keyIndex),
-        progress: parseInt(progress),
-        notedBy: parseInt(notedBy),
-        notedAt: new Date(),
-      },
-    });
-    // Optionally update the Goal's keyResult progress (if needed)
-    const updatedGoal = await prisma.goal.update({
-      where: { gid: parseInt(goalId) },
-      data: {
-        keyResult: {
-          set: await prisma.keyResultProgress.findMany({
-            where: { goalId: parseInt(goalId) },
-            orderBy: { keyIndex: 'asc' },
-            select: { keyIndex: true, progress: true },
-          }).then(records =>
-            Array.isArray(progressGoal.keyResult)
-              ? progressGoal.keyResult.map((kr, idx) => ({
-                  ...kr,
-                  progress: records.find(r => r.keyIndex === idx)?.progress || kr.progress || 0,
-                }))
-              : [{ title: progressGoal.keyResult  || '', progress }]
-          ),
-        },
-      },
-    });
-    res.status(201).json(newProgress);
-  } catch (error) {
-    console.error('Error creating key result progress:', error);
-    res.status(500).json({ error: 'Failed to update progress' });
-  }
-});
+// Removed duplicate inline key-result-progress route.
 
 process.on('SIGTERM', async () => {
   console.log('Shutting down server...');

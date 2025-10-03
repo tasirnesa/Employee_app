@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import {
@@ -12,6 +12,15 @@ import {
   TableRow,
   Paper,
   Card,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
 } from '@mui/material';
 import type { Evaluation } from '../types/interfaces';
 
@@ -37,10 +46,27 @@ const ViewEvaluations: React.FC = () => {
     },
   });
 
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [details, setDetails] = useState<any | null>(null);
+  const openDetails = async (evaluationId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token');
+      const res = await axios.get(`http://localhost:3000/api/evaluations/${evaluationId}/details`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDetails(res.data);
+      setDetailsOpen(true);
+    } catch (e) {
+      console.error('Fetch evaluation details error:', e);
+    }
+  };
+
   if (isLoading) return <Typography>Loading...</Typography>;
   if (error) return <Typography color="error">Error: {(error as Error).message}</Typography>;
 
   return (
+    <>
     <Container maxWidth="lg" sx={{ mt: 4, py: 4 }}>
       <Card sx={{ p: 4, borderRadius: 3, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' }}>
         <Typography variant="h4" gutterBottom sx={{ color: 'primary.main' }}>
@@ -85,7 +111,10 @@ const ViewEvaluations: React.FC = () => {
                     <TableCell>{evaluation.evaluatee?.fullName || evaluation.evaluatee?.FullName || evaluation.evaluateeID}</TableCell>
                     <TableCell>{evaluation.evaluationType}</TableCell>
                     <TableCell>{evaluation.sessionID}</TableCell>
-                    <TableCell>{new Date(evaluation.evaluationDate).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      {new Date(evaluation.evaluationDate).toLocaleDateString()}
+                      <Button size="small" sx={{ ml: 1 }} onClick={() => window.location.href = `/evaluations/${evaluation.evaluationID}`}>Details</Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -98,6 +127,9 @@ const ViewEvaluations: React.FC = () => {
         )}
       </Card>
     </Container>
+
+    {/* Details dialog removed; navigation to dedicated page instead */}
+    </>
   );
 };
 

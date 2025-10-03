@@ -14,6 +14,7 @@ import CreateCriteria from './pages/CreateCriteria';
 import ViewCriteria from './pages/ViewCriteria';
 import CreateEvaluation from './pages/CreateEvaluation';
 import ViewEvaluations from './pages/ViewEvaluations';
+import EvaluationDetails from './pages/EvaluationDetails';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Header from './components/Header';
@@ -139,6 +140,7 @@ const AppContent: React.FC = () => {
             <Route path="/criteria/view" element={<ProtectedRoute><ViewCriteria /></ProtectedRoute>} />
             <Route path="/evaluations/create" element={<ProtectedRoute blockEmployee={true}><CreateEvaluation /></ProtectedRoute>} />
             <Route path="/evaluations/view" element={<ProtectedRoute><ViewEvaluations /></ProtectedRoute>} />
+            <Route path="/evaluations/:id" element={<ProtectedRoute><EvaluationDetails /></ProtectedRoute>} />
             <Route path="/employees/view" element={<ProtectedRoute blockEmployee={true}><ViewEmployees /></ProtectedRoute>} />
             <Route path="/employees/create" element={<ProtectedRoute blockEmployee={true}><CreateEmployee /></ProtectedRoute>} />
             <Route path="/employees/:id/edit" element={<ProtectedRoute blockEmployee={true}><EditEmployee /></ProtectedRoute>} />
