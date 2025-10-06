@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { User } from '../types/interfaces';
+import api from '../lib/axios';
 
 interface UserContextType {
   user: User | null;
@@ -15,6 +16,20 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const storedProfile = localStorage.getItem('userProfile');
     if (storedProfile) {
       setUser(JSON.parse(storedProfile));
+    }
+    const token = localStorage.getItem('token');
+    // Enrich/refresh current user from backend (ensures profileImageUrl is present)
+    if (token) {
+      api.get('/api/users/me')
+        .then((res) => {
+          if (res?.data) {
+            setUser(res.data);
+            localStorage.setItem('userProfile', JSON.stringify(res.data));
+          }
+        })
+        .catch(() => {
+          // ignore
+        });
     }
   }, []);
 

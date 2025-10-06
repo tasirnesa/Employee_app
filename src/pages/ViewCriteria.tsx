@@ -57,6 +57,7 @@ const ViewCriteria: React.FC = () => {
                 <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Description</TableCell>
                 <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Created Date</TableCell>
                 <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Created By</TableCell>
+                <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Status</TableCell>
                 <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Action</TableCell>
               </TableRow>
             </TableHead>
@@ -74,19 +75,56 @@ const ViewCriteria: React.FC = () => {
                     <Chip label={(criterion as any).creatorName || criterion.creator?.fullName || criterion.creator?.FullName || `User #${criterion.createdBy}`} size="small" color="default" />
                   </TableCell>
                   <TableCell>
+                    <Chip 
+                      label={criterion.isAuthorized ? 'Authorized' : 'Pending'} 
+                      size="small" 
+                      color={criterion.isAuthorized ? 'success' : 'warning'} 
+                    />
+                  </TableCell>
+                  <TableCell>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      <Button size="small" variant="contained" onClick={async () => alert(JSON.stringify(criterion, null, 2))}>Detail</Button>
+                      <Button 
+                        size="small" 
+                        variant="contained" 
+                        onClick={async () => {
+                          try {
+                            const token = localStorage.getItem('token');
+                            const response = await api.get(`/api/criteria/${criterion.criteriaID}`, {
+                              headers: { Authorization: `Bearer ${token}` },
+                            });
+                            const detailData = response.data;
+                            alert(`Criteria Details:\n\nID: ${detailData.criteriaID}\nTitle: ${detailData.title}\nDescription: ${detailData.description || 'N/A'}\nCreated: ${new Date(detailData.createdDate).toLocaleString()}\nCreated By: ${detailData.creatorName || 'Unknown'}\nAuthorized: ${detailData.isAuthorized ? 'Yes' : 'No'}\nAuthorized By: ${detailData.authorizedBy ? 'User #' + detailData.authorizedBy : 'N/A'}\nAuthorized Date: ${detailData.authorizedDate ? new Date(detailData.authorizedDate).toLocaleString() : 'N/A'}`);
+                          } catch (error: any) {
+                            console.error('Error fetching criteria details:', error);
+                            alert('Error fetching criteria details: ' + (error.response?.data?.error || error.message));
+                          }
+                        }}
+                      >
+                        Detail
+                      </Button>
                       <Button
                         size="small"
                         variant="outlined"
                         onClick={async () => {
-                          const title = prompt('New title', criterion.title) || criterion.title;
-                          const description = prompt('New description', criterion.description || '') || criterion.description || '';
-                          const token = localStorage.getItem('token');
-                          await api.put(`/api/criteria/${criterion.criteriaID}`, { title, description }, {
-                            headers: { Authorization: `Bearer ${token}` },
-                          });
-                          location.reload();
+                          try {
+                            const title = prompt('New title', criterion.title);
+                            if (title === null) return; // User cancelled
+                            const description = prompt('New description', criterion.description || '');
+                            if (description === null) return; // User cancelled
+                            
+                            const token = localStorage.getItem('token');
+                            await api.put(`/api/criteria/${criterion.criteriaID}`, { 
+                              title: title.trim(), 
+                              description: description.trim() || null 
+                            }, {
+                              headers: { Authorization: `Bearer ${token}` },
+                            });
+                            alert('Criteria updated successfully!');
+                            window.location.reload();
+                          } catch (error: any) {
+                            console.error('Error updating criteria:', error);
+                            alert('Error updating criteria: ' + (error.response?.data?.error || error.message));
+                          }
                         }}
                       >
                         Edit
@@ -96,12 +134,19 @@ const ViewCriteria: React.FC = () => {
                         variant="contained"
                         color="error"
                         onClick={async () => {
-                          if (!confirm('Delete this criteria?')) return;
-                          const token = localStorage.getItem('token');
-                          await api.delete(`/api/criteria/${criterion.criteriaID}`, {
-                            headers: { Authorization: `Bearer ${token}` },
-                          });
-                          location.reload();
+                          try {
+                            if (!confirm('Are you sure you want to delete this criteria? This action cannot be undone.')) return;
+                            const token = localStorage.getItem('token');
+                            const response = await api.delete(`/api/criteria/${criterion.criteriaID}`, {
+                              headers: { Authorization: `Bearer ${token}` },
+                            });
+                            alert('Criteria deleted successfully!');
+                            window.location.reload();
+                          } catch (error: any) {
+                            console.error('Error deleting criteria:', error);
+                            const errorMsg = error.response?.data?.error || error.message;
+                            alert('Error deleting criteria: ' + errorMsg);
+                          }
                         }}
                       >
                         Delete
@@ -109,16 +154,29 @@ const ViewCriteria: React.FC = () => {
                       <Button
                         size="small"
                         variant="contained"
-                        color="success"
+                        color={criterion.isAuthorized ? "secondary" : "success"}
                         onClick={async () => {
-                          const token = localStorage.getItem('token');
-                          await api.post(`/api/criteria/${criterion.criteriaID}/authorize`, {}, {
-                            headers: { Authorization: `Bearer ${token}` },
-                          });
-                          alert('Authorized');
+                          try {
+                            if (criterion.isAuthorized) {
+                              alert('This criteria is already authorized.');
+                              return;
+                            }
+                            
+                            if (!confirm('Are you sure you want to authorize this criteria?')) return;
+                            const token = localStorage.getItem('token');
+                            const response = await api.post(`/api/criteria/${criterion.criteriaID}/authorize`, {}, {
+                              headers: { Authorization: `Bearer ${token}` },
+                            });
+                            alert('Criteria authorized successfully!');
+                            window.location.reload();
+                          } catch (error: any) {
+                            console.error('Error authorizing criteria:', error);
+                            const errorMsg = error.response?.data?.error || error.message;
+                            alert('Error authorizing criteria: ' + errorMsg);
+                          }
                         }}
                       >
-                        Authorize
+                        {criterion.isAuthorized ? 'Authorized' : 'Authorize'}
                       </Button>
                     </Box>
                   </TableCell>

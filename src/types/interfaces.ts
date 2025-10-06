@@ -12,6 +12,7 @@ export interface User {
   activeStatus: string; 
   createdDate: string;
   createdBy: number;
+  profileImageUrl?: string;
 }
 
 export interface Evaluation {
@@ -31,7 +32,11 @@ export interface EvaluationCriteria {
   description?: string;
   createdBy: number;
   createdDate: string;
+  isAuthorized?: boolean;
+  authorizedBy?: number;
+  authorizedDate?: string;
   creator?: { fullName?: string; FullName?: string };
+  creatorName?: string;
 }
 
 export interface EvaluationResult {

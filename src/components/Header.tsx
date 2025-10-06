@@ -17,6 +17,7 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import Avatar from '@mui/material/Avatar';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { useUser } from '../context/UserContext';
@@ -33,6 +34,17 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
   const [openProfile, setOpenProfile] = React.useState(false);
   const { user, setUser } = useUser();
   const navigate = useNavigate();
+
+  // Resolve profile image URL (supports absolute URLs or backend /uploads paths)
+  const resolvedProfileImageUrl = React.useMemo(() => {
+    const raw = user?.profileImageUrl?.trim();
+    if (!raw) return undefined;
+    const isAbsolute = /^https?:\/\//i.test(raw);
+    if (isAbsolute) return raw;
+    const base = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
+    if (raw.startsWith('/')) return `${base}${raw}`;
+    return `${base}/uploads/${raw}`;
+  }, [user?.profileImageUrl]);
 
   const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -76,8 +88,16 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
               </IconButton>
             </Tooltip>
             <Tooltip title={user ? `${user.fullName} (${user.role})` : 'Profile'}>
-              <IconButton color="inherit" onClick={handleOpenMenu} aria-label="profile">
-                <AccountCircleIcon />
+              <IconButton color="inherit" onClick={handleOpenMenu} aria-label="profile" sx={{ p: 0.5 }}>
+                {resolvedProfileImageUrl ? (
+                  <Avatar
+                    src={resolvedProfileImageUrl}
+                    alt={user.fullName}
+                    sx={{ width: 34, height: 34, border: '2px solid rgba(255,255,255,0.6)' }}
+                  />
+                ) : (
+                  <AccountCircleIcon />
+                )}
               </IconButton>
             </Tooltip>
           </Box>
@@ -99,9 +119,14 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
           }}
           onMouseLeave={handleCloseMenu}
         >
-          <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="subtitle2" noWrap>{user?.fullName || 'Unknown User'}</Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>{user?.role || 'Role'}</Typography>
+          <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Avatar src={resolvedProfileImageUrl} sx={{ width: 36, height: 36 }}>
+              {!resolvedProfileImageUrl && (user?.fullName ? user.fullName.charAt(0).toUpperCase() : undefined)}
+            </Avatar>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="subtitle2" noWrap>{user?.fullName || 'Unknown User'}</Typography>
+              <Typography variant="caption" color="text.secondary" noWrap>{user?.role || 'Role'}</Typography>
+            </Box>
           </Box>
           <Box sx={{ display: 'flex', flexDirection: 'column' }}>
             <Button startIcon={<SettingsIcon />} sx={{ justifyContent: 'flex-start', borderRadius: 0 }} onClick={handleOpenProfile}>
