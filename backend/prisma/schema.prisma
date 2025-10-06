@@ -27,6 +27,7 @@ model User {
   goals                   Goal[]               @relation("userGoals")
   evaluationSessions      EvaluationSession[]  @relation("userSessions")
   createdCriteria         EvaluationCriteria[] @relation("creatorCriteria")
+  authorizedCriteria      EvaluationCriteria[] @relation("authorizerCriteria")
   performancesAsUser      Performance[]        @relation("UserPerformance")
   performancesAsEvaluator Performance[]        @relation("EvaluatorPerformance")
   employees               Employee[]
@@ -47,13 +48,17 @@ model Evaluation {
 }
 
 model EvaluationCriteria {
-  criteriaID  Int                @id @default(autoincrement()) @map("CriteriaID")
-  title       String             @map("Title")
-  description String?            @map("Description")
-  createdBy   Int                @map("CreatedBy")
-  createdDate DateTime           @map("CreatedDate")
-  results     EvaluationResult[]
-  creator     User?              @relation("creatorCriteria", fields: [createdBy], references: [id])
+  criteriaID     Int                @id @default(autoincrement()) @map("CriteriaID")
+  title          String             @map("Title")
+  description    String?            @map("Description")
+  createdBy      Int                @map("CreatedBy")
+  createdDate    DateTime           @map("CreatedDate")
+  isAuthorized   Boolean            @default(false) @map("IsAuthorized")
+  authorizedBy   Int?               @map("AuthorizedBy")
+  authorizedDate DateTime?          @map("AuthorizedDate")
+  results        EvaluationResult[]
+  creator        User?              @relation("creatorCriteria", fields: [createdBy], references: [id])
+  authorizer     User?              @relation("authorizerCriteria", fields: [authorizedBy], references: [id])
 }
 
 model EvaluationSession {

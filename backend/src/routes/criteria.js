@@ -76,6 +76,160 @@ router.post('/bulk', async (req, res) => {
   }
 });
 
+// GET /api/criteria/:id
+router.get('/:id', async (req, res) => {
+  try {
+    const criteriaId = parseInt(req.params.id);
+    if (isNaN(criteriaId)) {
+      return res.status(400).json({ error: 'Invalid criteria ID' });
+    }
+
+    const criteria = await prisma.evaluationCriteria.findUnique({
+      where: { criteriaID: criteriaId },
+      include: { creator: { select: { fullName: true } } },
+    });
+
+    if (!criteria) {
+      return res.status(404).json({ error: 'Criteria not found' });
+    }
+
+    const enriched = {
+      ...criteria,
+      creatorName: criteria.creator?.fullName || null,
+    };
+
+    res.json(enriched);
+  } catch (error) {
+    console.error('Fetch criteria detail error:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+// PUT /api/criteria/:id
+router.put('/:id', async (req, res) => {
+  try {
+    const criteriaId = parseInt(req.params.id);
+    if (isNaN(criteriaId)) {
+      return res.status(400).json({ error: 'Invalid criteria ID' });
+    }
+
+    const { title, description } = req.body || {};
+    if (!title || String(title).trim() === '') {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+
+    // Check if criteria exists
+    const existingCriteria = await prisma.evaluationCriteria.findUnique({
+      where: { criteriaID: criteriaId },
+    });
+
+    if (!existingCriteria) {
+      return res.status(404).json({ error: 'Criteria not found' });
+    }
+
+    const updated = await prisma.evaluationCriteria.update({
+      where: { criteriaID: criteriaId },
+      data: {
+        title: String(title).trim(),
+        description: description == null || String(description).trim() === '' ? null : String(description),
+      },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Update criteria error:', error.message, error.stack);
+    res.status(500).json({ error: 'Failed to update criteria', details: error.message });
+  }
+});
+
+// DELETE /api/criteria/:id
+router.delete('/:id', async (req, res) => {
+  try {
+    const criteriaId = parseInt(req.params.id);
+    if (isNaN(criteriaId)) {
+      return res.status(400).json({ error: 'Invalid criteria ID' });
+    }
+
+    // Check if criteria exists
+    const existingCriteria = await prisma.evaluationCriteria.findUnique({
+      where: { criteriaID: criteriaId },
+    });
+
+    if (!existingCriteria) {
+      return res.status(404).json({ error: 'Criteria not found' });
+    }
+
+    // Check if criteria is being used in any evaluations
+    const evaluationCount = await prisma.evaluation.count({
+      where: {
+        OR: [
+          { criteriaID: criteriaId },
+          { criteriaIDs: { has: criteriaId } }
+        ]
+      }
+    });
+
+    if (evaluationCount > 0) {
+      return res.status(400).json({ 
+        error: 'Cannot delete criteria that is being used in evaluations',
+        evaluationCount 
+      });
+    }
+
+    await prisma.evaluationCriteria.delete({
+      where: { criteriaID: criteriaId },
+    });
+
+    res.json({ message: 'Criteria deleted successfully' });
+  } catch (error) {
+    console.error('Delete criteria error:', error.message, error.stack);
+    res.status(500).json({ error: 'Failed to delete criteria', details: error.message });
+  }
+});
+
+// POST /api/criteria/:id/authorize
+router.post('/:id/authorize', async (req, res) => {
+  try {
+    const criteriaId = parseInt(req.params.id);
+    if (isNaN(criteriaId)) {
+      return res.status(400).json({ error: 'Invalid criteria ID' });
+    }
+
+    // Check if criteria exists
+    const existingCriteria = await prisma.evaluationCriteria.findUnique({
+      where: { criteriaID: criteriaId },
+    });
+
+    if (!existingCriteria) {
+      return res.status(404).json({ error: 'Criteria not found' });
+    }
+
+    // Check if user has authorization permissions (you can customize this logic)
+    const userRole = req.user?.role;
+    if (userRole && userRole !== 'admin' && userRole !== 'manager') {
+      return res.status(403).json({ error: 'Insufficient permissions to authorize criteria' });
+    }
+
+    // Update criteria with authorization status
+    const updated = await prisma.evaluationCriteria.update({
+      where: { criteriaID: criteriaId },
+      data: {
+        isAuthorized: true,
+        authorizedBy: req.user?.id,
+        authorizedDate: new Date(),
+      },
+    });
+
+    res.json({ 
+      message: 'Criteria authorized successfully',
+      criteria: updated 
+    });
+  } catch (error) {
+    console.error('Authorize criteria error:', error.message, error.stack);
+    res.status(500).json({ error: 'Failed to authorize criteria', details: error.message });
+  }
+});
+
 module.exports = router;
 
 

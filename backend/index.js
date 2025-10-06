@@ -154,7 +154,15 @@ app.post('/api/auth/login', async (req, res) => {
     }
     const token = jwt.sign({ id: user.id, username: user.userName }, SECRET_KEY, { expiresIn: '1h' });
     console.log('Login successful:', username);
-    res.json({ token, user });
+    // Enrich user with profile image from linked employee record if available
+    let profileImageUrl = null;
+    try {
+      const emp = await prisma.employee.findFirst({ where: { userId: user.id }, select: { profileImageUrl: true } });
+      profileImageUrl = emp?.profileImageUrl || null;
+    } catch (e) {
+      console.warn('Failed to load employee profile image for user:', user.id, e?.message);
+    }
+    res.json({ token, user: { ...user, profileImageUrl } });
   } catch (error) {
     console.error('Login error:', error.message, error.stack); 
     res.status(500).json({ error: 'Server error', details: error.message });
@@ -171,8 +179,16 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
       console.log('User not found for id:', userId);
       return res.status(404).json({ error: 'User not found' });
     }
-    console.log('Current user fetched:', user);
-    res.json(user);
+    let profileImageUrl = null;
+    try {
+      const emp = await prisma.employee.findFirst({ where: { userId: user.id }, select: { profileImageUrl: true } });
+      profileImageUrl = emp?.profileImageUrl || null;
+    } catch (e) {
+      console.warn('Failed to load employee profile image for current user:', user.id, e?.message);
+    }
+    const enriched = { ...user, profileImageUrl };
+    console.log('Current user fetched:', enriched);
+    res.json(enriched);
   } catch (error) {
     console.error('Fetch current user error:', error.message);
     res.status(500).json({ error: 'Server error', details: error.message });
@@ -1389,7 +1405,13 @@ app.post('/api/employees', authenticateToken, blockEmployee, upload.fields([{ na
 
     const uploadedFile = Array.isArray(req.files?.profileImage) ? req.files.profileImage[0] : null;
 
-    const data = {
+    // Pre-validate uniqueness to fail fast before any writes
+    const existingByEmail = await prisma.employee.findFirst({ where: { email: emailTrim } });
+    if (existingByEmail) {
+      return res.status(409).json({ error: 'Email already exists' });
+    }
+
+    const baseEmployeeData = {
       firstName: firstNameTrim,
       lastName: lastNameTrim,
       email: emailTrim,
@@ -1405,46 +1427,51 @@ app.post('/api/employees', authenticateToken, blockEmployee, upload.fields([{ na
       userId: userId != null && userId !== '' && !Number.isNaN(parseInt(userId, 10)) ? parseInt(userId, 10) : null,
     };
 
-    // Optionally create linked user if username/password provided
-    if (!data.userId && username && password) {
-      let userName = String(username).trim().toLowerCase();
-      const exists = await prisma.user.findFirst({ where: { userName } });
-      if (exists) return res.status(409).json({ error: 'Username already exists' });
-      const hashed = await bcrypt.hash(String(password), 10);
-      const createdUser = await prisma.user.create({
-        data: {
-          fullName: `${data.firstName} ${data.lastName}`.trim(),
-          userName,
-          password: hashed,
-          gender: data.gender || null,
-          age: data.age == null ? null : Number(data.age),
-          role: 'Employee',
-          status: 'true',
-          locked: 'false',
-          isFirstLogin: 'true',
-          activeStatus: 'true',
-          createdDate: new Date(),
-          createdBy: req.user.id,
-        },
-      });
-      data.userId = createdUser.id;
-    }
+    // Atomically create optional user then employee; rollback both if any step fails
+    const created = await prisma.$transaction(async (tx) => {
+      const data = { ...baseEmployeeData };
+      if (!data.userId && username && password) {
+        let userName = String(username).trim().toLowerCase();
+        const exists = await tx.user.findFirst({ where: { userName } });
+        if (exists) throw Object.assign(new Error('Username already exists'), { httpCode: 409 });
+        const hashed = await bcrypt.hash(String(password), 10);
+        const createdUser = await tx.user.create({
+          data: {
+            fullName: `${data.firstName} ${data.lastName}`.trim(),
+            userName,
+            password: hashed,
+            gender: data.gender || null,
+            age: data.age == null ? null : Number(data.age),
+            role: 'Employee',
+            status: 'true',
+            locked: 'false',
+            isFirstLogin: 'true',
+            activeStatus: 'true',
+            createdDate: new Date(),
+            createdBy: req.user.id,
+          },
+        });
+        data.userId = createdUser.id;
+      }
 
-    const created = await prisma.employee.create({ data });
-    // If employee starts inactive and linked to a user, sync user flags
-    if (created.userId) {
-      await prisma.user.update({
-        where: { id: created.userId },
-        data: created.isActive
-          ? { activeStatus: 'true', status: 'true', locked: 'false' }
-          : { activeStatus: 'false', status: 'false', locked: 'true' },
-      });
-    }
+      const createdEmployee = await tx.employee.create({ data });
+
+      if (createdEmployee.userId) {
+        await tx.user.update({
+          where: { id: createdEmployee.userId },
+          data: createdEmployee.isActive
+            ? { activeStatus: 'true', status: 'true', locked: 'false' }
+            : { activeStatus: 'false', status: 'false', locked: 'true' },
+        });
+      }
+
+      return createdEmployee;
+    });
+
     res.status(201).json(created);
   } catch (error) {
-    if (error.code === 'P2002') {
-      return res.status(409).json({ error: 'Email already exists' });
-    }
+    if (error?.httpCode) return res.status(error.httpCode).json({ error: error.message });
+    if (error.code === 'P2002') return res.status(409).json({ error: 'Email already exists' });
     console.error('Create employee error:', error.message, error.stack);
     res.status(500).json({ error: 'Server error', details: error.message });
   }
