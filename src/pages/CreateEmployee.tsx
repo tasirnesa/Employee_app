@@ -9,7 +9,7 @@ import { useDropzone } from 'react-dropzone';
 
 const CreateEmployee: React.FC = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', department: '', position: '', hireDate: '', gender: '', age: '', birthDate: '', profileImageUrl: '', username: '', password: '', userId: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', department: '', position: '', hireDate: '', gender: '', birthDate: '', profileImageUrl: '', username: '', password: '', userId: '' });
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mutation = useMutation({
@@ -23,8 +23,14 @@ const CreateEmployee: React.FC = () => {
       if (form.position) fd.append('position', form.position);
       if (form.hireDate) fd.append('hireDate', form.hireDate);
       if (form.gender) fd.append('gender', form.gender);
-      if (form.age) fd.append('age', form.age);
-      if (form.birthDate) fd.append('birthDate', form.birthDate);
+      if (form.birthDate) {
+        fd.append('birthDate', form.birthDate);
+        // Calculate age from birth date
+        const birthYear = new Date(form.birthDate).getFullYear();
+        const currentYear = new Date().getFullYear();
+        const calculatedAge = currentYear - birthYear;
+        fd.append('age', calculatedAge.toString());
+      }
       if (form.profileImageUrl) fd.append('profileImageUrl', form.profileImageUrl);
       if (form.username) fd.append('username', form.username);
       if (form.password) fd.append('password', form.password);
@@ -53,6 +59,14 @@ const CreateEmployee: React.FC = () => {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, multiple: false, accept: { 'image/*': [] } });
 
+  // Calculate age from birth date
+  const calculateAge = (birthDate: string): number | null => {
+    if (!birthDate) return null;
+    const birthYear = new Date(birthDate).getFullYear();
+    const currentYear = new Date().getFullYear();
+    return currentYear - birthYear;
+  };
+
   const { data: users } = useQuery({
     queryKey: ['users-for-linking'],
     queryFn: async () => {
@@ -73,9 +87,20 @@ const CreateEmployee: React.FC = () => {
         <TextField name="username" label="Username" value={form.username} onChange={handleChange} fullWidth />
         <TextField name="password" type="password" label="Password" value={form.password} onChange={handleChange} fullWidth />
       </Stack>
-      <Stack direction="row" spacing={3}>
-        <TextField name="gender" label="Gender" value={form.gender} onChange={handleChange} fullWidth />
-        <TextField name="age" label="Age" type="number" value={form.age} onChange={handleChange} fullWidth />
+      <Stack direction="row" spacing={2}>
+        <FormControl fullWidth>
+          <InputLabel id="gender-label">Gender</InputLabel>
+          <Select
+            labelId="gender-label"
+            label="Gender"
+            value={form.gender}
+            onChange={(e) => setForm({ ...form, gender: e.target.value as string })}
+          >
+            <MenuItem value="">Select Gender</MenuItem>
+            <MenuItem value="Male">Male</MenuItem>
+            <MenuItem value="Female">Female</MenuItem>
+          </Select>
+        </FormControl>
         <TextField name="email" label="Email" type="email" value={form.email} onChange={handleChange} fullWidth required />
       </Stack>
       
@@ -89,7 +114,16 @@ const CreateEmployee: React.FC = () => {
       </Stack>
 
       <Stack direction="row" spacing={2}>
-        <TextField name="birthDate" label="Birth Date" type="date" value={form.birthDate} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} />
+        <TextField 
+          name="birthDate" 
+          label="Birth Date" 
+          type="date" 
+          value={form.birthDate} 
+          onChange={handleChange} 
+          fullWidth 
+          InputLabelProps={{ shrink: true }}
+          helperText={form.birthDate ? `Age: ${calculateAge(form.birthDate)} years` : ''}
+        />
         <TextField name="profileImageUrl" label="Profile Image URL (optional)" value={form.profileImageUrl} onChange={handleChange} fullWidth />
       </Stack>
       <Box {...getRootProps()} sx={{ border: '2px dashed #ccc', borderRadius: 1, p: 2, textAlign: 'center', cursor: 'pointer' }}>

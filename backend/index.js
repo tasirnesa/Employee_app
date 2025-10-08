@@ -153,7 +153,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(403).json({ error: 'Your account is Deactiveted. Contact system administrator.' });
     }
     const token = jwt.sign({ id: user.id, username: user.userName }, SECRET_KEY, { expiresIn: '1h' });
-    console.log('Login successful:', username);
+    console.log('Login successful:', username, 'isFirstLogin:', user.isFirstLogin);
     // Enrich user with profile image from linked employee record if available
     let profileImageUrl = null;
     try {
@@ -162,12 +162,50 @@ app.post('/api/auth/login', async (req, res) => {
     } catch (e) {
       console.warn('Failed to load employee profile image for user:', user.id, e?.message);
     }
-    res.json({ token, user: { ...user, profileImageUrl } });
+    const userResponse = { ...user, profileImageUrl };
+    console.log('Sending user data to frontend:', { id: userResponse.id, isFirstLogin: userResponse.isFirstLogin });
+    res.json({ token, user: userResponse });
   } catch (error) {
     console.error('Login error:', error.message, error.stack); 
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
+
+// Helper function to check if new password differs from old password by at least 4 characters
+function passwordsDifferByAtLeast4Chars(oldPassword, newPassword) {
+  if (!oldPassword || !newPassword) return true; // Allow if either is missing
+  
+  const old = oldPassword.toLowerCase();
+  const newPwd = newPassword.toLowerCase();
+  
+  // Check if passwords are identical
+  if (old === newPwd) return false;
+  
+  // Calculate Levenshtein distance
+  const matrix = [];
+  for (let i = 0; i <= newPwd.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= old.length; j++) {
+    matrix[0][j] = j;
+  }
+  
+  for (let i = 1; i <= newPwd.length; i++) {
+    for (let j = 1; j <= old.length; j++) {
+      if (newPwd.charAt(i - 1) === old.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substitution
+          matrix[i][j - 1] + 1,     // insertion
+          matrix[i - 1][j] + 1      // deletion
+        );
+      }
+    }
+  }
+  
+  return matrix[newPwd.length][old.length] >= 4;
+}
 
 // Change password (first login or regular) for authenticated user
 app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
@@ -181,21 +219,30 @@ app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // If user is on first login, currentPassword is optional; otherwise required
-    const isFirstLogin = (user.isFirstLogin || '').toString().toLowerCase();
-    const mustCheckCurrent = !(isFirstLogin === 'true');
-    if (mustCheckCurrent) {
-      if (!currentPassword) {
-        return res.status(400).json({ error: 'Current password is required' });
-      }
-      const ok = await bcrypt.compare(currentPassword, user.password);
-      if (!ok) return res.status(401).json({ error: 'Current password is incorrect' });
+    // Always require current password
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Current password is required' });
+    }
+    
+    // Verify current password
+    const ok = await bcrypt.compare(currentPassword, user.password);
+    if (!ok) return res.status(401).json({ error: 'Current password is incorrect' });
+
+    // Check if new password differs from old password by at least 4 characters
+    if (!passwordsDifferByAtLeast4Chars(currentPassword, newPassword)) {
+      return res.status(400).json({ error: 'New password must differ from current password by at least 4 characters' });
     }
 
     const hashed = await bcrypt.hash(String(newPassword), 10);
     const updated = await prisma.user.update({
       where: { id: userId },
       data: { password: hashed, isFirstLogin: 'false', locked: 'false' },
+    });
+
+    console.log('Password change successful. Updated user:', { 
+      id: updated.id, 
+      isFirstLogin: updated.isFirstLogin,
+      userName: updated.userName 
     });
 
     return res.json({ message: 'Password updated successfully', user: { id: updated.id, isFirstLogin: updated.isFirstLogin } });
@@ -223,10 +270,33 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
       console.warn('Failed to load employee profile image for current user:', user.id, e?.message);
     }
     const enriched = { ...user, profileImageUrl };
-    console.log('Current user fetched:', enriched);
+    console.log('Current user fetched from DB:', { 
+      id: enriched.id, 
+      userName: enriched.userName, 
+      isFirstLogin: enriched.isFirstLogin 
+    });
     res.json(enriched);
   } catch (error) {
     console.error('Fetch current user error:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+// Debug endpoint to check user's isFirstLogin status
+app.get('/api/debug/user-status', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await prisma.user.findUnique({ 
+      where: { id: userId },
+      select: { id: true, userName: true, isFirstLogin: true, locked: true }
+    });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    console.log('Debug - User status:', user);
+    res.json(user);
+  } catch (error) {
+    console.error('Debug user status error:', error.message);
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });

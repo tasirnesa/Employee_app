@@ -115,22 +115,30 @@ const AppContent: React.FC = () => {
     );
   }
 
+  // Check if user is on first login and needs to change password
+  const isFirstLogin = currentUser && String(currentUser.isFirstLogin).toLowerCase() === 'true';
+  const showSidebarAndHeader = isAuthenticated && !isFirstLogin;
+  
+  console.log('App render - currentUser:', currentUser);
+  console.log('App render - isFirstLogin:', isFirstLogin);
+  console.log('App render - showSidebarAndHeader:', showSidebarAndHeader);
+
   return (
     <Box sx={{ display: 'flex', bgcolor: 'background.default', minHeight: '100vh' }}>
       <CssBaseline />
-      {isAuthenticated && <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />}
+      {showSidebarAndHeader && <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
           p: 3,
-          width: `calc(100% - ${sidebarCollapsed ? 60 : 120}px)`,
-          ml: `${sidebarCollapsed ? 60 : 120}px`,
+          width: showSidebarAndHeader ? `calc(100% - ${sidebarCollapsed ? 60 : 120}px)` : '100%',
+          ml: showSidebarAndHeader ? `${sidebarCollapsed ? 60 : 120}px` : 0,
           transition: 'width 0.3s, margin-left 0.3s',
         }}
       >
-        {isAuthenticated && <Header collapsed={sidebarCollapsed} onToggle={toggleSidebar} />}
-        <Card sx={{ p: 3, minHeight: 'calc(100vh - 120px)' }}>
+        {showSidebarAndHeader && <Header collapsed={sidebarCollapsed} onToggle={toggleSidebar} />}
+        <Card sx={{ p: 3, minHeight: isFirstLogin ? '100vh' : 'calc(100vh - 120px)' }}>
           <Routes>
             <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
             <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />

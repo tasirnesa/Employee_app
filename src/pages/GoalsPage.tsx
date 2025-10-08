@@ -515,16 +515,18 @@ const GoalsPage: React.FC = () => {
                     InputProps={{ sx: { borderRadius: 1 } }}
                     sx={{ bgcolor: '#fafafa' }}
                   />
-                  <TextField
+                  {/* <TextField
                     label="%"
                     type="number"
                     value={kr.progress ?? 0}
                     onChange={(e) => handleNewKeyResultChange(index, 'progress', e.target.value)}
                     inputProps={{ min: 0, max: 100 }}
                     sx={{ width: 100, bgcolor: '#fafafa' }}
-                  />
+                  /> */}
                 </Box>
-              ))}
+              )
+            )
+              }
               <Button
                 variant="outlined"
                 color="primary"

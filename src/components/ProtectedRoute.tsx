@@ -23,7 +23,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Force first-time users to change password, but allow the change-password page itself
+  console.log('ProtectedRoute - user:', user);
+  console.log('ProtectedRoute - user.isFirstLogin:', user?.isFirstLogin);
+  console.log('ProtectedRoute - location.pathname:', location.pathname);
+  
   if (user && String(user.isFirstLogin).toLowerCase() === 'true' && location.pathname !== '/change-password') {
+    console.log('ProtectedRoute - Redirecting to change-password');
     return <Navigate to="/change-password" replace />;
   }
 

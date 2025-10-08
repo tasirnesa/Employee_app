@@ -2,12 +2,16 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Typography, TextField, Button, Box } from '@mui/material';
+import { useUser } from '../context/UserContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { setUser } = useUser();
+  const queryClient = useQueryClient();
 
   const handleLogin = async () => {
     try {
@@ -19,9 +23,21 @@ const Login: React.FC = () => {
       localStorage.setItem('token', response.data.token);
       console.log('Token stored:', localStorage.getItem('token'));
       const user = response.data.user;
+      
+      // Store user data in context and localStorage
+      setUser(user);
+      localStorage.setItem('userProfile', JSON.stringify(user));
+      
+      // Invalidate and refetch current user data to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      
+      console.log('Login successful, user isFirstLogin:', user.isFirstLogin);
+      
       if (user && String(user.isFirstLogin).toLowerCase() === 'true') {
+        console.log('Redirecting to change password page');
         navigate('/change-password');
       } else {
+        console.log('Redirecting to dashboard');
         navigate('/dashboard');
       }
     } catch (err: any) {
