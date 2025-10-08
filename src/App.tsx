@@ -29,6 +29,7 @@ import PerformanceMenu from './pages/PerformanceMenu';
 import ViewEmployees from './pages/ViewEmployees';
 import CreateEmployee from './pages/CreateEmployee';
 import EditEmployee from './pages/EditEmployee';
+import ChangePassword from './pages/ChangePassword';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -132,6 +133,7 @@ const AppContent: React.FC = () => {
         <Card sx={{ p: 3, minHeight: 'calc(100vh - 120px)' }}>
           <Routes>
             <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
+            <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/users/create" element={<ProtectedRoute blockEmployee={true}><CreateUser /></ProtectedRoute>} />
             <Route path="/users/view" element={<ProtectedRoute blockEmployee={true}><ViewUsers /></ProtectedRoute>} />

@@ -169,6 +169,42 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Change password (first login or regular) for authenticated user
+app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body || {};
+    if (!newPassword) {
+      return res.status(400).json({ error: 'New password is required' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // If user is on first login, currentPassword is optional; otherwise required
+    const isFirstLogin = (user.isFirstLogin || '').toString().toLowerCase();
+    const mustCheckCurrent = !(isFirstLogin === 'true');
+    if (mustCheckCurrent) {
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Current password is required' });
+      }
+      const ok = await bcrypt.compare(currentPassword, user.password);
+      if (!ok) return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    const hashed = await bcrypt.hash(String(newPassword), 10);
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashed, isFirstLogin: 'false', locked: 'false' },
+    });
+
+    return res.json({ message: 'Password updated successfully', user: { id: updated.id, isFirstLogin: updated.isFirstLogin } });
+  } catch (error) {
+    console.error('Change password error:', error.message);
+    return res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
 
 app.get('/api/users/me', authenticateToken, async (req, res) => {
   try {

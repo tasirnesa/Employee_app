@@ -18,7 +18,12 @@ const Login: React.FC = () => {
       console.log('Login response:', response.data);
       localStorage.setItem('token', response.data.token);
       console.log('Token stored:', localStorage.getItem('token'));
-      navigate('/dashboard');
+      const user = response.data.user;
+      if (user && String(user.isFirstLogin).toLowerCase() === 'true') {
+        navigate('/change-password');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       const serverMsg = err?.response?.data?.error || 'Invalid credentials';
       console.error('Login error:', err.response?.data || err.message);
