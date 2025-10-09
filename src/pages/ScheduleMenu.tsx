@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AxiosError } from 'axios';
 import api from '../lib/axios';
-import { Box, Card, CardContent, TextField, Button, Typography, Alert, Tab, Tabs, CardHeader, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import { Box, Card, CardContent, TextField, Button, Typography, Alert, Tab, Tabs, CardHeader, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, FormControl, InputLabel, Select, MenuItem, Switch, Stack } from '@mui/material';
 import { TabContext, TabPanel } from '@mui/lab';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Calendar from 'react-calendar';
@@ -15,6 +15,9 @@ const ScheduleMenu = () => {
   const [error, setError] = useState('');
   const [tabValue, setTabValue] = useState('1');
   const [openDialog, setOpenDialog] = useState(false);
+  const [openActivateDialog, setOpenActivateDialog] = useState(false);
+  const [activateSessionId, setActivateSessionId] = useState<number | ''>('');
+  const [activateEndDate, setActivateEndDate] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // Track selected category
   const queryClient = useQueryClient();
 
@@ -86,6 +89,9 @@ const isEmployee = userRole === 'Employee';
         startDate: s.startDate,
         endDate: s.endDate,
         activatedBy: s.activatedBy ?? s.ActivatedBy ?? 0,
+        // expose status via type field
+        // @ts-ignore
+        status: (s.type || '').toLowerCase() === 'on' ? 'on' : 'off',
       }));
       console.log('Normalized sessions:', normalized);
       return normalized as Session[];
@@ -157,9 +163,30 @@ const isEmployee = userRole === 'Employee';
         Manage the Session and Events
       </Typography>
       {!isEmployee && (
-        <Button variant="contained" color="secondary" size="small" onClick={() => setOpenDialog(true)}>
-          + New Event
-        </Button>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <IconButton color="primary" onClick={() => setOpenDialog(true)} title="Create New Event">
+            +
+          </IconButton>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Switch
+              checked={openActivateDialog}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                if (checked) {
+                  // default selection
+                  const firstId = sessions[0]?.id ? Number(sessions[0].id) : '';
+                  setActivateSessionId(firstId);
+                  setActivateEndDate('');
+                  setOpenActivateDialog(true);
+                } else {
+                  setOpenActivateDialog(false);
+                }
+              }}
+              inputProps={{ 'aria-label': 'Activate evaluation' }}
+            />
+            <Typography variant="body2">Activate</Typography>
+          </Stack>
+        </Stack>
       )}
     </Box>
   }
@@ -315,6 +342,83 @@ const isEmployee = userRole === 'Employee';
           <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
           <Button onClick={handleSubmit} variant="contained" color="primary">
             Schedule
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Activate/Deactivate dialog */}
+      <Dialog open={openActivateDialog} onClose={() => setOpenActivateDialog(false)}>
+        <DialogTitle>Activate Evaluation</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth sx={{ mt: 1 }}>
+            <InputLabel id="session-select-label">Evaluation Session</InputLabel>
+            <Select
+              labelId="session-select-label"
+              label="Evaluation Session"
+              value={activateSessionId === '' ? '' : String(activateSessionId)}
+              onChange={(e) => setActivateSessionId(Number(e.target.value))}
+            >
+              {sessions.map((s) => (
+                <MenuItem key={s.id} value={String(s.id)}>{s.title}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            fullWidth
+            label="Start Date"
+            type="date"
+            margin="normal"
+            variant="outlined"
+            InputLabelProps={{ shrink: true }}
+            value={new Date().toISOString().split('T')[0]}
+            disabled
+            helperText="Start date will be set to today"
+          />
+          <TextField
+            fullWidth
+            label="End Date"
+            type="date"
+            value={activateEndDate}
+            onChange={(e) => setActivateEndDate(e.target.value)}
+            required
+            margin="normal"
+            variant="outlined"
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ min: new Date().toISOString().split('T')[0] }}
+          />
+          {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenActivateDialog(false)}>Cancel</Button>
+          <Button
+            onClick={async () => {
+              try {
+                setError('');
+                const token = localStorage.getItem('token');
+                if (!token) throw new Error('No token');
+                if (!activateSessionId || !activateEndDate) {
+                  setError('Please select session and end date');
+                  return;
+                }
+                const today = new Date().toISOString().split('T')[0];
+                await api.put(
+                  `/api/evaluation-sessions/${activateSessionId}/status`,
+                  { status: 'on', startDate: today, endDate: activateEndDate },
+                  { headers: { Authorization: `Bearer ${token}` } }
+                );
+                setOpenActivateDialog(false);
+                queryClient.invalidateQueries({ queryKey: ['sessions'] });
+                queryClient.invalidateQueries({ queryKey: ['evaluationStats'] });
+                alert('Evaluation activated');
+              } catch (err) {
+                const ax = err as any;
+                setError(ax?.response?.data?.error || ax?.message || 'Failed to activate');
+              }
+            }}
+            variant="contained"
+            color="primary"
+          >
+            Activate
           </Button>
         </DialogActions>
       </Dialog>

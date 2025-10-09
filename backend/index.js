@@ -620,6 +620,22 @@ app.post('/api/evaluations', authenticateToken, requireNonEmployee, async (req, 
       return res.status(400).json({ error: `Session with id ${sessionID} does not exist` });
     }
 
+    // Enforce session active status and date window
+    {
+      const session = await prisma.evaluationSession.findUnique({ where: { sessionID: parseInt(sessionID) } });
+      if (!session) {
+        return res.status(400).json({ error: `Session with id ${sessionID} does not exist` });
+      }
+      const now = new Date();
+      const isOn = String(session.type || '').toLowerCase() === 'on';
+      if (!isOn) {
+        return res.status(403).json({ error: 'Evaluation is not active for this session' });
+      }
+      if (now < new Date(session.startDate) || now > new Date(session.endDate)) {
+        return res.status(403).json({ error: 'Evaluation is outside the active date range' });
+      }
+    }
+
     const evaluationResult = await prisma.evaluation.create({
       data: {
         evaluationID: undefined,
@@ -927,6 +943,8 @@ app.post('/api/evaluation-sessions', authenticateToken, requireNonEmployee, asyn
         startDate: start,
         endDate: end,
         activatedBy: activatedBy, 
+        // default status is ON
+        type: 'on'
       },
     });
 
@@ -946,6 +964,39 @@ app.get('/api/evaluation-sessions', authenticateToken, async (req, res) => {
     res.json(sessions);
   } catch (error) {
     console.error('Fetch sessions error:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+// Toggle/update session status and optionally dates (uses `type` as status)
+app.put('/api/evaluation-sessions/:id/status', authenticateToken, requireNonEmployee, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { status, startDate, endDate } = req.body || {};
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid session id' });
+    if (!status) return res.status(400).json({ error: 'status is required (on/off)' });
+
+    // Prevent turning on an already active session
+    const existing = await prisma.evaluationSession.findUnique({ where: { sessionID: id } });
+    if (!existing) return res.status(404).json({ error: 'Session not found' });
+    const desired = String(status).toLowerCase();
+    const alreadyOn = String(existing.type || '').toLowerCase() === 'on';
+    if (desired === 'on' && alreadyOn) {
+      return res.status(409).json({ error: 'Session is already activated' });
+    }
+
+    const data = { type: desired };
+    if (startDate) Object.assign(data, { startDate: new Date(startDate) });
+    if (endDate) Object.assign(data, { endDate: new Date(endDate) });
+
+    if (data.startDate && data.endDate && data.endDate <= data.startDate) {
+      return res.status(400).json({ error: 'endDate must be after startDate' });
+    }
+
+    const updated = await prisma.evaluationSession.update({ where: { sessionID: id }, data });
+    res.json(updated);
+  } catch (error) {
+    console.error('Update session status error:', error.message);
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
