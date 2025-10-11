@@ -1,5 +1,5 @@
 import React from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Formik, Form, Field } from 'formik';
 import * as Yup from 'yup';
@@ -16,12 +16,50 @@ import {
   Select,
   MenuItem,
 } from '@mui/material';
-import type { User } from '../types/interfaces';
+import type { User, Department, Position } from '../types/interfaces';
 
 const CreateUser: React.FC = () => {
   console.log('CreateUser rendering');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Fetch Departments
+  const { data: departments = [], isLoading: isLoadingDepartments, error: departmentsError } = useQuery<Department[]>({
+    queryKey: ['departments'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No token found in localStorage');
+        throw new Error('No authentication token');
+      }
+      console.log('Fetching departments with token:', token);
+      const response = await axios.get('http://localhost:3000/api/departments', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log('Departments response:', response.data);
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Fetch Positions
+  const { data: positions = [], isLoading: isLoadingPositions, error: positionsError } = useQuery<Position[]>({
+    queryKey: ['positions'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No token found in localStorage');
+        throw new Error('No authentication token');
+      }
+      console.log('Fetching positions with token:', token);
+      const response = await axios.get('http://localhost:3000/api/positions', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log('Positions response:', response.data);
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   const createUserMutation = useMutation({
     mutationFn: async (userData: Partial<User>) => {
@@ -31,6 +69,8 @@ const CreateUser: React.FC = () => {
         ...userData,
         age: userData.age ? parseInt(userData.age as unknown as string) : undefined,
         createdBy: 1, // Assume current user ID is 1; replace with actual logic
+        departmentId: userData.departmentId ? parseInt(userData.departmentId as unknown as string) : undefined,
+        positionId: userData.positionId ? parseInt(userData.positionId as unknown as string) : undefined,
       }, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -52,6 +92,8 @@ const CreateUser: React.FC = () => {
     role: Yup.string().required('Role is required').oneOf(['Admin', 'SuperAdmin', 'Maker', 'Checker'], 'Please select a valid role'),
     gender: Yup.string().required('Gender is required').oneOf(['Male', 'Female'], 'Please select a valid gender'),
     age: Yup.number().nullable().min(18, 'Age must be at least 18'),
+    departmentId: Yup.number().nullable().notRequired(), // Optional field
+    positionId: Yup.number().nullable().notRequired(),  // Optional field
   });
 
   return (
@@ -67,12 +109,16 @@ const CreateUser: React.FC = () => {
           gender: '', // Default to empty string
           age: '',
           role: '',  // Default to empty string
+          departmentId: '', // Default to empty string
+          positionId: '',   // Default to empty string
         }}
         validationSchema={validationSchema}
         onSubmit={(values, { setSubmitting }) => {
           createUserMutation.mutate({
             ...values,
             age: values.age ? parseInt(values.age as string) : undefined,
+            departmentId: values.departmentId ? parseInt(values.departmentId as string) : undefined,
+            positionId: values.positionId ? parseInt(values.positionId as string) : undefined,
           });
           setSubmitting(false);
         }}
@@ -115,7 +161,7 @@ const CreateUser: React.FC = () => {
                   name="gender"
                   labelId="gender-label"
                   label="Gender"
-                  value={values.gender || ''} // Controlled value
+                  value={values.gender || ''}
                   onChange={(e) => setFieldValue('gender', e.target.value)}
                 >
                   <MenuItem value="Male">Male</MenuItem>
@@ -144,7 +190,7 @@ const CreateUser: React.FC = () => {
                   name="role"
                   labelId="role-label"
                   label="Role"
-                  value={values.role || ''} // Controlled value
+                  value={values.role || ''}
                   onChange={(e) => setFieldValue('role', e.target.value)}
                 >
                   <MenuItem value="Admin">Admin</MenuItem>
@@ -156,6 +202,56 @@ const CreateUser: React.FC = () => {
                   <Typography color="error" variant="caption">{errors.role}</Typography>
                 )}
               </Field>
+              <Field
+                as={FormControl}
+                fullWidth
+                error={touched.departmentId && !!errors.departmentId}
+              >
+                <InputLabel id="department-label">Department</InputLabel>
+                <Select
+                  name="departmentId"
+                  labelId="department-label"
+                  label="Department"
+                  value={values.departmentId || ''}
+                  onChange={(e) => setFieldValue('departmentId', e.target.value)}
+                  disabled={isLoadingDepartments}
+                >
+                  {departments.map((dept) => (
+                    <MenuItem key={dept.id} value={dept.id}>{dept.name}</MenuItem>
+                  ))}
+                </Select>
+                {departmentsError && (
+                  <Typography color="error" variant="caption">Error loading departments: {departmentsError.message}</Typography>
+                )}
+                {touched.departmentId && errors.departmentId && (
+                  <Typography color="error" variant="caption">{errors.departmentId}</Typography>
+                )}
+              </Field>
+              <Field
+                as={FormControl}
+                fullWidth
+                error={touched.positionId && !!errors.positionId}
+              >
+                <InputLabel id="position-label">Position</InputLabel>
+                <Select
+                  name="positionId"
+                  labelId="position-label"
+                  label="Position"
+                  value={values.positionId || ''}
+                  onChange={(e) => setFieldValue('positionId', e.target.value)}
+                  disabled={isLoadingPositions}
+                >
+                  {positions.map((pos) => (
+                    <MenuItem key={pos.id} value={pos.id}>{pos.name}</MenuItem>
+                  ))}
+                </Select>
+                {positionsError && (
+                  <Typography color="error" variant="caption">Error loading positions: {positionsError.message}</Typography>
+                )}
+                {touched.positionId && errors.positionId && (
+                  <Typography color="error" variant="caption">{errors.positionId}</Typography>
+                )}
+              </Field>
               {createUserMutation.isError && (
                 <Alert severity="error">
                   Error creating user: {createUserMutation.error?.message || 'Unknown error'}
@@ -165,7 +261,7 @@ const CreateUser: React.FC = () => {
                 <Button
                   type="submit"
                   variant="contained"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isLoadingDepartments || isLoadingPositions}
                 >
                   Create
                 </Button>

@@ -12,7 +12,16 @@ export interface User {
   activeStatus: string; 
   createdDate: string;
   createdBy: number;
+  departmentId?: number | null; // New field
+  positionId?: number | null;  // New field
+  managerId?: number | null;   // Existing hierarchy field
+  // Relations (optional, for TypeScript typing)
+  department?: Department | null;
+  position?: Position | null;
+  manager?: User | null;
+  directReports?: User[];
   profileImageUrl?: string;
+  managedDepartments?: Department[];
 }
 
 export interface Evaluation {
@@ -106,4 +115,21 @@ export interface Employee {
   createdAt?: string;
   updatedAt?: string;
   userId?: number | null;
+}
+
+export interface Department {
+  id: number;
+  name: string;
+  managerId?: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Position {
+  id: number;
+  name: string;
+  level: number;
+  reportsTo?: number | null;
+  createdAt: Date;
+  updatedAt: Date;
 }

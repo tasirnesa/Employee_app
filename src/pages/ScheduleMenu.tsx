@@ -12,6 +12,7 @@ const ScheduleMenu = () => {
   const [title, setTitle] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [department, setDepartment] = useState('');
   const [error, setError] = useState('');
   const [tabValue, setTabValue] = useState('1');
   const [openDialog, setOpenDialog] = useState(false);
@@ -38,7 +39,7 @@ const isEmployee = userRole === 'Employee';
     try {
       const response = await api.post(
         '/api/evaluation-sessions',
-        { title, startDate, endDate },
+        { title, startDate, endDate, department },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       console.log('Evaluation session created:', response.data);
@@ -310,6 +311,15 @@ const isEmployee = userRole === 'Employee';
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
+            margin="normal"
+            variant="outlined"
+          />
+          <TextField
+            fullWidth
+            label="Department"
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+            placeholder="e.g., HR, Finance, Engineering"
             margin="normal"
             variant="outlined"
           />

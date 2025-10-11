@@ -85,6 +85,19 @@ const CreateEvaluation: React.FC = () => {
     enabled: evaluateeUserIdForGoals != null,
   });
 
+  // Load sessions for selection and department filtering
+  const { data: sessions } = useQuery({
+    queryKey: ['sessions-for-eval'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token');
+      const response = await axios.get('http://localhost:3000/api/evaluation-sessions', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data as Array<{ sessionID: number; title: string; startDate: string; endDate: string; department?: string }>;
+    },
+  });
+
   const createEvaluationMutation = useMutation({
     mutationFn: async (evaluationData: { evaluation: Partial<Evaluation>; results: Partial<EvaluationResult>[] }) => {
       const token = localStorage.getItem('token');
@@ -130,7 +143,7 @@ const CreateEvaluation: React.FC = () => {
       (value, context) => value !== context.parent.evaluatorID
     ),
     evaluationType: Yup.string().required('Evaluation type is required'),
-    sessionID: Yup.number().required('Session ID is required').positive().integer(),
+    sessionID: Yup.number().required('Session is required').positive().integer(),
     criteriaScores: Yup.object().test(
       'criteria-required',
       'At least one criterion score is required',
@@ -218,6 +231,11 @@ const CreateEvaluation: React.FC = () => {
                   {employees && employees.length > 0 ? (
                     employees
                       ?.filter((e) => (e.userId || -1) !== currentUserId)
+                      .filter((e) => {
+                        const session = (sessions || []).find(s => s.sessionID === values.sessionID);
+                        if (!session || !session.department) return true;
+                        return String(e.department || '').trim().toLowerCase() === String(session.department || '').trim().toLowerCase();
+                      })
                       .map((e) => (
                         <MenuItem key={e.id} value={e.userId ? (e.userId as number) : e.id}>
                           {e.firstName} {e.lastName} ({e.email})
@@ -240,16 +258,20 @@ const CreateEvaluation: React.FC = () => {
                 helperText={touched.evaluationType && errors.evaluationType}
                 sx={{ bgcolor: 'background.paper' }}
               />
-              <Field
-                as={TextField}
-                name="sessionID"
-                label="Session ID"
-                type="number"
-                fullWidth
-                error={touched.sessionID && !!errors.sessionID}
-                helperText={touched.sessionID && errors.sessionID}
-                sx={{ bgcolor: 'background.paper' }}
-              />
+              <FormControl fullWidth error={touched.sessionID && !!errors.sessionID}>
+                <InputLabel id="session-label">Session</InputLabel>
+                <Field as={Select} name="sessionID" labelId="session-label" label="Session" sx={{ bgcolor: 'background.paper' }}>
+                  <MenuItem value={0} disabled>Select Session</MenuItem>
+                  {(sessions || []).map((s) => (
+                    <MenuItem key={s.sessionID} value={s.sessionID}>
+                      {s.title}{s.department ? ` - ${s.department}` : ''}
+                    </MenuItem>
+                  ))}
+                </Field>
+                {touched.sessionID && errors.sessionID && (
+                  <Typography color="error" variant="caption">{errors.sessionID}</Typography>
+                )}
+              </FormControl>
               <Box sx={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: 1, p: 1 }}>
                 {criteria?.map((criterion) => (
                   <Box key={criterion.criteriaID} sx={{ mb: 2 }}>
