@@ -77,6 +77,13 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+const authorizeRole = (roles) => (req, res, next) => {
+  if (!req.user || !roles.includes(req.user.role)) {
+    return res.status(403).json({ error: 'Access denied: Insufficient permissions' });
+  }
+  next();
+};
+
 // Helper to require non-Employee role
 const requireNonEmployee = async (req, res, next) => {
   try {
@@ -620,7 +627,7 @@ app.post('/api/evaluations', authenticateToken, requireNonEmployee, async (req, 
       return res.status(400).json({ error: `Session with id ${sessionID} does not exist` });
     }
 
-    // Enforce session active status and date window
+    // Enforce session active status, date window, and department alignment
     {
       const session = await prisma.evaluationSession.findUnique({ where: { sessionID: parseInt(sessionID) } });
       if (!session) {
@@ -633,6 +640,14 @@ app.post('/api/evaluations', authenticateToken, requireNonEmployee, async (req, 
       }
       if (now < new Date(session.startDate) || now > new Date(session.endDate)) {
         return res.status(403).json({ error: 'Evaluation is outside the active date range' });
+      }
+      if (session.department) {
+        // Load evaluatee's department via Employee record
+        const evaluateeEmployee = await prisma.employee.findFirst({ where: { userId: parseInt(evaluateeID) } });
+        const evaluateeDept = evaluateeEmployee?.department || null;
+        if (!evaluateeDept || String(evaluateeDept).trim().toLowerCase() !== String(session.department).trim().toLowerCase()) {
+          return res.status(403).json({ error: 'Evaluatee not in the session department' });
+        }
       }
     }
 
@@ -917,10 +932,10 @@ app.post('/api/criteria/:id/authorize', authenticateToken, async (req, res) => {
 app.post('/api/evaluation-sessions', authenticateToken, requireNonEmployee, async (req, res) => {
   console.log('Create evaluation session request received with body:', req.body);
   try {
-    const { title, startDate, endDate } = req.body;
+    const { title, startDate, endDate, department } = req.body;
 
     if (!title || !startDate || !endDate) {
-      console.log('Missing required fields:', { title, startDate, endDate });
+      console.log('Missing required fields:', { title, startDate, endDate, department });
       return res.status(400).json({ error: 'Missing required fields: title, startDate, endDate' });
     }
 
@@ -944,7 +959,8 @@ app.post('/api/evaluation-sessions', authenticateToken, requireNonEmployee, asyn
         endDate: end,
         activatedBy: activatedBy, 
         // default status is ON
-        type: 'on'
+        type: 'on',
+        department: department || null,
       },
     });
 
@@ -972,7 +988,7 @@ app.get('/api/evaluation-sessions', authenticateToken, async (req, res) => {
 app.put('/api/evaluation-sessions/:id/status', authenticateToken, requireNonEmployee, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { status, startDate, endDate } = req.body || {};
+    const { status, startDate, endDate, department } = req.body || {};
     if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid session id' });
     if (!status) return res.status(400).json({ error: 'status is required (on/off)' });
 
@@ -988,6 +1004,7 @@ app.put('/api/evaluation-sessions/:id/status', authenticateToken, requireNonEmpl
     const data = { type: desired };
     if (startDate) Object.assign(data, { startDate: new Date(startDate) });
     if (endDate) Object.assign(data, { endDate: new Date(endDate) });
+    if (department !== undefined) Object.assign(data, { department: department || null });
 
     if (data.startDate && data.endDate && data.endDate <= data.startDate) {
       return res.status(400).json({ error: 'endDate must be after startDate' });
@@ -1739,6 +1756,125 @@ app.patch('/api/employees/:id/deactivate', authenticateToken, blockEmployee, asy
   }
 });
 
+
+
+// Create Department
+app.post('/api/departments', authenticateToken, authorizeRole(['Admin', 'SuperAdmin']), async (req, res) => {
+  const { name, managerId } = req.body;
+  try {
+    const department = await prisma.department.create({
+      data: {
+        name,
+        managerId: managerId ? parseInt(managerId) : null,
+      },
+    });
+    res.status(201).json(department);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create department' });
+  }
+});
+
+// Get All Departments
+app.get('/api/departments', authenticateToken, async (req, res) => {
+  try {
+    const departments = await prisma.department.findMany({
+      include: { manager: { select: { fullName: true } }, users: { select: { id: true, fullName: true } } },
+    });
+    res.json(departments);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch departments' });
+  }
+});
+
+// Update Department
+app.put('/api/departments/:id', authenticateToken, authorizeRole(['Admin', 'SuperAdmin']), async (req, res) => {
+  const { id } = req.params;
+  const { name, managerId } = req.body;
+  try {
+    const department = await prisma.department.update({
+      where: { id: parseInt(id) },
+      data: {
+        name,
+        managerId: managerId ? parseInt(managerId) : null,
+      },
+    });
+    res.json(department);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update department' });
+  }
+});
+
+// Delete Department
+app.delete('/api/departments/:id', authenticateToken, authorizeRole(['Admin', 'SuperAdmin']), async (req, res) => {
+  const { id } = req.params;
+  try {
+    await prisma.department.delete({ where: { id: parseInt(id) } });
+    res.json({ message: 'Department deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete department' });
+  }
+});
+
+// === POSITIONS ENDPOINTS ===
+
+// Create Position
+app.post('/api/positions', authenticateToken, authorizeRole(['Admin', 'SuperAdmin']), async (req, res) => {
+  const { name, level, reportsTo } = req.body;
+  try {
+    const position = await prisma.position.create({
+      data: {
+        name,
+        level: parseInt(level),
+        reportsTo: reportsTo ? parseInt(reportsTo) : null,
+      },
+    });
+    res.status(201).json(position);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create position' });
+  }
+});
+
+// Get All Positions
+app.get('/api/positions', authenticateToken, async (req, res) => {
+  try {
+    const positions = await prisma.position.findMany({
+      include: { subordinates: true, users: { select: { id: true, fullName: true } } },
+    });
+    res.json(positions);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch positions' });
+  }
+});
+
+// Update Position
+app.put('/api/positions/:id', authenticateToken, authorizeRole(['Admin', 'SuperAdmin']), async (req, res) => {
+  const { id } = req.params;
+  const { name, level, reportsTo } = req.body;
+  try {
+    const position = await prisma.position.update({
+      where: { id: parseInt(id) },
+      data: {
+        name,
+        level: parseInt(level),
+        reportsTo: reportsTo ? parseInt(reportsTo) : null,
+      },
+    });
+    res.json(position);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update position' });
+  }
+});
+
+// Delete Position
+app.delete('/api/positions/:id', authenticateToken, authorizeRole(['Admin', 'SuperAdmin']), async (req, res) => {
+  const { id } = req.params;
+  try {
+    await prisma.position.delete({ where: { id: parseInt(id) } });
+    res.json({ message: 'Position deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete position' });
+  }
+});
 // Removed duplicate inline key-result-progress route.
 
 process.on('SIGTERM', async () => {

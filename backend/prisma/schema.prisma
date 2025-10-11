@@ -22,6 +22,14 @@ model User {
   activeStatus            String               @map("activeStatus")
   createdDate             DateTime             @map("CreatedDate")
   createdBy               Int                  @map("CreatedBy")
+  departmentId            Int?
+  positionId              Int?
+  managerId               Int?
+  department              Department?          @relation(fields: [departmentId], references: [id])
+  position                Position?            @relation(fields: [positionId], references: [id])
+  manager                 User?                @relation("UserToManager", fields: [managerId], references: [id])
+  directReports           User[]               @relation("UserToManager")
+  managedDepartments      Department[]         @relation("DepartmentManager")
   evaluationsAsEvaluator  Evaluation[]         @relation("evaluator")
   evaluationsAsEvaluatee  Evaluation[]         @relation("evaluatee")
   goals                   Goal[]               @relation("userGoals")
@@ -31,7 +39,32 @@ model User {
   performancesAsUser      Performance[]        @relation("UserPerformance")
   performancesAsEvaluator Performance[]        @relation("EvaluatorPerformance")
   employees               Employee[]
-  keyResultProgress  KeyResultProgress[] @relation("notedBy")
+  keyResultProgress       KeyResultProgress[]  @relation("notedBy")
+
+  @@index([managerId])
+}
+
+model Department {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  managerId Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  manager   User?    @relation("DepartmentManager", fields: [managerId], references: [id])
+  users     User[] // Users in this department
+}
+
+model Position {
+  id        Int      @id @default(autoincrement())
+  name      String // e.g., "President", "Chief", "Senior Director"
+  level     Int // Hierarchy level (e.g., 1 for President, 2 for Chief)
+  reportsTo Int? // Self-reference to higher position (e.g., Chief reports to President)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reportsToPosition Position?  @relation("PositionHierarchy", fields: [reportsTo], references: [id])
+  subordinates      Position[] @relation("PositionHierarchy")
+  users             User[] // Users with this position
 }
 
 model Evaluation {
@@ -68,6 +101,7 @@ model EvaluationSession {
   endDate     DateTime     @map("EndDate")
   activatedBy Int          @map("ActivatedBy")
   type        String       @default("") @map("type")
+  department  String?      @map("Department")
   evaluations Evaluation[]
   user        User         @relation("userSessions", fields: [activatedBy], references: [id])
 }
@@ -103,13 +137,13 @@ model Goal {
 model KeyResultProgress {
   id       Int      @id @default(autoincrement())
   goalId   Int
-  keyIndex Int 
+  keyIndex Int
   progress Int
   notedAt  DateTime @default(now())
-  notedBy  Int 
+  notedBy  Int
 
   goal Goal @relation(fields: [goalId], references: [gid])
- user       User     @relation(fields: [notedBy], references: [id], name: "notedBy")
+  user User @relation(fields: [notedBy], references: [id], name: "notedBy")
 
   @@index([goalId, keyIndex, notedAt])
 }
