@@ -32,11 +32,14 @@ const CreateUser: React.FC = () => {
         console.error('No token found in localStorage');
         throw new Error('No authentication token');
       }
-      console.log('Fetching departments with token:', token);
+      console.log('Fetching departments with token:', token.substring(0, 10) + '...');
       const response = await axios.get('http://localhost:3000/api/departments', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log('Departments response:', response.data);
+      console.log('Departments response data:', response.data);
+      if (!Array.isArray(response.data)) {
+        throw new Error('Invalid departments data format');
+      }
       return response.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -51,11 +54,14 @@ const CreateUser: React.FC = () => {
         console.error('No token found in localStorage');
         throw new Error('No authentication token');
       }
-      console.log('Fetching positions with token:', token);
+      console.log('Fetching positions with token:', token.substring(0, 10) + '...');
       const response = await axios.get('http://localhost:3000/api/positions', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log('Positions response:', response.data);
+      console.log('Positions response data:', response.data);
+      if (!Array.isArray(response.data)) {
+        throw new Error('Invalid positions data format');
+      }
       return response.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -107,19 +113,21 @@ const CreateUser: React.FC = () => {
           userName: '',
           password: '',
           gender: '', // Default to empty string
-          age: '',
+          age: '', // String to match TextField input
           role: '',  // Default to empty string
-          departmentId: '', // Default to empty string
-          positionId: '',   // Default to empty string
+          departmentId: '', // String to match Select input
+          positionId: '',   // String to match Select input
         }}
         validationSchema={validationSchema}
         onSubmit={(values, { setSubmitting }) => {
-          createUserMutation.mutate({
+          // Convert string values to numbers where expected by User type
+          const processedValues: Partial<User> = {
             ...values,
-            age: values.age ? parseInt(values.age as string) : undefined,
-            departmentId: values.departmentId ? parseInt(values.departmentId as string) : undefined,
-            positionId: values.positionId ? parseInt(values.positionId as string) : undefined,
-          });
+            age: values.age ? parseInt(values.age, 10) : undefined,
+            departmentId: values.departmentId ? parseInt(values.departmentId, 10) : undefined,
+            positionId: values.positionId ? parseInt(values.positionId, 10) : undefined,
+          };
+          createUserMutation.mutate(processedValues);
           setSubmitting(false);
         }}
       >
@@ -216,8 +224,11 @@ const CreateUser: React.FC = () => {
                   onChange={(e) => setFieldValue('departmentId', e.target.value)}
                   disabled={isLoadingDepartments}
                 >
+                  {departments.length === 0 && !isLoadingDepartments && !departmentsError && (
+                    <MenuItem disabled value="">No departments available</MenuItem>
+                  )}
                   {departments.map((dept) => (
-                    <MenuItem key={dept.id} value={dept.id}>{dept.name}</MenuItem>
+                    <MenuItem key={dept.id} value={dept.id.toString()}>{dept.name}</MenuItem> // Convert to string for Select
                   ))}
                 </Select>
                 {departmentsError && (
@@ -241,8 +252,11 @@ const CreateUser: React.FC = () => {
                   onChange={(e) => setFieldValue('positionId', e.target.value)}
                   disabled={isLoadingPositions}
                 >
+                  {positions.length === 0 && !isLoadingPositions && !positionsError && (
+                    <MenuItem disabled value="">No positions available</MenuItem>
+                  )}
                   {positions.map((pos) => (
-                    <MenuItem key={pos.id} value={pos.id}>{pos.name}</MenuItem>
+                    <MenuItem key={pos.id} value={pos.id.toString()}>{pos.name}</MenuItem> // Convert to string for Select
                   ))}
                 </Select>
                 {positionsError && (

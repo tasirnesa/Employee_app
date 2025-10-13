@@ -3,15 +3,74 @@ import { Stack, TextField, Button, Typography, FormControl, InputLabel, Select, 
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/axios';
-import type { User } from '../types/interfaces';
+import type { User, Department, Position } from '../types/interfaces';
 import { useQuery } from '@tanstack/react-query';
 import { useDropzone } from 'react-dropzone';
 
 const CreateEmployee: React.FC = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', department: '', position: '', hireDate: '', gender: '', birthDate: '', profileImageUrl: '', username: '', password: '', userId: '' });
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    departmentId: '', // Changed to departmentId (string for Select value)
+    positionId: '',   // Changed to positionId (string for Select value)
+    hireDate: '',
+    gender: '',
+    birthDate: '',
+    profileImageUrl: '',
+    username: '',
+    password: '',
+    userId: '',
+  });
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch Departments
+  const { data: departments = [], isLoading: isLoadingDepartments, error: departmentsError } = useQuery<Department[]>({
+    queryKey: ['departments'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No token found in localStorage');
+        throw new Error('No authentication token');
+      }
+      console.log('Fetching departments with token:', token.substring(0, 10) + '...');
+      const response = await api.get('/api/departments', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log('Departments response data:', response.data);
+      if (!Array.isArray(response.data)) {
+        throw new Error('Invalid departments data format');
+      }
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Fetch Positions
+  const { data: positions = [], isLoading: isLoadingPositions, error: positionsError } = useQuery<Position[]>({
+    queryKey: ['positions'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No token found in localStorage');
+        throw new Error('No authentication token');
+      }
+      console.log('Fetching positions with token:', token.substring(0, 10) + '...');
+      const response = await api.get('/api/positions', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log('Positions response data:', response.data);
+      if (!Array.isArray(response.data)) {
+        throw new Error('Invalid positions data format');
+      }
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
   const mutation = useMutation({
     mutationFn: async () => {
       const fd = new FormData();
@@ -19,13 +78,12 @@ const CreateEmployee: React.FC = () => {
       fd.append('lastName', form.lastName);
       fd.append('email', form.email);
       if (form.phone) fd.append('phone', form.phone);
-      if (form.department) fd.append('department', form.department);
-      if (form.position) fd.append('position', form.position);
+      if (form.departmentId) fd.append('departmentId', form.departmentId); // Send as string, backend will parse
+      if (form.positionId) fd.append('positionId', form.positionId); // Send as string, backend will parse
       if (form.hireDate) fd.append('hireDate', form.hireDate);
       if (form.gender) fd.append('gender', form.gender);
       if (form.birthDate) {
         fd.append('birthDate', form.birthDate);
-        // Calculate age from birth date
         const birthYear = new Date(form.birthDate).getFullYear();
         const currentYear = new Date().getFullYear();
         const calculatedAge = currentYear - birthYear;
@@ -59,7 +117,6 @@ const CreateEmployee: React.FC = () => {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, multiple: false, accept: { 'image/*': [] } });
 
-  // Calculate age from birth date
   const calculateAge = (birthDate: string): number | null => {
     if (!birthDate) return null;
     const birthYear = new Date(birthDate).getFullYear();
@@ -105,11 +162,45 @@ const CreateEmployee: React.FC = () => {
       </Stack>
       
       <Stack direction="row" spacing={2}>
+        <FormControl fullWidth>
+          <InputLabel id="department-label">Department</InputLabel>
+          <Select
+            labelId="department-label"
+            label="Department"
+            value={form.departmentId}
+            onChange={(e) => setForm({ ...form, departmentId: e.target.value as string })}
+            disabled={isLoadingDepartments}
+          >
+            {departments.length === 0 && !isLoadingDepartments && !departmentsError && (
+              <MenuItem disabled value="">No departments available</MenuItem>
+            )}
+            {departments.map((dept) => (
+              <MenuItem key={dept.id} value={dept.id.toString()}>{dept.name}</MenuItem>
+            ))}
+          </Select>
+          {departmentsError && <Typography color="error">Error loading departments: {departmentsError.message}</Typography>}
+        </FormControl>
         <TextField name="phone" label="Phone" value={form.phone} onChange={handleChange} fullWidth />
-        <TextField name="department" label="Department" value={form.department} onChange={handleChange} fullWidth />
       </Stack>
       <Stack direction="row" spacing={2}>
-        <TextField name="position" label="Position" value={form.position} onChange={handleChange} fullWidth />
+        <FormControl fullWidth>
+          <InputLabel id="position-label">Position</InputLabel>
+          <Select
+            labelId="position-label"
+            label="Position"
+            value={form.positionId}
+            onChange={(e) => setForm({ ...form, positionId: e.target.value as string })}
+            disabled={isLoadingPositions}
+          >
+            {positions.length === 0 && !isLoadingPositions && !positionsError && (
+              <MenuItem disabled value="">No positions available</MenuItem>
+            )}
+            {positions.map((pos) => (
+              <MenuItem key={pos.id} value={pos.id.toString()}>{pos.name}</MenuItem>
+            ))}
+          </Select>
+          {positionsError && <Typography color="error">Error loading positions: {positionsError.message}</Typography>}
+        </FormControl>
         <TextField name="hireDate" label="Hire Date" type="date" value={form.hireDate} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} />
       </Stack>
 
@@ -161,5 +252,3 @@ const CreateEmployee: React.FC = () => {
 };
 
 export default CreateEmployee;
-
-
