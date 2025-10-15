@@ -117,18 +117,18 @@ app.use('/api/key-result-progress', authenticateToken, keyResultProgressRoutes);
 // Login endpoint
 app.post('/api/auth/login', async (req, res) => {
   try {
-    console.log('Login request received with body:', req.body);
+ 
     if (!req.body) {
       console.log('Missing request body');
       return res.status(400).json({ error: 'Request body is missing' });
     }
     const { username, password } = req.body;
+    
     if (!username || !password) {
       console.log('Missing username or password:', { username, password });
       return res.status(400).json({ error: 'Username and password are required' });
     }
     
-    console.log('Login attempt:', { username, password });
     const user = await prisma.user.findFirst({ where: { userName: username } });
     if (!user) {
       console.log('User not found:', username);
@@ -139,16 +139,13 @@ app.post('/api/auth/login', async (req, res) => {
       console.log('Password mismatch for:', username);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-    // Block inactive/locked users from logging in
     const isInactive = isFalseLike(user.status) || isFalseLike(user.activeStatus);
     const isLocked = isTrueLike(user.locked);
     if (isInactive || isLocked) {
       return res.status(403).json({ error: 'Your account is Deactiveted. Contact system administrator.' });
     }
-    // Additionally, if this user is linked to an employee record that is inactive, block login
-    const linkedEmployee = await prisma.employee.findFirst({ where: { userId: user.id } });
+   const linkedEmployee = await prisma.employee.findFirst({ where: { userId: user.id } });
     if (linkedEmployee && linkedEmployee.isActive === false) {
-      // Auto-sync user flags if inconsistent with employee
       try {
         await prisma.user.update({
           where: { id: user.id },
@@ -160,9 +157,8 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(403).json({ error: 'Your account is Deactiveted. Contact system administrator.' });
     }
     const token = jwt.sign({ id: user.id, username: user.userName }, SECRET_KEY, { expiresIn: '1h' });
-    console.log('Login successful:', username, 'isFirstLogin:', user.isFirstLogin);
-    // Enrich user with profile image from linked employee record if available
-    let profileImageUrl = null;
+    console.log('Login successful:', username, 'isFirstLogin:', user.isFirstLogin, user.password);
+   let profileImageUrl = null;
     try {
       const emp = await prisma.employee.findFirst({ where: { userId: user.id }, select: { profileImageUrl: true } });
       profileImageUrl = emp?.profileImageUrl || null;
@@ -178,17 +174,12 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Helper function to check if new password differs from old password by at least 4 characters
 function passwordsDifferByAtLeast4Chars(oldPassword, newPassword) {
-  if (!oldPassword || !newPassword) return true; // Allow if either is missing
+  if (!oldPassword || !newPassword) return true; 
   
   const old = oldPassword.toLowerCase();
   const newPwd = newPassword.toLowerCase();
-  
-  // Check if passwords are identical
   if (old === newPwd) return false;
-  
-  // Calculate Levenshtein distance
   const matrix = [];
   for (let i = 0; i <= newPwd.length; i++) {
     matrix[i] = [i];
@@ -203,9 +194,9 @@ function passwordsDifferByAtLeast4Chars(oldPassword, newPassword) {
         matrix[i][j] = matrix[i - 1][j - 1];
       } else {
         matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1, // substitution
-          matrix[i][j - 1] + 1,     // insertion
-          matrix[i - 1][j] + 1      // deletion
+          matrix[i - 1][j - 1] + 1, 
+          matrix[i][j - 1] + 1,     
+          matrix[i - 1][j] + 1    
         );
       }
     }
@@ -214,7 +205,6 @@ function passwordsDifferByAtLeast4Chars(oldPassword, newPassword) {
   return matrix[newPwd.length][old.length] >= 4;
 }
 
-// Change password (first login or regular) for authenticated user
 app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -226,16 +216,16 @@ app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Always require current password
+    
     if (!currentPassword) {
       return res.status(400).json({ error: 'Current password is required' });
     }
     
-    // Verify current password
+   
     const ok = await bcrypt.compare(currentPassword, user.password);
     if (!ok) return res.status(401).json({ error: 'Current password is incorrect' });
 
-    // Check if new password differs from old password by at least 4 characters
+    
     if (!passwordsDifferByAtLeast4Chars(currentPassword, newPassword)) {
       return res.status(400).json({ error: 'New password must differ from current password by at least 4 characters' });
     }
@@ -262,7 +252,7 @@ app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
 
 app.get('/api/users/me', authenticateToken, async (req, res) => {
   try {
-    // console.log('Headers for /api/users/me:', req.headers);
+  
     const userId = req.user.id; 
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -289,7 +279,6 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
   }
 });
 
-// Debug endpoint to check user's isFirstLogin status
 app.get('/api/debug/user-status', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -368,7 +357,6 @@ app.get('/api/users', authenticateToken, blockEmployee, async (req, res) => {
   }
 });
 
-// Update user
 app.put('/api/users/:id', authenticateToken, blockEmployee, async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
@@ -410,7 +398,6 @@ app.put('/api/users/:id', authenticateToken, blockEmployee, async (req, res) => 
   }
 });
 
-// Delete user
 app.delete('/api/users/:id', authenticateToken, blockEmployee, async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
@@ -424,8 +411,6 @@ app.delete('/api/users/:id', authenticateToken, blockEmployee, async (req, res) 
     return res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
-
-// Authorize user (activate & unlock)
 app.put('/api/users/:id/authorize', authenticateToken, blockEmployee, async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
@@ -473,8 +458,6 @@ app.get('/api/evaluations', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
-
-// Evaluation details: results with criteria and current goals for evaluatee
 app.get('/api/evaluations/:evaluationId/details', authenticateToken, async (req, res) => {
   try {
     const evaluationId = parseInt(req.params.evaluationId);
@@ -522,18 +505,16 @@ app.post('/api/evaluations', authenticateToken, requireNonEmployee, async (req, 
       return res.status(400).json({ error: 'Evaluator and evaluatee cannot be the same person' });
     }
 
-    // If evaluatee supplied via employee, resolve to user id (auto-create and link if needed)
     if (!evaluateeID && evaluateeEmployeeId) {
       const empId = parseInt(evaluateeEmployeeId);
       const employee = await prisma.employee.findUnique({ where: { id: empId } });
       if (!employee) return res.status(400).json({ error: `Employee with id ${empId} does not exist` });
       if (!employee.userId) {
-        // Auto-create a user for this employee and link
+        
         const baseUserName = (employee.email?.split('@')[0] || `${employee.firstName}.${employee.lastName}`).replace(/[^a-zA-Z0-9._-]/g, '').toLowerCase();
         let userName = baseUserName || `emp${empId}`;
-        // ensure unique username
+       
         let suffix = 0;
-        // eslint-disable-next-line no-constant-condition
         while (true) {
           const exists = await prisma.user.findFirst({ where: { userName } });
           if (!exists) break;
@@ -564,9 +545,7 @@ app.post('/api/evaluations', authenticateToken, requireNonEmployee, async (req, 
         evaluateeID = employee.userId;
       }
     }
-
-    // If evaluateeID is provided, but does not correspond to a user, treat it as an employee id
-    if (evaluateeID && !Number.isNaN(parseInt(evaluateeID))) {
+ if (evaluateeID && !Number.isNaN(parseInt(evaluateeID))) {
       const userCandidate = await prisma.user.findUnique({ where: { id: parseInt(evaluateeID) } });
       if (!userCandidate) {
         const empIdFromEvaluatee = parseInt(evaluateeID);
@@ -576,7 +555,6 @@ app.post('/api/evaluations', authenticateToken, requireNonEmployee, async (req, 
             const baseUserName = (employee.email?.split('@')[0] || `${employee.firstName}.${employee.lastName}`).replace(/[^a-zA-Z0-9._-]/g, '').toLowerCase() || `emp${empIdFromEvaluatee}`;
             let userName = baseUserName;
             let suffix = 0;
-            // eslint-disable-next-line no-constant-condition
             while (true) {
               const exists = await prisma.user.findFirst({ where: { userName } });
               if (!exists) break;
@@ -609,8 +587,6 @@ app.post('/api/evaluations', authenticateToken, requireNonEmployee, async (req, 
         }
       }
     }
-
-    // Validate foreign keys before create to avoid FK constraint errors
     const [evaluatorExists, evaluateeExists, sessionExists] = await Promise.all([
       prisma.user.findUnique({ where: { id: parseInt(evaluatorID) } }),
       prisma.user.findUnique({ where: { id: parseInt(evaluateeID) } }),
@@ -626,8 +602,6 @@ app.post('/api/evaluations', authenticateToken, requireNonEmployee, async (req, 
     if (!sessionExists) {
       return res.status(400).json({ error: `Session with id ${sessionID} does not exist` });
     }
-
-    // Enforce session active status, date window, and department alignment
     {
       const session = await prisma.evaluationSession.findUnique({ where: { sessionID: parseInt(sessionID) } });
       if (!session) {
@@ -642,7 +616,6 @@ app.post('/api/evaluations', authenticateToken, requireNonEmployee, async (req, 
         return res.status(403).json({ error: 'Evaluation is outside the active date range' });
       }
       if (session.department) {
-        // Load evaluatee's department via Employee record
         const evaluateeEmployee = await prisma.employee.findFirst({ where: { userId: parseInt(evaluateeID) } });
         const evaluateeDept = evaluateeEmployee?.department || null;
         if (!evaluateeDept || String(evaluateeDept).trim().toLowerCase() !== String(session.department).trim().toLowerCase()) {
@@ -664,7 +637,7 @@ app.post('/api/evaluations', authenticateToken, requireNonEmployee, async (req, 
 
     console.log('Evaluation created:', evaluationResult);
 
-    let evaluationResults = { count: 0 }; // Default value
+    let evaluationResults = { count: 0 };
     if (results && Array.isArray(results) && results.length > 0) {
       const validResults = results.filter(result => result.criteriaID !== undefined && result.criteriaID !== null);
       if (validResults.length !== results.length) {
@@ -710,7 +683,6 @@ app.get('/api/criteria', authenticateToken, async (req, res) => {
         creator: { select: { fullName: true } },
       },
     });
-    // Fallback: if some rows have creator null but createdBy set, enrich names
     const missing = criteria.filter(c => !c.creator && c.createdBy != null).map(c => c.createdBy);
     let idToName = {};
     if (missing.length) {
@@ -834,8 +806,6 @@ app.post('/api/criteria', authenticateToken, requireNonEmployee, async (req, res
     res.status(500).json({ error: 'Failed to create criteria', details: error.message });
   }
 });
-
-// Bulk create criteria
 app.post('/api/criteria/bulk', authenticateToken, requireNonEmployee, async (req, res) => {
   console.log('Bulk create criteria request with body:', req.body?.length ?? 0, 'items');
   try {
@@ -867,7 +837,6 @@ app.post('/api/criteria/bulk', authenticateToken, requireNonEmployee, async (req
   }
 });
 
-// Update criteria
 app.put('/api/criteria/:id', authenticateToken, requireNonEmployee, async (req, res) => {
   console.log('Update criteria request with params:', req.params, 'body:', req.body);
   try {
@@ -889,8 +858,6 @@ app.put('/api/criteria/:id', authenticateToken, requireNonEmployee, async (req, 
     res.status(500).json({ error: 'Failed to update criteria' });
   }
 });
-
-// Delete criteria
 app.delete('/api/criteria/:id', authenticateToken, requireNonEmployee, async (req, res) => {
   console.log('Delete criteria request with params:', req.params);
   try {
@@ -906,8 +873,6 @@ app.delete('/api/criteria/:id', authenticateToken, requireNonEmployee, async (re
     res.status(500).json({ error: 'Failed to delete criteria' });
   }
 });
-
-// Authorize criteria (assign current user as creator)
 app.post('/api/criteria/:id/authorize', authenticateToken, async (req, res) => {
   console.log('Authorize criteria request with params:', req.params);
   try {
@@ -926,8 +891,6 @@ app.post('/api/criteria/:id/authorize', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to authorize criteria' });
   }
 });
-
-
 
 app.post('/api/evaluation-sessions', authenticateToken, requireNonEmployee, async (req, res) => {
   console.log('Create evaluation session request received with body:', req.body);
@@ -958,7 +921,6 @@ app.post('/api/evaluation-sessions', authenticateToken, requireNonEmployee, asyn
         startDate: start,
         endDate: end,
         activatedBy: activatedBy, 
-        // default status is ON
         type: 'on',
         department: department || null,
       },
@@ -983,16 +945,12 @@ app.get('/api/evaluation-sessions', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
-
-// Toggle/update session status and optionally dates (uses `type` as status)
 app.put('/api/evaluation-sessions/:id/status', authenticateToken, requireNonEmployee, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { status, startDate, endDate, department } = req.body || {};
     if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid session id' });
     if (!status) return res.status(400).json({ error: 'status is required (on/off)' });
-
-    // Prevent turning on an already active session
     const existing = await prisma.evaluationSession.findUnique({ where: { sessionID: id } });
     if (!existing) return res.status(404).json({ error: 'Session not found' });
     const desired = String(status).toLowerCase();
@@ -1038,7 +996,7 @@ app.get('/api/evaluation-sessions/stats', authenticateToken, async (req, res) =>
       thisWeek: Number(stats[0].this_week) || 0,
       today: Number(stats[0].today) || 0,
       pending: Number(stats[0].pending) || 0,
-      meetings: 0 // Placeholder; adjust if "Meetings" has a specific definition
+      meetings: 0 
     });
   } catch (error) {
     console.error('Error fetching session stats:', error.message);
@@ -1062,8 +1020,6 @@ app.get('/api/performance', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
-
-// Helpers for performance calculation
 const toStartOfDay = (d) => {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
@@ -1096,8 +1052,6 @@ app.post('/api/performance/recalculate', authenticateToken, async (req, res) => 
     
     const user = await prisma.user.findUnique({ where: { id: parseInt(userId) } });
     if (!user) return res.status(400).json({ error: `User ${userId} does not exist` });
-
-    // 1) Evaluation score (normalize 1-5 to 0-100)
     const evalResults = await prisma.evaluationResult.findMany({
       where: {
         evaluation: {
@@ -1109,9 +1063,7 @@ app.post('/api/performance/recalculate', authenticateToken, async (req, res) => 
     });
     const evalScores100 = evalResults.map((r) => mapScoreTo100(r.score)).filter((x) => x != null);
     const evaluationScore = safeAvg(evalScores100); // 0..100
-
-    // 2) Goals score: use average progress (0..100) for goals with duedate in period (fallback all goals)
-    let goals = await prisma.goal.findMany({
+ let goals = await prisma.goal.findMany({
       where: {
         activatedBy: parseInt(userId),
         OR: [
@@ -1122,9 +1074,7 @@ app.post('/api/performance/recalculate', authenticateToken, async (req, res) => 
       select: { progress: true },
     });
     const goalProgress = goals.map((g) => (g.progress == null ? 0 : Number(g.progress))).filter((n) => !Number.isNaN(n));
-    const goalsScore = safeAvg(goalProgress); // already 0..100 convention
-
-    // 3) Productivity: if raw perf records exist in period, derive a score vs benchmark
+    const goalsScore = safeAvg(goalProgress); 
     const rawPerf = await prisma.performance.findMany({
       where: { userId: parseInt(userId), date: { gte: start, lte: end } },
       select: { tasksCompleted: true, hoursWorked: true },
@@ -1132,12 +1082,10 @@ app.post('/api/performance/recalculate', authenticateToken, async (req, res) => 
     let productivityScore = null;
     if (rawPerf.length) {
       const totalTasks = rawPerf.reduce((s, r) => s + (r.tasksCompleted || 0), 0);
-      // Simple benchmark: 40 tasks per period → 100
+      
       const targetTasks = 40;
       productivityScore = Math.min(100, (totalTasks / targetTasks) * 100);
     }
-
-    // 4) Punctuality: placeholder unless you track it elsewhere
     const punctualityScore = null;
 
     
@@ -1153,8 +1101,6 @@ app.post('/api/performance/recalculate', authenticateToken, async (req, res) => 
       components.goals * weights.goals +
       components.productivity * weights.productivity +
       components.punctuality * weights.punctuality;
-
-    // Upsert (find existing by userId + period label)
     const existing = await prisma.performance.findFirst({ where: { userId: parseInt(userId), evaluationPeriod: label } });
     let saved;
     if (existing) {
@@ -1202,15 +1148,13 @@ app.post('/api/performance/recalculate', authenticateToken, async (req, res) => 
   }
 });
 
-// POST /api/performance/recalculate-all { periodStart?, periodEnd?, evaluationPeriod? }
 app.post('/api/performance/recalculate-all', authenticateToken, async (req, res) => {
   try {
     const { start, end, label } = coercePeriod(req.body);
     const users = await prisma.user.findMany({ select: { id: true } });
     const results = [];
     for (const u of users) {
-      const r = await fetch(`http://localhost:3000/api/performance/recalculate`); // placeholder to satisfy linter
-      // Instead of HTTP, call the same logic inline for efficiency:
+      const r = await fetch(`http://localhost:3000/api/performance/recalculate`);
       const evalResults = await prisma.evaluationResult.findMany({
         where: { evaluation: { evaluateeID: u.id, evaluationDate: { gte: start, lte: end } } },
         select: { score: true },
@@ -1309,18 +1253,11 @@ app.post('/api/performance', authenticateToken, async (req, res) => {
     return res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
-
-
-
-
- // goals 
-
- // GET all goals for the authenticated user
 app.get('/api/goals', authenticateToken, async (req, res) => {
   try {
     const goals = await prisma.goal.findMany({
       where: {
-        activatedBy: req.user.id, // Filter by authenticated user
+        activatedBy: req.user.id,
       },
     });
     console.log('Fetched goals:', goals);
@@ -1330,8 +1267,6 @@ app.get('/api/goals', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
-
-// POST a new goal
 app.post('/api/goals', authenticateToken, async (req, res) => {
   console.log('Create goal request received with body:', req.body);
   try {
@@ -1350,7 +1285,7 @@ app.post('/api/goals', authenticateToken, async (req, res) => {
     const goal = await prisma.goal.create({
       data: {
         objective,
-        keyResult: Array.isArray(keyResult) ? keyResult : [keyResult || ''], // Ensure it's an array
+        keyResult: Array.isArray(keyResult) ? keyResult : [keyResult || ''], 
         priority,
         status,
         progress: parseInt(progress) || 0,
@@ -1367,8 +1302,6 @@ app.post('/api/goals', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
-
-// PUT (edit) an existing goal
 app.put('/api/goals/:gid', authenticateToken, async (req, res) => {
   console.log('Edit goal request received with params:', req.params, 'body:', req.body);
   try {
@@ -1409,9 +1342,6 @@ app.put('/api/goals/:gid', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
-
-// Record progress for a specific key result under a goal
-// POST /api/goals/:gid/key-results/:keyIndex/progress { progress }
 app.post('/api/goals/:gid/key-results/:keyIndex/progress', authenticateToken, async (req, res) => {
   try {
     const gid = parseInt(req.params.gid);
@@ -1445,8 +1375,6 @@ app.post('/api/goals/:gid/key-results/:keyIndex/progress', authenticateToken, as
         notedBy: req.user.id,
       },
     });
-
-    // Recalculate goal.progress as average of latest progress per key
     const latestByKey = await prisma.$queryRaw`
       SELECT DISTINCT ON ("keyIndex") "keyIndex", "progress"
       FROM "KeyResultProgress"
@@ -1463,9 +1391,6 @@ app.post('/api/goals/:gid/key-results/:keyIndex/progress', authenticateToken, as
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
-
-// Get latest per-key progress for a goal
-// GET /api/goals/:gid/key-results/progress
 app.get('/api/goals/:gid/key-results/progress', authenticateToken, async (req, res) => {
   try {
     const gid = parseInt(req.params.gid);
@@ -1490,7 +1415,6 @@ app.get('/api/goals/:gid/key-results/progress', authenticateToken, async (req, r
   }
 });
 
-// DELETE a goal
 app.delete('/api/goals/:gid', authenticateToken, async (req, res) => {
   console.log('Delete goal request received with params:', req.params);
   try {
@@ -1515,14 +1439,13 @@ app.delete('/api/goals/:gid', authenticateToken, async (req, res) => {
     });
 
     console.log('Goal deleted:', gid);
-    res.status(204).send(); // No content on successful delete
+    res.status(204).send();
   } catch (error) {
     console.error('Error deleting goal:', error.message);
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
 
-// Employees CRUD and activation
 app.get('/api/employees', authenticateToken, blockEmployee, async (req, res) => {
   try {
     const { isActive } = req.query;
@@ -1552,7 +1475,6 @@ app.get('/api/employees/:id', authenticateToken, blockEmployee, async (req, res)
 
 app.post('/api/employees', authenticateToken, blockEmployee, upload.fields([{ name: 'profileImage', maxCount: 1 }]), async (req, res) => {
   try {
-    // Normalize multipart fields (handle array-form)
     const pick = (v) => Array.isArray(v) ? v[0] : v;
     const firstName = pick(req.body.firstName);
     const lastName = pick(req.body.lastName);
@@ -1578,8 +1500,6 @@ app.post('/api/employees', authenticateToken, blockEmployee, upload.fields([{ na
     }
 
     const uploadedFile = Array.isArray(req.files?.profileImage) ? req.files.profileImage[0] : null;
-
-    // Pre-validate uniqueness to fail fast before any writes
     const existingByEmail = await prisma.employee.findFirst({ where: { email: emailTrim } });
     if (existingByEmail) {
       return res.status(409).json({ error: 'Email already exists' });
@@ -1600,8 +1520,6 @@ app.post('/api/employees', authenticateToken, blockEmployee, upload.fields([{ na
       isActive: isActive == null ? true : isTrueLike(isActive),
       userId: userId != null && userId !== '' && !Number.isNaN(parseInt(userId, 10)) ? parseInt(userId, 10) : null,
     };
-
-    // Atomically create optional user then employee; rollback both if any step fails
     const created = await prisma.$transaction(async (tx) => {
       const data = { ...baseEmployeeData };
       if (!data.userId && username && password) {
@@ -1693,7 +1611,6 @@ app.put('/api/employees/:id', authenticateToken, blockEmployee, upload.fields([{
         userId: userId === undefined ? existing.userId : (userId != null && userId !== '' ? parseInt(userId, 10) : null),
       },
     });
-    // If active flag changed and linked to user, sync user flags
     if (updated.userId != null && updated.isActive !== existing.isActive) {
       await prisma.user.update({
         where: { id: updated.userId },
@@ -1716,7 +1633,6 @@ app.patch('/api/employees/:id/activate', authenticateToken, blockEmployee, async
   try {
     const id = parseInt(req.params.id);
     const updated = await prisma.employee.update({ where: { id }, data: { isActive: true } });
-    // If employee linked to a user, set user's activeStatus/status/locked appropriately
     if (updated.userId) {
       await prisma.user.update({
         where: { id: updated.userId },
@@ -1738,7 +1654,6 @@ app.patch('/api/employees/:id/deactivate', authenticateToken, blockEmployee, asy
   try {
     const id = parseInt(req.params.id);
     const updated = await prisma.employee.update({ where: { id }, data: { isActive: false } });
-    // If employee linked to a user, set user's activeStatus/status/locked accordingly
     if (updated.userId) {
       await prisma.user.update({
         where: { id: updated.userId },
