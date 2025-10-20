@@ -6,33 +6,23 @@ import {
   Typography,
   Card,
   CardContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   Box,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  Avatar,
+  Chip,
+  Divider,
+  Button,
 } from '@mui/material';
-import { Pie, Bar, Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  ArcElement,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  LineElement,
-  PointElement,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import type { User, Evaluation, EvaluationCriteria, EvaluationResult } from '../types/interfaces';
-
-ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, LineElement, PointElement, Tooltip, Legend);
+import { useNavigate } from 'react-router-dom';
+import type { User, Evaluation, EvaluationCriteria, EvaluationResult, Employee, Goal } from '../types/interfaces';
+import { listEmployees } from '../api/employeeApi';
 
 const Dashboard: React.FC = () => {
   const token = localStorage.getItem('token');
+  const navigate = useNavigate();
   const currentUser = (() => {
     try {
       return JSON.parse(localStorage.getItem('userProfile') || '{}');
@@ -100,6 +90,69 @@ const Dashboard: React.FC = () => {
     },
   });
 
+  // Fetch employees to identify current user's employee profile for Time Off
+  const { data: employeesForTime } = useQuery({
+    queryKey: ['employees-for-timeoff'],
+    queryFn: async () => await listEmployees(true),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+  const employeeCacheKey = currentUser?.id ? `meEmployee_${currentUser.id}` : undefined;
+  const cachedMe = (() => {
+    if (!employeeCacheKey) return null;
+    try { return JSON.parse(localStorage.getItem(employeeCacheKey) || 'null'); } catch { return null; }
+  })();
+  const normalize = (s?: string | null) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const liveMe = (() => {
+    const list = employeesForTime || [];
+    // 1) Match by linked userId
+    const byUserId = list.find((e) => e.userId === currentUser?.id);
+    if (byUserId) return byUserId;
+    // 2) Match by full name
+    const userName = normalize(currentUser?.fullName as any);
+    const byName = list.find((e) => `${normalize(e.firstName)} ${normalize(e.lastName)}` === userName);
+    if (byName) return byName;
+    // 3) Match by email prefix equals userName (if usernames are emails)
+    const userUserName = normalize((currentUser as any)?.userName);
+    const byEmail = list.find((e) => normalize(e.email).startsWith(userUserName) || normalize(e.email) === userUserName);
+    return byEmail;
+  })();
+  const meEmployee: Employee | undefined = liveMe || cachedMe || undefined;
+  if (liveMe && employeeCacheKey) {
+    localStorage.setItem(employeeCacheKey, JSON.stringify(liveMe));
+  }
+
+  // Time Off entitlement calculation
+  const computeEntitlement = (hireDate?: string | null) => {
+    if (!hireDate) return 0;
+    const start = new Date(hireDate);
+    if (Number.isNaN(start.getTime())) return 0;
+    const now = new Date();
+    const anniversaryThisYear = new Date(now.getFullYear(), start.getMonth(), start.getDate());
+    const years = now.getFullYear() - start.getFullYear() - (now < anniversaryThisYear ? 1 : 0);
+    if (years <= 0) return 16; // first year
+    if (years === 1) return 18; // second year
+    if (years === 2) return 20; // third year
+    return 20 + (years - 2) * 2; // add 2 days per year after third
+  };
+  const entitlementCacheKey = currentUser?.id && meEmployee?.hireDate
+    ? `timeoff_entitlement_${currentUser.id}_${new Date(meEmployee.hireDate).toISOString().slice(0,10)}`
+    : undefined;
+  const cachedEntitlement = entitlementCacheKey ? Number(localStorage.getItem(entitlementCacheKey) || 'NaN') : NaN;
+  const entitlementDaysCalc = computeEntitlement(meEmployee?.hireDate || null);
+  // Prefer fresh calculation when hireDate exists; fallback to cache only if calc is 0 because no hireDate available yet
+  const entitlementDays = entitlementDaysCalc > 0
+    ? entitlementDaysCalc
+    : (Number.isFinite(cachedEntitlement) ? cachedEntitlement : 0);
+  if (entitlementCacheKey && entitlementDaysCalc > 0) {
+    localStorage.setItem(entitlementCacheKey, String(entitlementDaysCalc));
+  }
+  // TODO: subtract approved leave days when Leave API exists (persist used as well)
+  const usedCacheKey = currentUser?.id ? `timeoff_used_${currentUser.id}` : undefined;
+  const cachedUsed = usedCacheKey ? Number(localStorage.getItem(usedCacheKey) || '0') : 0;
+  const usedDays = cachedUsed;
+  const remainingDays = Math.max(0, entitlementDays - usedDays);
+
   const { data: sessionStats } = useQuery({
     queryKey: ['sessionStats'],
     queryFn: async () => {
@@ -120,16 +173,7 @@ const Dashboard: React.FC = () => {
   const activeUsers = users?.filter((user: User) => user.activeStatus).length || 0;
   const inactiveUsers = totalUsers - activeUsers;
 
-  const roleChartData = {
-    labels: Object.keys(usersByRole),
-    datasets: [
-      {
-        data: Object.values(usersByRole),
-        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'],
-        hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'],
-      },
-    ],
-  };
+  // role chart removed in redesigned dashboard
 
   const averageScores = criteria?.map((criterion: EvaluationCriteria) => {
     const relevantResults = results?.filter((result: EvaluationResult) => result.criteriaID === criterion.criteriaID) || [];
@@ -156,21 +200,7 @@ const Dashboard: React.FC = () => {
     ? results.reduce((sum: number, r: EvaluationResult) => sum + r.score, 0) / results.length
     : 0;
 
-  const evaluationsByType = evaluations?.reduce((acc: Record<string, number>, e: Evaluation) => {
-    acc[e.evaluationType] = (acc[e.evaluationType] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>) || {};
-
-  const evalTypeChartData = {
-    labels: Object.keys(evaluationsByType),
-    datasets: [
-      {
-        data: Object.values(evaluationsByType),
-        backgroundColor: ['#4BC0C0', '#FF6384', '#9966FF', '#FFCE56', '#36A2EB'],
-        hoverBackgroundColor: ['#4BC0C0', '#FF6384', '#9966FF', '#FFCE56', '#36A2EB'],
-      },
-    ],
-  };
+  // evaluations by type removed in redesigned dashboard
 
   // Monthly evaluations trend (last 6 months)
   const trendLabels: string[] = [];
@@ -186,177 +216,212 @@ const Dashboard: React.FC = () => {
     const idx = trendLabels.indexOf(label);
     if (idx !== -1) monthlyCounts[idx] += 1;
   });
-  const trendChartData = {
-    labels: trendLabels,
-    datasets: [
-      {
-        label: 'Evaluations (last 6 months)',
-        data: monthlyCounts,
-        borderColor: '#36A2EB',
-        backgroundColor: 'rgba(54,162,235,0.2)',
-        tension: 0.35,
-        fill: true,
-        pointRadius: 3,
-      },
-    ],
-  };
+  // trend chart removed in redesigned dashboard
 
   // Score distribution (bins 1..5)
   const scoreBins = [1, 2, 3, 4, 5];
   const scoreCounts = scoreBins.map((b) => (results || []).filter((r) => Math.round(r.score) === b).length);
-  const scoreDistributionData = {
-    labels: scoreBins.map((b) => `Score ${b}`),
-    datasets: [
-      {
-        label: 'Responses',
-        data: scoreCounts,
-        backgroundColor: '#8E8CF3',
-      },
-    ],
-  };
+  // score distribution removed in redesigned dashboard
 
-  const chartOptions = {
-    maintainAspectRatio: false,
-    responsive: true,
-  };
+  // chart options removed
 
-  if (usersLoading || evaluationsLoading || criteriaLoading || resultsLoading) {
-    return <Typography>Loading...</Typography>;
-  }
+  // Do not early-return; render widgets with whatever data is available
 
-  if (evaluationsError || criteriaError || resultsError) {
-    return (
-      <Typography color="error">
-        Error: {(evaluationsError as Error)?.message || (criteriaError as Error)?.message || (resultsError as Error)?.message}
-      </Typography>
-    );
-  }
+  // 'recent evaluations' table removed in redesigned dashboard
 
-  const recentEvaluations = evaluations
-    ?.slice()
-    .sort((a: Evaluation, b: Evaluation) => new Date(b.evaluationDate).getTime() - new Date(a.evaluationDate).getTime())
-    .slice(0, 5);
+  // Goals and sessions data
+  const { data: myGoals } = useQuery({
+    queryKey: ['goals-dashboard', currentUser?.id],
+    queryFn: async () => {
+      if (!token || !currentUser?.id) return [] as Goal[];
+      const res = await axios.get('http://localhost:3000/api/goals', {
+        params: { userId: currentUser.id },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.data as Goal[];
+    },
+    enabled: !!token && !!currentUser?.id,
+  });
+
+  const { data: sessionsList } = useQuery({
+    queryKey: ['sessions-dashboard'],
+    queryFn: async () => {
+      if (!token) return [] as Array<{ sessionID: number; title: string; startDate: string; endDate: string }>;
+      const res = await axios.get('http://localhost:3000/api/evaluation-sessions', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.data;
+    },
+  });
 
   return (
-    <Container sx={{ mt: 8 }}>
-      <Typography variant="h4" gutterBottom>
-        Dashboard
-      </Typography>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-        <Box sx={{ flex: '1 1 300px', minWidth: 260 }}>
-          <Card>
+    <Container disableGutters maxWidth={false} sx={{ mt: 0, px: 0 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 0.75 }}>
+        {/* Time Off */}
+        <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 4' } }}>
+          <Card sx={{ borderRadius: 3, bgcolor: 'background.paper', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' }}>
             <CardContent>
-              <Typography variant="h6">Total Registered Users</Typography>
-              <Typography variant="h4">{totalUsers}</Typography>
-            </CardContent>
-          </Card>
-        </Box>
-        <Box sx={{ flex: '1 1 300px', minWidth: 260 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6">User Status</Typography>
-              <Typography>Active: {activeUsers}</Typography>
-              <Typography>Inactive: {inactiveUsers}</Typography>
-            </CardContent>
-          </Card>
-        </Box>
-        <Box sx={{ flex: '1 1 300px', minWidth: 260 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6">Evaluations</Typography>
-              <Typography>Total: {totalEvaluations}</Typography>
-              <Typography>Avg Score: {overallAverageScore.toFixed(2)}</Typography>
-            </CardContent>
-          </Card>
-        </Box>
-        <Box sx={{ flex: '1 1 300px', minWidth: 260 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6">Sessions</Typography>
-              <Typography>This week: {sessionStats?.thisWeek ?? 0}</Typography>
-              <Typography>Today: {sessionStats?.today ?? 0}</Typography>
-              <Typography>Pending: {sessionStats?.pending ?? 0}</Typography>
-            </CardContent>
-          </Card>
-        </Box>
-        <Box sx={{ flex: '1 1 300px', minWidth: 260 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6">Users by Role</Typography>
-              <Box sx={{ height: 200 }}>
-                <Pie data={roleChartData} options={chartOptions} />
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h6">Time Off</Typography>
+                <Button size="small" variant="text" onClick={() => navigate('/employees/view')}>See more</Button>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
+                <Box sx={{ width: 120, height: 120, position: 'relative' }}>
+                  <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%' }}>
+                    <path d="M18 2 a16 16 0 1 1 0 32 a16 16 0 1 1 0 -32" fill="none" stroke="#e5e7eb" strokeWidth="4" />
+                    <path d="M18 2 a16 16 0 1 1 0 32" fill="none" stroke="#8b5cf6" strokeWidth="4" strokeDasharray={`${Math.round((remainingDays/Math.max(1, entitlementDays))*100)}, 100`} strokeLinecap="round" />
+                  </svg>
+                  <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                    <Typography variant="h5" fontWeight={700}>{remainingDays}</Typography>
+                    <Typography variant="caption">out of {entitlementDays}</Typography>
+                  </Box>
+                </Box>
+                <Box>
+                  <List dense>
+                    <ListItem disablePadding>
+                      <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`Hire date: ${meEmployee?.hireDate ? new Date(meEmployee.hireDate).toLocaleDateString() : '—'}`} />
+                    </ListItem>
+                    <ListItem disablePadding>
+                      <ListItemText primaryTypographyProps={{ variant: 'body2' }} primary={`Used: ${usedDays} days`} />
+                    </ListItem>
+                  </List>
+                </Box>
               </Box>
             </CardContent>
           </Card>
         </Box>
-        <Box sx={{ flex: '1 1 300px', minWidth: 260 }}>
-          <Card>
+
+        {/* Current Project */}
+        <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 4' } }}>
+          <Card sx={{ borderRadius: 3, bgcolor: 'background.paper', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' }}>
             <CardContent>
-              <Typography variant="h6">Evaluations by Type</Typography>
-              <Box sx={{ height: 200 }}>
-                <Pie data={evalTypeChartData} options={chartOptions} />
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h6">Current Project</Typography>
+                <Button size="small" variant="text" onClick={() => navigate('/goals')}>See more</Button>
               </Box>
+              {(!myGoals || !myGoals.length) ? (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>No goals yet.</Typography>
+              ) : (
+                <List dense sx={{ mt: 1, maxHeight: 260, overflow: 'auto', pr: 1 }}>
+                  {myGoals.slice(0, 3).map((g) => {
+                    const progress = Math.max(0, Math.min(100, Number(g.progress || 0)));
+                    const due = g.duedate ? new Date(g.duedate as any) : null;
+                    const overdue = due && due.getTime() < Date.now() && progress < 100;
+                    const color = overdue ? 'error' : progress >= 80 ? 'success' : progress >= 40 ? 'warning' : 'secondary';
+                    return (
+                      <ListItem key={g.gid} sx={{ px: 0 }}>
+                        <ListItemText
+                          primary={<Typography variant="subtitle2" noWrap>{g.objective}</Typography>}
+                          secondary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Box sx={{ flexGrow: 1, height: 8, bgcolor: '#eef2ff', borderRadius: 9999, overflow: 'hidden' }}>
+                                <Box sx={{ width: `${progress}%`, height: '100%', bgcolor: (theme) => theme.palette[color].main }} />
+                              </Box>
+                              <Chip size="small" label={`${progress}%`} color={color as any} variant="outlined" />
+                            </Box>
+                          }
+                        />
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              )}
             </CardContent>
           </Card>
         </Box>
-        <Box sx={{ flex: '1 1 100%', minWidth: 260 }}>
-          <Card>
+
+        {/* Schedule */}
+        <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 4' } }}>
+          <Card sx={{ borderRadius: 3, bgcolor: 'background.paper', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' }}>
             <CardContent>
-              <Typography variant="h6">Recent Evaluations</Typography>
-              <TableContainer component={Paper} sx={{ maxHeight: 300, overflow: 'auto' }}>
-                <Table stickyHeader>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Evaluation ID</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Evaluator</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Evaluatee</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {recentEvaluations?.map((evaluation: Evaluation) => (
-                      <TableRow key={evaluation.evaluationID}>
-                        <TableCell>{evaluation.evaluationID}</TableCell>
-                        <TableCell>{evaluation.evaluator?.fullName || evaluation.evaluator?.FullName || evaluation.evaluatorID}</TableCell>
-                        <TableCell>{evaluation.evaluatee?.fullName || evaluation.evaluatee?.FullName || evaluation.evaluateeID}</TableCell>
-                        <TableCell>{evaluation.evaluationType}</TableCell>
-                        <TableCell>{new Date(evaluation.evaluationDate).toLocaleDateString()}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h6">Schedule</Typography>
+                <Button size="small" variant="text" onClick={() => navigate('/schedule')}>See more</Button>
+              </Box>
+              <List dense sx={{ mt: 1, maxHeight: 260, overflow: 'auto', pr: 1 }}>
+                {(sessionsList || []).slice(0, 5).map((s: any) => (
+                  <ListItem key={s.sessionID} sx={{ px: 0 }}>
+                    <ListItemText primary={<Typography variant="body2" fontWeight={600} noWrap>{s.title}</Typography>} secondary={<Typography variant="caption" color="text.secondary">{new Date(s.startDate).toLocaleDateString()} - {new Date(s.endDate).toLocaleDateString()}</Typography>} />
+                  </ListItem>
+                ))}
+                {(!sessionsList || !sessionsList.length) && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>No upcoming sessions.</Typography>
+                )}
+              </List>
             </CardContent>
           </Card>
         </Box>
-        <Box sx={{ flex: '1 1 100%', minWidth: 260 }}>
-          <Card>
+
+        {/* Status Tracker */}
+        <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 4' } }}>
+          <Card sx={{ borderRadius: 3, bgcolor: 'background.paper', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' }}>
             <CardContent>
-              <Typography variant="h6">Average Evaluation Scores by Criteria</Typography>
-              <Box sx={{ height: 300 }}>
-                <Bar data={scoreChartData} options={chartOptions} />
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h6">Status Tracker</Typography>
+                <Button size="small" variant="text" onClick={() => navigate('/analytics-performance')}>See more</Button>
               </Box>
+              <List dense sx={{ mt: 1, maxHeight: 260, overflow: 'auto', pr: 1 }}>
+                {(myGoals || []).slice(0, 3).map((g) => (
+                  <ListItem key={g.gid} sx={{ px: 0 }}>
+                    <ListItemAvatar>
+                      <Avatar>{g.objective.charAt(0).toUpperCase()}</Avatar>
+                    </ListItemAvatar>
+                    <ListItemText primary={g.objective} secondary={`Due ${g.duedate ? new Date(g.duedate as any).toLocaleDateString() : '—'}`} />
+                    <Chip size="small" label={`${Math.round(Number(g.progress || 0))}%`} />
+                  </ListItem>
+                ))}
+                {(!myGoals || !myGoals.length) && (
+                  <Typography variant="body2" color="text.secondary">No items yet.</Typography>
+                )}
+              </List>
             </CardContent>
           </Card>
         </Box>
-        <Box sx={{ flex: '1 1 100%', minWidth: 260 }}>
-          <Card>
+
+        {/* Announcements */}
+        <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 4' } }}>
+          <Card sx={{ borderRadius: 3, bgcolor: 'background.paper', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' }}>
             <CardContent>
-              <Typography variant="h6">Evaluations Trend</Typography>
-              <Box sx={{ height: 300 }}>
-                <Line data={trendChartData} options={chartOptions} />
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h6">Announcements</Typography>
+                <Button size="small" variant="text" onClick={() => navigate('/reports')}>See more</Button>
               </Box>
+              <List dense sx={{ mt: 1, maxHeight: 260, overflow: 'auto', pr: 1 }}>
+                <ListItem sx={{ px: 0 }}>
+                  <ListItemText primary="Meeting with John" secondary={<Typography variant="caption" color="text.secondary">9:00 - 10:30</Typography>} />
+                </ListItem>
+                <Divider />
+                <ListItem sx={{ px: 0 }}>
+                  <ListItemText primary="Check neutral colors" secondary={<Typography variant="caption" color="text.secondary">Design System</Typography>} />
+                </ListItem>
+                <Divider />
+                <ListItem sx={{ px: 0 }}>
+                  <ListItemText primary="Text inputs for design system" secondary={<Typography variant="caption" color="text.secondary">UX</Typography>} />
+                </ListItem>
+              </List>
             </CardContent>
           </Card>
         </Box>
-        <Box sx={{ flex: '1 1 100%', minWidth: 260 }}>
-          <Card>
+
+        {/* Meetings */}
+        <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 4' } }}>
+          <Card sx={{ borderRadius: 3, bgcolor: 'background.paper', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' }}>
             <CardContent>
-              <Typography variant="h6">Score Distribution</Typography>
-              <Box sx={{ height: 300 }}>
-                <Bar data={scoreDistributionData} options={chartOptions} />
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h6">Meetings</Typography>
+                <Button size="small" variant="text" onClick={() => navigate('/schedule')}>See more</Button>
               </Box>
+              <List dense sx={{ mt: 1, maxHeight: 260, overflow: 'auto', pr: 1 }}>
+                {(sessionsList || []).slice(0, 3).map((s: any) => (
+                  <ListItem key={s.sessionID} sx={{ px: 0 }}>
+                    <ListItemText primary={s.title} secondary={<Typography variant="caption" color="text.secondary">{new Date(s.startDate).toLocaleTimeString()} - {new Date(s.endDate).toLocaleTimeString()}</Typography>} />
+                    <Chip size="small" label="+4 members" variant="outlined" />
+                  </ListItem>
+                ))}
+                {(!sessionsList || !sessionsList.length) && (
+                  <Typography variant="body2" color="text.secondary">No meetings today.</Typography>
+                )}
+              </List>
             </CardContent>
           </Card>
         </Box>

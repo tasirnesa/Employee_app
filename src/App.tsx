@@ -18,6 +18,7 @@ import EvaluationDetails from './pages/EvaluationDetails';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Header from './components/Header';
+import RightRail from './components/RightRail';
 import Sidebar from './Sidebar';
 import ProtectedRoute from './components/ProtectedRoute';
 import { UserProvider, useUser } from './context/UserContext';
@@ -30,6 +31,7 @@ import ViewEmployees from './pages/ViewEmployees';
 import CreateEmployee from './pages/CreateEmployee';
 import EditEmployee from './pages/EditEmployee';
 import ChangePassword from './pages/ChangePassword';
+import TodoList from './pages/TodoList';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -131,14 +133,14 @@ const AppContent: React.FC = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
-          width: showSidebarAndHeader ? `calc(100% - ${sidebarCollapsed ? 60 : 120}px)` : '100%',
-          ml: showSidebarAndHeader ? `${sidebarCollapsed ? 60 : 120}px` : 0,
+          p: 0,
+          width: showSidebarAndHeader ? `calc(100% - ${sidebarCollapsed ? 72 : 240}px)` : '100%',
+          ml: showSidebarAndHeader ? `${sidebarCollapsed ? 72 : 240}px` : 0,
           transition: 'width 0.3s, margin-left 0.3s',
         }}
       >
         {showSidebarAndHeader && <Header collapsed={sidebarCollapsed} onToggle={toggleSidebar} />}
-        <Card sx={{ p: 3, minHeight: isFirstLogin ? '100vh' : 'calc(100vh - 120px)' }}>
+        <Box sx={{ p: 0, minHeight: isFirstLogin ? '100vh' : 'calc(100vh - 64px)' }}>
           <Routes>
             <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
             <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
@@ -159,10 +161,12 @@ const AppContent: React.FC = () => {
             <Route path="/schedule" element={<ProtectedRoute><ScheduleMenu /></ProtectedRoute>} />
             <Route path="/goals" element={<ProtectedRoute><GoalsMenu /></ProtectedRoute>} />
             <Route path="/analytics-performance" element={<ProtectedRoute><PerformanceMenu /></ProtectedRoute>} />
+            <Route path="/todo" element={<ProtectedRoute><TodoList /></ProtectedRoute>} />
             <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
           </Routes>
-        </Card>
+        </Box>
       </Box>
+      {showSidebarAndHeader && <RightRail />}
     </Box>
   );
 };

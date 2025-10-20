@@ -13,6 +13,9 @@ import {
   DialogActions,
   Button,
   Divider,
+  TextField,
+  InputAdornment,
+  Badge,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
@@ -20,6 +23,9 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import Avatar from '@mui/material/Avatar';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
+import SearchIcon from '@mui/icons-material/Search';
+import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
+import TuneIcon from '@mui/icons-material/Tune';
 import { useUser } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -64,24 +70,48 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
 
   return (
     <Box sx={{ mb: 2 }}>
-      <AppBar position="static" color="primary" elevation={1}>
-        <Toolbar sx={{ gap: 1 }}>
+      <AppBar position="static" color="transparent" elevation={0}>
+        <Toolbar sx={{ gap: 1, py: 1.5 }}>
           <Tooltip title={collapsed ? 'Open sidebar' : 'Collapse sidebar'}>
             <IconButton edge="start" color="inherit" aria-label="menu" onClick={onToggle}>
               <MenuIcon />
             </IconButton>
           </Tooltip>
 
-          <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minWidth: 0 }}>
-            <Typography variant="h6" noWrap>
-              Employee Performance Evaluation
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1, minWidth: 0 }}>
+            <Typography variant="h6" noWrap sx={{ fontWeight: 700 }}>
+              Employee Performance Evaluation System
             </Typography>
-            {/* <Typography variant="body2" sx={{ opacity: 0.9 }} noWrap>
-              Assess, coach, and recognize employees to drive continuous improvement
-            </Typography> */}
+            <Box sx={{ flexGrow: 1, minWidth: 200, maxWidth: 520 }}>
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="Search"
+                variant="outlined"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Tooltip title="Filters">
+              <IconButton color="inherit" aria-label="filters">
+                <TuneIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Notifications">
+              <IconButton color="inherit" aria-label="notifications">
+                <Badge color="error" variant="dot">
+                  <NotificationsNoneIcon />
+                </Badge>
+              </IconButton>
+            </Tooltip>
             <Tooltip title="What is employee performance evaluation?">
               <IconButton color="inherit" onClick={() => setOpenHelp(true)} aria-label="help">
                 <HelpOutlineIcon />
@@ -92,7 +122,7 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
                 {resolvedProfileImageUrl ? (
                   <Avatar
                     src={resolvedProfileImageUrl}
-                    alt={user.fullName}
+                    alt={user?.fullName || 'Profile'}
                     sx={{ width: 34, height: 34, border: '2px solid rgba(255,255,255,0.6)' }}
                   />
                 ) : (
