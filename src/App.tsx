@@ -32,6 +32,7 @@ import CreateEmployee from './pages/CreateEmployee';
 import EditEmployee from './pages/EditEmployee';
 import ChangePassword from './pages/ChangePassword';
 import TodoList from './pages/TodoList';
+import Attendance from './pages/Attendance';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -161,6 +162,7 @@ const AppContent: React.FC = () => {
             <Route path="/schedule" element={<ProtectedRoute><ScheduleMenu /></ProtectedRoute>} />
             <Route path="/goals" element={<ProtectedRoute><GoalsMenu /></ProtectedRoute>} />
             <Route path="/analytics-performance" element={<ProtectedRoute><PerformanceMenu /></ProtectedRoute>} />
+            <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
             <Route path="/todo" element={<ProtectedRoute><TodoList /></ProtectedRoute>} />
             <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
           </Routes>

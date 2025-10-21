@@ -143,3 +143,26 @@ export interface Todo {
   updatedAt: string;
   userId: number;
 }
+
+export interface AttendanceRecord {
+  id: number;
+  employeeId: number;
+  date: string;
+  checkInTime: string;
+  checkOutTime?: string;
+  hoursWorked?: number;
+  status: 'present' | 'absent' | 'late' | 'half-day';
+  timeType?: 'working' | 'break' | 'overnight' | 'holiday' | 'overtime-regular' | 'overtime-sunday';
+  notes?: string;
+}
+
+export interface AttendanceSummary {
+  employeeId: number;
+  employeeName: string;
+  totalDays: number;
+  presentDays: number;
+  absentDays: number;
+  lateDays: number;
+  halfDays: number;
+  totalHours: number;
+}

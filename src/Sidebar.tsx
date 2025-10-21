@@ -146,6 +146,12 @@ const menuItems = [
     recordRecent('Todo List', '/todo');
   };
 
+  const handleAttendance = () => {
+    console.log('Navigating to attendance');
+    navigate('/attendance');
+    recordRecent('Attendance', '/attendance');
+  };
+
   // Collapsible groups state
   const [openUserMgmt, setOpenUserMgmt] = useState<boolean>(true);
   const [openEmployeeMgmt, setOpenEmployeeMgmt] = useState<boolean>(true);
@@ -328,6 +334,13 @@ const menuItems = [
           </ListItem>
           <Collapse in={openAttendance} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
+              <ListItemButton 
+                sx={{ pl: collapsed ? 2 : 7 }} 
+                onClick={handleAttendance} 
+                selected={location.pathname === '/attendance'}
+              >
+                <ListItemText primary="Attendance Records" />
+              </ListItemButton>
               <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { /* TODO */ }}>
                 <ListItemText primary="Timesheets" />
               </ListItemButton>
