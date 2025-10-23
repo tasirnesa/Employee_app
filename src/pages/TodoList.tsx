@@ -18,6 +18,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -25,16 +27,8 @@ import {
   Edit as EditIcon,
 } from '@mui/icons-material';
 import { useUser } from '../context/UserContext';
-
-interface Todo {
-  id: number;
-  title: string;
-  description?: string;
-  completed: boolean;
-  createdAt: string;
-  updatedAt: string;
-  userId: number;
-}
+import * as todoApi from '../api/todoApi';
+import type { Todo } from '../types/interfaces';
 
 const TodoList: React.FC = () => {
   const { user } = useUser();
@@ -42,49 +36,72 @@ const TodoList: React.FC = () => {
   const [newTodo, setNewTodo] = useState({ title: '', description: '' });
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [loading, setLoading] = useState(true);
 
-  // Load todos from localStorage on component mount
+  // Load todos from API on component mount
   useEffect(() => {
-    const savedTodos = localStorage.getItem(`todos_${user?.id}`);
-    if (savedTodos) {
-      setTodos(JSON.parse(savedTodos));
-    }
+    loadTodos();
   }, [user?.id]);
 
-  // Save todos to localStorage whenever they change
-  useEffect(() => {
-    if (user?.id) {
-      localStorage.setItem(`todos_${user.id}`, JSON.stringify(todos));
+  const loadTodos = async () => {
+    try {
+      if (user?.id) {
+        setLoading(true);
+        const userTodos = await todoApi.getTodos(user.id);
+        setTodos(userTodos);
+      }
+    } catch (error) {
+      showSnackbar('Error loading todos', 'error');
+    } finally {
+      setLoading(false);
     }
-  }, [todos, user?.id]);
-
-  const handleAddTodo = () => {
-    if (newTodo.title.trim() === '') return;
-    
-    const todo: Todo = {
-      id: Date.now(),
-      title: newTodo.title,
-      description: newTodo.description,
-      completed: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      userId: user?.id || 0,
-    };
-    
-    setTodos([...todos, todo]);
-    setNewTodo({ title: '', description: '' });
   };
 
-  const handleToggleComplete = (id: number) => {
-    setTodos(
-      todos.map(todo =>
-        todo.id === id ? { ...todo, completed: !todo.completed, updatedAt: new Date().toISOString() } : todo
-      )
-    );
+  const showSnackbar = (message: string, severity: 'success' | 'error') => {
+    setSnackbar({ open: true, message, severity });
   };
 
-  const handleDeleteTodo = (id: number) => {
-    setTodos(todos.filter(todo => todo.id !== id));
+  const handleSnackbarClose = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
+
+  const handleAddTodo = async () => {
+    if (newTodo.title.trim() === '' || !user?.id) return;
+    
+    try {
+      const todo = await todoApi.createTodo({
+        title: newTodo.title,
+        description: newTodo.description,
+        completed: false,
+        userId: user.id,
+      });
+      
+      setTodos([todo, ...todos]);
+      setNewTodo({ title: '', description: '' });
+      showSnackbar('Todo added successfully', 'success');
+    } catch (error) {
+      showSnackbar('Error adding todo', 'error');
+    }
+  };
+
+  const handleToggleComplete = async (id: number) => {
+    try {
+      const updatedTodo = await todoApi.toggleTodo(id);
+      setTodos(todos.map(todo => todo.id === id ? updatedTodo : todo));
+    } catch (error) {
+      showSnackbar('Error updating todo', 'error');
+    }
+  };
+
+  const handleDeleteTodo = async (id: number) => {
+    try {
+      await todoApi.deleteTodo(id);
+      setTodos(todos.filter(todo => todo.id !== id));
+      showSnackbar('Todo deleted successfully', 'success');
+    } catch (error) {
+      showSnackbar('Error deleting todo', 'error');
+    }
   };
 
   const handleEditTodo = (todo: Todo) => {
@@ -92,19 +109,22 @@ const TodoList: React.FC = () => {
     setOpenDialog(true);
   };
 
-  const handleUpdateTodo = () => {
-    if (!editingTodo || editingTodo.title.trim() === '') return;
+  const handleUpdateTodo = async () => {
+    if (!editingTodo || editingTodo.title.trim() === '' || !user?.id) return;
     
-    setTodos(
-      todos.map(todo =>
-        todo.id === editingTodo.id
-          ? { ...editingTodo, updatedAt: new Date().toISOString() }
-          : todo
-      )
-    );
-    
-    setEditingTodo(null);
-    setOpenDialog(false);
+    try {
+      const updatedTodo = await todoApi.updateTodo(editingTodo.id, {
+        title: editingTodo.title,
+        description: editingTodo.description,
+      });
+      
+      setTodos(todos.map(todo => todo.id === editingTodo.id ? updatedTodo : todo));
+      setEditingTodo(null);
+      setOpenDialog(false);
+      showSnackbar('Todo updated successfully', 'success');
+    } catch (error) {
+      showSnackbar('Error updating todo', 'error');
+    }
   };
 
   const handleDialogClose = () => {
@@ -142,7 +162,7 @@ const TodoList: React.FC = () => {
               variant="contained"
               startIcon={<AddIcon />}
               onClick={handleAddTodo}
-              disabled={newTodo.title.trim() === ''}
+              disabled={newTodo.title.trim() === '' || loading}
             >
               Add Task
             </Button>
@@ -155,7 +175,11 @@ const TodoList: React.FC = () => {
           <Typography variant="h6" gutterBottom>
             Your Tasks
           </Typography>
-          {todos.length === 0 ? (
+          {loading ? (
+            <Typography color="textSecondary" align="center" sx={{ py: 3 }}>
+              Loading tasks...
+            </Typography>
+          ) : todos.length === 0 ? (
             <Typography color="textSecondary" align="center" sx={{ py: 3 }}>
               No tasks yet. Add a new task to get started!
             </Typography>
@@ -259,11 +283,22 @@ const TodoList: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleDialogClose}>Cancel</Button>
-          <Button onClick={handleUpdateTodo} variant="contained">
+          <Button onClick={handleUpdateTodo} variant="contained" disabled={loading}>
             Update
           </Button>
         </DialogActions>
       </Dialog>
+      
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

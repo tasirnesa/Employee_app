@@ -114,6 +114,18 @@ const blockEmployee = async (req, res, next) => {
 const keyResultProgressRoutes = require('./src/routes/keyResultProgress');
 app.use('/api/key-result-progress', authenticateToken, keyResultProgressRoutes);
 
+// Add attendance and todos routes
+const attendanceRoutes = require('./src/routes/attendance');
+const todoRoutes = require('./src/routes/todos');
+const payrollRoutes = require('./src/routes/payroll');
+const recruitmentRoutes = require('./src/routes/recruitment');
+const benefitsRoutes = require('./src/routes/benefits');
+app.use('/api/attendance', authenticateToken, attendanceRoutes);
+app.use('/api/todos', authenticateToken, todoRoutes);
+app.use('/api/payroll', authenticateToken, payrollRoutes);
+app.use('/api/recruitment', authenticateToken, recruitmentRoutes);
+app.use('/api/benefits', authenticateToken, benefitsRoutes);
+
 // Login endpoint
 app.post('/api/auth/login', async (req, res) => {
   try {

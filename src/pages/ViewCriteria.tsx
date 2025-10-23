@@ -1,5 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import api from '../lib/axios';
 import {
   Container,
@@ -15,10 +16,16 @@ import {
   Box,
   Chip,
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import type { EvaluationCriteria } from '../types/interfaces';
 
 const ViewCriteria: React.FC = () => {
   console.log('ViewCriteria rendering');
+  const navigate = useNavigate();
+  
+  // Check user role for access control
+  const userRole = JSON.parse(localStorage.getItem('userProfile') || '{}').role;
+  const isEmployee = userRole === 'Employee';
 
   const { data: criteria, isLoading, error } = useQuery({
     queryKey: ['criteria'],
@@ -44,9 +51,24 @@ const ViewCriteria: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 8, bgcolor: 'background.paper', p: 4, borderRadius: 2, boxShadow: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        View Criteria
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          View Criteria
+        </Typography>
+        {!isEmployee && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => navigate('/criteria/create')}
+            sx={{ 
+              backgroundColor: 'primary.main',
+              '&:hover': { backgroundColor: 'primary.dark' }
+            }}
+          >
+            Create Criteria
+          </Button>
+        )}
+      </Box>
       {criteria && criteria.length > 0 ? (
         <TableContainer component={Paper} sx={{ maxHeight: 400, borderRadius: 2 }}>
           <Table stickyHeader>

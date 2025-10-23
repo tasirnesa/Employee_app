@@ -313,11 +313,8 @@ const menuItems = [
           </ListItem>
           <Collapse in={openPayroll} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { /* TODO: implement route */ }}>
-                <ListItemText primary="Payslips" />
-              </ListItemButton>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { /* TODO */ }}>
-                <ListItemText primary="Compensation" />
+              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/payroll'); recordRecent('Payroll', '/payroll'); }} selected={location.pathname === '/payroll'}>
+                <ListItemText primary="Payroll Management" />
               </ListItemButton>
             </List>
           </Collapse>
@@ -359,8 +356,8 @@ const menuItems = [
           </ListItem>
           <Collapse in={openRecruitment} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { /* TODO */ }}>
-                <ListItemText primary="Candidates" />
+              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/recruitment'); recordRecent('Recruitment', '/recruitment'); }} selected={location.pathname === '/recruitment'}>
+                <ListItemText primary="Candidates Management" />
               </ListItemButton>
             </List>
           </Collapse>
@@ -377,8 +374,8 @@ const menuItems = [
           </ListItem>
           <Collapse in={openBenefit} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { /* TODO */ }}>
-                <ListItemText primary="Health & Perks" />
+              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/benefits'); recordRecent('Benefits', '/benefits'); }} selected={location.pathname === '/benefits'}>
+                <ListItemText primary="Benefits & Perks" />
               </ListItemButton>
             </List>
           </Collapse>
@@ -445,7 +442,7 @@ const menuItems = [
               <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => navigate('/criteria/view')} selected={location.pathname.startsWith('/criteria')}>
                 <ListItemText primary="Criteria Management" />
               </ListItemButton>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => navigate('/goals')} selected={location.pathname === '/goals'}>
+              {/* <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => navigate('/goals')} selected={location.pathname === '/goals'}>
                 <ListItemText primary="Goals" />
               </ListItemButton>
               <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => navigate('/analytics-performance')} selected={location.pathname === '/analytics-performance'}>
@@ -456,7 +453,7 @@ const menuItems = [
               </ListItemButton>
               <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={handleTodoList} selected={location.pathname === '/todo'}>
                 <ListItemText primary="Todo List" />
-              </ListItemButton>
+              </ListItemButton> */}
               <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => navigate('/reports')} selected={location.pathname === '/reports'}>
                 <ListItemText primary="Reports" />
               </ListItemButton>
