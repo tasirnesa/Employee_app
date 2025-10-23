@@ -24,6 +24,10 @@ const todoRoutes = require('./routes/todos');
 const payrollRoutes = require('./routes/payroll');
 const recruitmentRoutes = require('./routes/recruitment');
 const benefitsRoutes = require('./routes/benefits');
+const timesheetsRoutes = require('./routes/timesheets');
+const projectsRoutes = require('./routes/projects');
+const leavesRoutes = require('./routes/leaves');
+const leaveTypesRoutes = require('./routes/leaveTypes');
 
 app.use('/api/evaluations', authenticateToken, evalRoutes);
 app.use('/api/employees', authenticateToken, empRoutes);
@@ -36,6 +40,10 @@ app.use('/api/todos', authenticateToken, todoRoutes);
 app.use('/api/payroll', authenticateToken, payrollRoutes);
 app.use('/api/recruitment', authenticateToken, recruitmentRoutes);
 app.use('/api/benefits', authenticateToken, benefitsRoutes);
+app.use('/api/timesheets', authenticateToken, timesheetsRoutes);
+app.use('/api/projects', authenticateToken, projectsRoutes);
+app.use('/api/leaves', authenticateToken, leavesRoutes);
+app.use('/api/leave-types', authenticateToken, leaveTypesRoutes);
 
 // Test route
 app.get('/api/test', (req, res) => {

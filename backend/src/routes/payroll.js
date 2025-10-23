@@ -1,7 +1,6 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
 const router = express.Router();
-const prisma = new PrismaClient();
+const { prisma } = require('../prisma/client');
 
 // Get all payslips
 router.get('/payslips', async (req, res) => {
@@ -60,9 +59,28 @@ router.get('/payslips/employee/:employeeId', async (req, res) => {
 // Create new payslip
 router.post('/payslips', async (req, res) => {
   try {
+    console.log('Received payslip request:', req.body);
     const { employeeId, period, basicSalary, allowances, deductions, status } = req.body;
     
+    console.log('Parsed data:', { employeeId, period, basicSalary, allowances, deductions, status });
+    
+    // Validate required fields
+    if (!employeeId || !period || basicSalary === undefined || allowances === undefined || deductions === undefined) {
+      return res.status(400).json({ error: 'Missing required fields: employeeId, period, basicSalary, allowances, deductions' });
+    }
+    
+    // Check if employee exists
+    const employee = await prisma.user.findUnique({
+      where: { id: parseInt(employeeId) }
+    });
+    
+    if (!employee) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+    
     const netSalary = parseFloat(basicSalary) + parseFloat(allowances) - parseFloat(deductions);
+    
+    console.log('Calculated net salary:', netSalary);
     
     const payslip = await prisma.payslip.create({
       data: {
@@ -85,10 +103,13 @@ router.post('/payslips', async (req, res) => {
       }
     });
 
+    console.log('Created payslip:', payslip);
     res.status(201).json(payslip);
   } catch (error) {
     console.error('Error creating payslip:', error);
-    res.status(500).json({ error: 'Failed to create payslip' });
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ error: 'Failed to create payslip', details: error.message });
   }
 });
 
@@ -203,6 +224,20 @@ router.get('/compensations/employee/:employeeId', async (req, res) => {
 router.post('/compensations', async (req, res) => {
   try {
     const { employeeId, position, basicSalary, allowances, bonus, effectiveDate, status } = req.body;
+    
+    // Validate required fields
+    if (!employeeId || !position || basicSalary === undefined || allowances === undefined || bonus === undefined || !effectiveDate) {
+      return res.status(400).json({ error: 'Missing required fields: employeeId, position, basicSalary, allowances, bonus, effectiveDate' });
+    }
+    
+    // Check if employee exists
+    const employee = await prisma.user.findUnique({
+      where: { id: parseInt(employeeId) }
+    });
+    
+    if (!employee) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
     
     const totalCompensation = parseFloat(basicSalary) + parseFloat(allowances) + parseFloat(bonus);
     

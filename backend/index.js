@@ -120,11 +120,19 @@ const todoRoutes = require('./src/routes/todos');
 const payrollRoutes = require('./src/routes/payroll');
 const recruitmentRoutes = require('./src/routes/recruitment');
 const benefitsRoutes = require('./src/routes/benefits');
+const timesheetsRoutes = require('./src/routes/timesheets');
+const projectsRoutes = require('./src/routes/projects');
+const leavesRoutes = require('./src/routes/leaves');
+const leaveTypesRoutes = require('./src/routes/leaveTypes');
 app.use('/api/attendance', authenticateToken, attendanceRoutes);
 app.use('/api/todos', authenticateToken, todoRoutes);
 app.use('/api/payroll', authenticateToken, payrollRoutes);
 app.use('/api/recruitment', authenticateToken, recruitmentRoutes);
 app.use('/api/benefits', authenticateToken, benefitsRoutes);
+app.use('/api/timesheets', authenticateToken, timesheetsRoutes);
+app.use('/api/projects', authenticateToken, projectsRoutes);
+app.use('/api/leaves', authenticateToken, leavesRoutes);
+app.use('/api/leave-types', authenticateToken, leaveTypesRoutes);
 
 // Login endpoint
 app.post('/api/auth/login', async (req, res) => {

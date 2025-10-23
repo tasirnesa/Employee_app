@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/axios';
+import type { Benefit, Perk } from '../types/interfaces';
 import {
   Container,
   Typography,
@@ -41,37 +42,10 @@ import SchoolIcon from '@mui/icons-material/School';
 import WorkIcon from '@mui/icons-material/Work';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 
-interface Benefit {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  benefitType: 'Health Insurance' | 'Dental' | 'Vision' | 'Life Insurance' | 'Retirement' | 'Gym Membership' | 'Education' | 'Transportation' | 'Meal Allowance';
-  provider: string;
-  coverage: string;
-  monthlyCost: number;
-  employeeContribution: number;
-  companyContribution: number;
-  effectiveDate: string;
-  expiryDate?: string;
-  status: 'Active' | 'Inactive' | 'Pending' | 'Expired';
-  notes?: string;
-}
-
-interface Perk {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  perkType: 'Flexible Hours' | 'Remote Work' | 'Professional Development' | 'Wellness Program' | 'Company Events' | 'Free Meals' | 'Parking' | 'Childcare';
-  description: string;
-  value: number;
-  frequency: 'Monthly' | 'Quarterly' | 'Annually' | 'One-time';
-  status: 'Active' | 'Inactive' | 'Pending';
-  startDate: string;
-  endDate?: string;
-}
 
 const Benefits: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'benefits' | 'perks'>('benefits');
   const [benefitDialogOpen, setBenefitDialogOpen] = useState(false);
   const [perkDialogOpen, setPerkDialogOpen] = useState(false);
@@ -82,6 +56,30 @@ const Benefits: React.FC = () => {
   // Check user role for access control
   const userRole = JSON.parse(localStorage.getItem('userProfile') || '{}').role;
   const isEmployee = userRole === 'Employee';
+
+  // Form states
+  const [benefitForm, setBenefitForm] = useState({
+    employeeId: '',
+    benefitType: '',
+    provider: '',
+    coverage: '',
+    monthlyCost: '',
+    employeeContribution: '',
+    companyContribution: '',
+    effectiveDate: '',
+    expiryDate: '',
+    notes: ''
+  });
+
+  const [perkForm, setPerkForm] = useState({
+    employeeId: '',
+    perkType: '',
+    description: '',
+    value: '',
+    frequency: '',
+    startDate: '',
+    endDate: ''
+  });
 
   // Fetch benefits data
   const { data: benefits, isLoading: benefitsLoading, error: benefitsError } = useQuery({
@@ -107,12 +105,137 @@ const Benefits: React.FC = () => {
     },
   });
 
+  // Fetch users for dropdown (benefits reference User model, not Employee model)
+  const { data: employees } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      const response = await api.get('/api/users', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    },
+  });
+
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
   const handleMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  // Form handlers
+  const handleBenefitFormChange = (field: string, value: string) => {
+    setBenefitForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handlePerkFormChange = (field: string, value: string) => {
+    setPerkForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Mutations
+  const createBenefitMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const token = localStorage.getItem('token');
+      const res = await api.post('/api/benefits/benefits', payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['benefits'] });
+      setBenefitDialogOpen(false);
+      setBenefitForm({
+        employeeId: '',
+        benefitType: '',
+        provider: '',
+        coverage: '',
+        monthlyCost: '',
+        employeeContribution: '',
+        companyContribution: '',
+        effectiveDate: '',
+        expiryDate: '',
+        notes: ''
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error creating benefit:', error);
+      alert('Error creating benefit: ' + (error?.response?.data?.error || error.message));
+    }
+  });
+
+  const createPerkMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const token = localStorage.getItem('token');
+      const res = await api.post('/api/benefits/perks', payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['perks'] });
+      setPerkDialogOpen(false);
+      setPerkForm({
+        employeeId: '',
+        perkType: '',
+        description: '',
+        value: '',
+        frequency: '',
+        startDate: '',
+        endDate: ''
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error creating perk:', error);
+      alert('Error creating perk: ' + (error?.response?.data?.error || error.message));
+    }
+  });
+
+  // Submit handlers
+  const handleSubmitBenefit = () => {
+    if (!benefitForm.employeeId || !benefitForm.benefitType || !benefitForm.provider || !benefitForm.effectiveDate) {
+      alert('Please fill Employee, Benefit Type, Provider and Effective Date');
+      return;
+    }
+    const payload = {
+      employeeId: parseInt(benefitForm.employeeId),
+      benefitType: benefitForm.benefitType,
+      provider: benefitForm.provider,
+      coverage: benefitForm.coverage,
+      monthlyCost: parseFloat(benefitForm.monthlyCost || '0') || 0,
+      employeeContribution: parseFloat(benefitForm.employeeContribution || '0') || 0,
+      companyContribution: parseFloat(benefitForm.companyContribution || '0') || 0,
+      effectiveDate: benefitForm.effectiveDate,
+      expiryDate: benefitForm.expiryDate || null,
+      notes: benefitForm.notes,
+      // status is optional; backend defaults to 'Active'
+    };
+    createBenefitMutation.mutate(payload);
+  };
+
+  const handleSubmitPerk = () => {
+    if (!perkForm.employeeId || !perkForm.perkType || !perkForm.startDate) {
+      alert('Please fill Employee, Perk Type and Start Date');
+      return;
+    }
+    const payload = {
+      employeeId: parseInt(perkForm.employeeId),
+      perkType: perkForm.perkType,
+      description: perkForm.description,
+      value: parseFloat(perkForm.value || '0') || 0,
+      frequency: perkForm.frequency,
+      startDate: perkForm.startDate,
+      endDate: perkForm.endDate || null,
+      // status optional; backend defaults to 'Active'
+    };
+    createPerkMutation.mutate(payload);
   };
 
   const getStatusColor = (status: string) => {
@@ -421,10 +544,15 @@ const Benefits: React.FC = () => {
                 select
                 SelectProps={{ native: true }}
                 variant="outlined"
+                value={benefitForm.employeeId}
+                onChange={(e) => handleBenefitFormChange('employeeId', e.target.value)}
               >
                 <option value="">Select Employee</option>
-                <option value="EMP001">John Doe</option>
-                <option value="EMP002">Jane Smith</option>
+                {employees?.map((employee: any) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.fullName}
+                  </option>
+                ))}
               </TextField>
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
@@ -434,6 +562,8 @@ const Benefits: React.FC = () => {
                 select
                 SelectProps={{ native: true }}
                 variant="outlined"
+                value={benefitForm.benefitType}
+                onChange={(e) => handleBenefitFormChange('benefitType', e.target.value)}
               >
                 <option value="">Select Benefit Type</option>
                 <option value="Health Insurance">Health Insurance</option>
@@ -452,6 +582,8 @@ const Benefits: React.FC = () => {
                 fullWidth
                 label="Provider"
                 variant="outlined"
+                value={benefitForm.provider}
+                onChange={(e) => handleBenefitFormChange('provider', e.target.value)}
               />
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
@@ -459,6 +591,8 @@ const Benefits: React.FC = () => {
                 fullWidth
                 label="Coverage"
                 variant="outlined"
+                value={benefitForm.coverage}
+                onChange={(e) => handleBenefitFormChange('coverage', e.target.value)}
               />
             </Box>
             <Box sx={{ flex: '1 1 250px', minWidth: '250px' }}>
@@ -467,6 +601,8 @@ const Benefits: React.FC = () => {
                 label="Monthly Cost"
                 type="number"
                 variant="outlined"
+                value={benefitForm.monthlyCost}
+                onChange={(e) => handleBenefitFormChange('monthlyCost', e.target.value)}
               />
             </Box>
             <Box sx={{ flex: '1 1 250px', minWidth: '250px' }}>
@@ -475,6 +611,8 @@ const Benefits: React.FC = () => {
                 label="Employee Contribution"
                 type="number"
                 variant="outlined"
+                value={benefitForm.employeeContribution}
+                onChange={(e) => handleBenefitFormChange('employeeContribution', e.target.value)}
               />
             </Box>
             <Box sx={{ flex: '1 1 250px', minWidth: '250px' }}>
@@ -483,6 +621,8 @@ const Benefits: React.FC = () => {
                 label="Company Contribution"
                 type="number"
                 variant="outlined"
+                value={benefitForm.companyContribution}
+                onChange={(e) => handleBenefitFormChange('companyContribution', e.target.value)}
               />
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
@@ -492,21 +632,20 @@ const Benefits: React.FC = () => {
                 type="date"
                 variant="outlined"
                 InputLabelProps={{ shrink: true }}
+                value={benefitForm.effectiveDate}
+                onChange={(e) => handleBenefitFormChange('effectiveDate', e.target.value)}
               />
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
               <TextField
                 fullWidth
-                label="Status"
-                select
-                SelectProps={{ native: true }}
+                label="Expiry Date"
+                type="date"
                 variant="outlined"
-              >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Pending">Pending</option>
-                <option value="Expired">Expired</option>
-              </TextField>
+                InputLabelProps={{ shrink: true }}
+                value={benefitForm.expiryDate}
+                onChange={(e) => handleBenefitFormChange('expiryDate', e.target.value)}
+              />
             </Box>
             <Box sx={{ width: '100%' }}>
               <TextField
@@ -515,14 +654,20 @@ const Benefits: React.FC = () => {
                 multiline
                 rows={3}
                 variant="outlined"
+                value={benefitForm.notes}
+                onChange={(e) => handleBenefitFormChange('notes', e.target.value)}
               />
             </Box>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setBenefitDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setBenefitDialogOpen(false)}>
-            Add Benefit
+          <Button 
+            variant="contained" 
+            onClick={handleSubmitBenefit}
+            disabled={createBenefitMutation.isPending}
+          >
+            {createBenefitMutation.isPending ? 'Adding...' : 'Add Benefit'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -539,10 +684,15 @@ const Benefits: React.FC = () => {
                 select
                 SelectProps={{ native: true }}
                 variant="outlined"
+                value={perkForm.employeeId}
+                onChange={(e) => handlePerkFormChange('employeeId', e.target.value)}
               >
                 <option value="">Select Employee</option>
-                <option value="EMP001">John Doe</option>
-                <option value="EMP002">Jane Smith</option>
+                {employees?.map((employee: any) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.fullName}
+                  </option>
+                ))}
               </TextField>
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
@@ -552,6 +702,8 @@ const Benefits: React.FC = () => {
                 select
                 SelectProps={{ native: true }}
                 variant="outlined"
+                value={perkForm.perkType}
+                onChange={(e) => handlePerkFormChange('perkType', e.target.value)}
               >
                 <option value="">Select Perk Type</option>
                 <option value="Flexible Hours">Flexible Hours</option>
@@ -571,6 +723,8 @@ const Benefits: React.FC = () => {
                 multiline
                 rows={2}
                 variant="outlined"
+                value={perkForm.description}
+                onChange={(e) => handlePerkFormChange('description', e.target.value)}
               />
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
@@ -579,6 +733,8 @@ const Benefits: React.FC = () => {
                 label="Value"
                 type="number"
                 variant="outlined"
+                value={perkForm.value}
+                onChange={(e) => handlePerkFormChange('value', e.target.value)}
               />
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
@@ -588,7 +744,10 @@ const Benefits: React.FC = () => {
                 select
                 SelectProps={{ native: true }}
                 variant="outlined"
+                value={perkForm.frequency}
+                onChange={(e) => handlePerkFormChange('frequency', e.target.value)}
               >
+                <option value="">Select Frequency</option>
                 <option value="Monthly">Monthly</option>
                 <option value="Quarterly">Quarterly</option>
                 <option value="Annually">Annually</option>
@@ -602,27 +761,31 @@ const Benefits: React.FC = () => {
                 type="date"
                 variant="outlined"
                 InputLabelProps={{ shrink: true }}
+                value={perkForm.startDate}
+                onChange={(e) => handlePerkFormChange('startDate', e.target.value)}
               />
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
               <TextField
                 fullWidth
-                label="Status"
-                select
-                SelectProps={{ native: true }}
+                label="End Date"
+                type="date"
                 variant="outlined"
-              >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Pending">Pending</option>
-              </TextField>
+                InputLabelProps={{ shrink: true }}
+                value={perkForm.endDate}
+                onChange={(e) => handlePerkFormChange('endDate', e.target.value)}
+              />
             </Box>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setPerkDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setPerkDialogOpen(false)}>
-            Add Perk
+          <Button 
+            variant="contained" 
+            onClick={handleSubmitPerk}
+            disabled={createPerkMutation.isPending}
+          >
+            {createPerkMutation.isPending ? 'Adding...' : 'Add Perk'}
           </Button>
         </DialogActions>
       </Dialog>

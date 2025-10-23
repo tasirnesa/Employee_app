@@ -338,8 +338,11 @@ const menuItems = [
               >
                 <ListItemText primary="Attendance Records" />
               </ListItemButton>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { /* TODO */ }}>
+              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/timesheets'); recordRecent('Timesheets', '/timesheets'); }} selected={location.pathname === '/timesheets'}>
                 <ListItemText primary="Timesheets" />
+              </ListItemButton>
+              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/leave-management'); recordRecent('Leave Management', '/leave-management'); }} selected={location.pathname === '/leave-management'}>
+                <ListItemText primary="Leave Management" />
               </ListItemButton>
             </List>
           </Collapse>

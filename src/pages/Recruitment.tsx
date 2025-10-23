@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/axios';
+import type { Candidate } from '../types/interfaces';
 import {
   Container,
   Typography,
@@ -38,25 +39,10 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import WorkIcon from '@mui/icons-material/Work';
 import SchoolIcon from '@mui/icons-material/School';
 
-interface Candidate {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  position: string;
-  experience: number;
-  education: string;
-  skills: string[];
-  status: 'Applied' | 'Screening' | 'Interview' | 'Offered' | 'Hired' | 'Rejected';
-  appliedDate: string;
-  resumeUrl?: string;
-  interviewDate?: string;
-  notes?: string;
-}
 
 const Recruitment: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [candidateDialogOpen, setCandidateDialogOpen] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -65,6 +51,21 @@ const Recruitment: React.FC = () => {
   // Check user role for access control
   const userRole = JSON.parse(localStorage.getItem('userProfile') || '{}').role;
   const isEmployee = userRole === 'Employee';
+
+  // Form state
+  const [candidateForm, setCandidateForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    position: '',
+    experience: '',
+    education: '',
+    skills: '',
+    appliedDate: '',
+    status: 'Applied',
+    notes: ''
+  });
 
   // Fetch candidates data
   const { data: candidates, isLoading: candidatesLoading, error: candidatesError } = useQuery({
@@ -78,12 +79,91 @@ const Recruitment: React.FC = () => {
     },
   });
 
+  // Create candidate mutation
+  const createCandidateMutation = useMutation({
+    mutationFn: async (candidateData: any) => {
+      const token = localStorage.getItem('token');
+      console.log('Creating candidate with data:', candidateData);
+      const response = await api.post('/api/recruitment/candidates', candidateData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['candidates'] });
+      setCandidateDialogOpen(false);
+      setCandidateForm({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        position: '',
+        experience: '',
+        education: '',
+        skills: '',
+        appliedDate: '',
+        status: 'Applied',
+        notes: ''
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error creating candidate:', error);
+      console.error('Error response:', error.response);
+      console.error('Error response data:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      alert('Error creating candidate: ' + (error.response?.data?.error || error.message));
+    },
+  });
+
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
   const handleMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  // Form handler
+  const handleCandidateFormChange = (field: string, value: string) => {
+    setCandidateForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleCandidateSubmit = () => {
+    console.log('Form data before submission:', candidateForm);
+    
+    // Validate form data
+    if (!candidateForm.firstName || !candidateForm.lastName || !candidateForm.email || !candidateForm.position) {
+      alert('Please fill in all required fields: First Name, Last Name, Email, and Position');
+      return;
+    }
+    
+    // Process skills from comma-separated string to array
+    const skillsArray = candidateForm.skills
+      .split(',')
+      .map(skill => skill.trim())
+      .filter(skill => skill.length > 0);
+    
+    const candidateData = {
+      firstName: candidateForm.firstName,
+      lastName: candidateForm.lastName,
+      email: candidateForm.email,
+      phone: candidateForm.phone,
+      position: candidateForm.position,
+      experience: parseInt(candidateForm.experience) || 0,
+      education: candidateForm.education,
+      skills: skillsArray,
+      status: candidateForm.status,
+      appliedDate: candidateForm.appliedDate || new Date().toISOString().split('T')[0],
+      notes: candidateForm.notes
+    };
+    
+    console.log('Sending candidate data:', candidateData);
+    
+    // Create candidate using mutation
+    createCandidateMutation.mutate(candidateData);
   };
 
   const getStatusColor = (status: string) => {
@@ -126,7 +206,22 @@ const Recruitment: React.FC = () => {
             <Button
               variant="contained"
               startIcon={<PersonAddIcon />}
-              onClick={() => setCandidateDialogOpen(true)}
+              onClick={() => {
+                setCandidateForm({
+                  firstName: '',
+                  lastName: '',
+                  email: '',
+                  phone: '',
+                  position: '',
+                  experience: '',
+                  education: '',
+                  skills: '',
+                  appliedDate: '',
+                  status: 'Applied',
+                  notes: ''
+                });
+                setCandidateDialogOpen(true);
+              }}
               sx={{ backgroundColor: 'primary.main' }}
             >
               Add Candidate
@@ -339,6 +434,8 @@ const Recruitment: React.FC = () => {
                 fullWidth
                 label="First Name"
                 variant="outlined"
+                value={candidateForm.firstName}
+                onChange={(e) => handleCandidateFormChange('firstName', e.target.value)}
               />
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
@@ -346,6 +443,8 @@ const Recruitment: React.FC = () => {
                 fullWidth
                 label="Last Name"
                 variant="outlined"
+                value={candidateForm.lastName}
+                onChange={(e) => handleCandidateFormChange('lastName', e.target.value)}
               />
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
@@ -354,6 +453,8 @@ const Recruitment: React.FC = () => {
                 label="Email"
                 type="email"
                 variant="outlined"
+                value={candidateForm.email}
+                onChange={(e) => handleCandidateFormChange('email', e.target.value)}
               />
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
@@ -361,6 +462,8 @@ const Recruitment: React.FC = () => {
                 fullWidth
                 label="Phone"
                 variant="outlined"
+                value={candidateForm.phone}
+                onChange={(e) => handleCandidateFormChange('phone', e.target.value)}
               />
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
@@ -368,6 +471,8 @@ const Recruitment: React.FC = () => {
                 fullWidth
                 label="Position"
                 variant="outlined"
+                value={candidateForm.position}
+                onChange={(e) => handleCandidateFormChange('position', e.target.value)}
               />
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
@@ -376,6 +481,8 @@ const Recruitment: React.FC = () => {
                 label="Experience (years)"
                 type="number"
                 variant="outlined"
+                value={candidateForm.experience}
+                onChange={(e) => handleCandidateFormChange('experience', e.target.value)}
               />
             </Box>
             <Box sx={{ width: '100%' }}>
@@ -383,6 +490,8 @@ const Recruitment: React.FC = () => {
                 fullWidth
                 label="Education"
                 variant="outlined"
+                value={candidateForm.education}
+                onChange={(e) => handleCandidateFormChange('education', e.target.value)}
               />
             </Box>
             <Box sx={{ width: '100%' }}>
@@ -391,6 +500,8 @@ const Recruitment: React.FC = () => {
                 label="Skills (comma separated)"
                 variant="outlined"
                 placeholder="React, TypeScript, CSS, JavaScript"
+                value={candidateForm.skills}
+                onChange={(e) => handleCandidateFormChange('skills', e.target.value)}
               />
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
@@ -400,6 +511,8 @@ const Recruitment: React.FC = () => {
                 type="date"
                 variant="outlined"
                 InputLabelProps={{ shrink: true }}
+                value={candidateForm.appliedDate}
+                onChange={(e) => handleCandidateFormChange('appliedDate', e.target.value)}
               />
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
@@ -409,6 +522,8 @@ const Recruitment: React.FC = () => {
                 select
                 SelectProps={{ native: true }}
                 variant="outlined"
+                value={candidateForm.status}
+                onChange={(e) => handleCandidateFormChange('status', e.target.value)}
               >
                 <option value="Applied">Applied</option>
                 <option value="Screening">Screening</option>
@@ -425,14 +540,20 @@ const Recruitment: React.FC = () => {
                 multiline
                 rows={3}
                 variant="outlined"
+                value={candidateForm.notes}
+                onChange={(e) => handleCandidateFormChange('notes', e.target.value)}
               />
             </Box>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCandidateDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setCandidateDialogOpen(false)}>
-            Add Candidate
+          <Button 
+            variant="contained" 
+            onClick={handleCandidateSubmit}
+            disabled={createCandidateMutation.isPending}
+          >
+            {createCandidateMutation.isPending ? 'Adding...' : 'Add Candidate'}
           </Button>
         </DialogActions>
       </Dialog>

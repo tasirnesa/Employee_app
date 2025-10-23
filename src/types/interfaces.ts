@@ -166,3 +166,169 @@ export interface AttendanceSummary {
   halfDays: number;
   totalHours: number;
 }
+
+export interface Payslip {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  period: string;
+  basicSalary: number;
+  allowances: number;
+  deductions: number;
+  netSalary: number;
+  status: 'Generated' | 'Paid' | 'Pending';
+  generatedDate: string;
+  paidDate?: string;
+}
+
+export interface Compensation {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  position: string;
+  basicSalary: number;
+  allowances: number;
+  bonus: number;
+  totalCompensation: number;
+  effectiveDate: string;
+  status: 'Active' | 'Inactive';
+}
+
+export interface Benefit {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  benefitType: 'Health Insurance' | 'Dental' | 'Vision' | 'Life Insurance' | 'Retirement' | 'Gym Membership' | 'Education' | 'Transportation' | 'Meal Allowance';
+  provider: string;
+  coverage: string;
+  monthlyCost: number;
+  employeeContribution: number;
+  companyContribution: number;
+  effectiveDate: string;
+  expiryDate?: string;
+  status: 'Active' | 'Inactive' | 'Pending' | 'Expired';
+  notes?: string;
+}
+
+export interface Perk {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  perkType: 'Flexible Hours' | 'Remote Work' | 'Professional Development' | 'Wellness Program' | 'Company Events' | 'Free Meals' | 'Parking' | 'Childcare';
+  description: string;
+  value: number;
+  frequency: 'Monthly' | 'Quarterly' | 'Annually' | 'One-time';
+  status: 'Active' | 'Inactive' | 'Pending';
+  startDate: string;
+  endDate?: string;
+}
+
+export interface Candidate {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  position: string;
+  experience: number;
+  education: string;
+  skills: string[];
+  status: 'Applied' | 'Screening' | 'Interview' | 'Offered' | 'Hired' | 'Rejected';
+  appliedDate: string;
+  resumeUrl?: string;
+  interviewDate?: string;
+  notes?: string;
+}
+
+export interface Project {
+  id: number;
+  name: string;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  status: 'Active' | 'Completed' | 'On Hold' | 'Cancelled';
+  managerId: number;
+  createdAt: string;
+  updatedAt: string;
+  manager?: {
+    id: number;
+    fullName: string;
+    userName: string;
+  };
+  timesheets?: Timesheet[];
+}
+
+export interface Timesheet {
+  id: number;
+  employeeId: number;
+  projectId?: number;
+  taskDescription: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  hoursWorked: number;
+  overtimeHours: number;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  approvedBy?: number;
+  approvedAt?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  employee?: {
+    id: number;
+    fullName: string;
+    userName: string;
+  };
+  project?: {
+    id: number;
+    name: string;
+  };
+  approver?: {
+    id: number;
+    fullName: string;
+  };
+}
+
+export interface LeaveType {
+  id: number;
+  name: string;
+  description?: string;
+  maxDays?: number;
+  isPaid: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Leave {
+  id: number;
+  employeeId: number;
+  leaveTypeId: number;
+  startDate: string;
+  endDate: string;
+  days: number;
+  reason: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  appliedDate: string;
+  approvedBy?: number;
+  approvedAt?: string;
+  comments?: string;
+  createdAt: string;
+  updatedAt: string;
+  employee?: {
+    id: number;
+    fullName: string;
+    userName: string;
+  };
+  leaveType?: {
+    id: number;
+    name: string;
+    description?: string;
+    maxDays?: number;
+    isPaid: boolean;
+  };
+  approver?: {
+    id: number;
+    fullName: string;
+  };
+}
