@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Formik, Form, Field } from 'formik';
 import * as Yup from 'yup';
-import axios from 'axios';
+import api from '../lib/axios';
 import {
   Container,
   Typography,
@@ -54,10 +54,9 @@ const CreateCriteria: React.FC = () => {
             createdDate: new Date().toISOString(), 
           };
       console.log('Sending data to backend:', requestData);
-      const response = await axios.post(
-        Array.isArray(criteriaData) ? 'http://localhost:3000/api/criteria/bulk' : 'http://localhost:3000/api/criteria',
-        requestData,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await api.post(
+        Array.isArray(criteriaData) ? '/api/criteria/bulk' : '/api/criteria',
+        requestData
       );
       console.log('Backend response:', response.data);
       return response.data;

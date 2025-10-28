@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import api from '../lib/axios';
+import { apiService } from '../services/apiService';
 import type { Leave, LeaveType } from '../types/interfaces';
+import LeaveTypeManagement from '../components/LeaveTypeManagement';
 import {
   Container,
   Typography,
@@ -32,7 +33,6 @@ import {
   Select,
   FormControl,
   InputLabel,
-  Grid,
   Tabs,
   Tab,
 } from '@mui/material';
@@ -51,6 +51,7 @@ const LeaveManagement: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [leaveTypeDialogOpen, setLeaveTypeDialogOpen] = useState(false);
   const [selectedLeave, setSelectedLeave] = useState<Leave | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [activeTab, setActiveTab] = useState(0);
@@ -72,37 +73,19 @@ const LeaveManagement: React.FC = () => {
   // Fetch leaves data
   const { data: leaves, isLoading: leavesLoading, error: leavesError } = useQuery({
     queryKey: ['leaves'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/leaves', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    queryFn: () => apiService.getLeaves(),
   });
 
   // Fetch leave types for dropdown
   const { data: leaveTypes } = useQuery({
     queryKey: ['leaveTypes'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/leave-types', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    queryFn: () => apiService.getLeaveTypes(),
   });
 
   // Fetch users for dropdown
   const { data: employees } = useQuery({
     queryKey: ['users'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/users', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    queryFn: () => apiService.getUsers(),
   });
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -123,13 +106,7 @@ const LeaveManagement: React.FC = () => {
 
   // Mutations
   const createLeaveMutation = useMutation({
-    mutationFn: async (payload: any) => {
-      const token = localStorage.getItem('token');
-      const res = await api.post('/api/leaves', payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.data;
-    },
+    mutationFn: (payload: any) => apiService.createLeave(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
       setLeaveDialogOpen(false);
@@ -149,13 +126,8 @@ const LeaveManagement: React.FC = () => {
   });
 
   const approveLeaveMutation = useMutation({
-    mutationFn: async ({ id, approvedBy, comments }: { id: number; approvedBy: number; comments?: string }) => {
-      const token = localStorage.getItem('token');
-      const res = await api.patch(`/api/leaves/${id}/approve`, { approvedBy, comments }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.data;
-    },
+    mutationFn: ({ id, approvedBy, comments }: { id: number; approvedBy: number; comments?: string }) => 
+      apiService.approveLeave(id, approvedBy, comments),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
     },
@@ -166,13 +138,8 @@ const LeaveManagement: React.FC = () => {
   });
 
   const rejectLeaveMutation = useMutation({
-    mutationFn: async ({ id, comments }: { id: number; comments?: string }) => {
-      const token = localStorage.getItem('token');
-      const res = await api.patch(`/api/leaves/${id}/reject`, { comments }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.data;
-    },
+    mutationFn: ({ id, comments }: { id: number; comments?: string }) => 
+      apiService.rejectLeave(id, comments),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
     },
@@ -240,22 +207,57 @@ const LeaveManagement: React.FC = () => {
   const approvedLeaves = leaves?.filter((leave: any) => leave.status === 'Approved') || [];
   const rejectedLeaves = leaves?.filter((leave: any) => leave.status === 'Rejected') || [];
 
+  // Loading state
+  if (leavesLoading) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 8, bgcolor: 'background.paper', p: 4, borderRadius: 2, boxShadow: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+          <Typography variant="h6">Loading leave data...</Typography>
+        </Box>
+      </Container>
+    );
+  }
+
+  // Error state
+  if (leavesError) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 8, bgcolor: 'background.paper', p: 4, borderRadius: 2, boxShadow: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+          <Typography variant="h6" color="error">
+            Error loading leave data: {(leavesError as any)?.message || 'Unknown error'}
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="lg" sx={{ mt: 8, bgcolor: 'background.paper', p: 4, borderRadius: 2, boxShadow: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" gutterBottom>
           Leave Management
         </Typography>
-        {!isEmployee && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setLeaveDialogOpen(true)}
-            sx={{ backgroundColor: 'primary.main' }}
-          >
-            Add Leave Request
-          </Button>
-        )}
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          {!isEmployee && (
+            <>
+              <Button
+                variant="outlined"
+                onClick={() => setLeaveTypeDialogOpen(true)}
+                sx={{ borderColor: 'primary.main', color: 'primary.main' }}
+              >
+                Manage Leave Types
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setLeaveDialogOpen(true)}
+                sx={{ backgroundColor: 'primary.main' }}
+              >
+                Add Leave Request
+              </Button>
+            </>
+          )}
+        </Box>
       </Box>
 
       {/* Tabs for different leave statuses */}
@@ -411,80 +413,80 @@ const LeaveManagement: React.FC = () => {
       <Dialog open={leaveDialogOpen} onClose={() => setLeaveDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Add Leave Request</DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Employee</InputLabel>
-                <Select
-                  value={leaveForm.employeeId}
-                  onChange={(e) => handleLeaveFormChange('employeeId', e.target.value)}
-                  label="Employee"
-                >
-                  {employees?.map((employee: any) => (
-                    <MenuItem key={employee.id} value={employee.id}>
-                      {employee.fullName}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Leave Type</InputLabel>
-                <Select
-                  value={leaveForm.leaveTypeId}
-                  onChange={(e) => handleLeaveFormChange('leaveTypeId', e.target.value)}
-                  label="Leave Type"
-                >
-                  {leaveTypes?.map((leaveType: any) => (
-                    <MenuItem key={leaveType.id} value={leaveType.id}>
-                      {leaveType.name} {leaveType.maxDays ? `(Max: ${leaveType.maxDays} days)` : ''}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Start Date"
-                type="date"
-                InputLabelProps={{ shrink: true }}
-                value={leaveForm.startDate}
-                onChange={(e) => handleLeaveFormChange('startDate', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="End Date"
-                type="date"
-                InputLabelProps={{ shrink: true }}
-                value={leaveForm.endDate}
-                onChange={(e) => handleLeaveFormChange('endDate', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Reason"
-                multiline
-                rows={3}
-                value={leaveForm.reason}
-                onChange={(e) => handleLeaveFormChange('reason', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Comments (Optional)"
-                multiline
-                rows={2}
-                value={leaveForm.comments}
-                onChange={(e) => handleLeaveFormChange('comments', e.target.value)}
-              />
-            </Grid>
-          </Grid>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Box sx={{ flex: 1, minWidth: '200px' }}>
+                <FormControl fullWidth>
+                  <InputLabel>Employee</InputLabel>
+                  <Select
+                    value={leaveForm.employeeId}
+                    onChange={(e) => handleLeaveFormChange('employeeId', e.target.value)}
+                    label="Employee"
+                  >
+                    {employees?.map((employee: any) => (
+                      <MenuItem key={employee.id} value={employee.id}>
+                        {employee.fullName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+              <Box sx={{ flex: 1, minWidth: '200px' }}>
+                <FormControl fullWidth>
+                  <InputLabel>Leave Type</InputLabel>
+                  <Select
+                    value={leaveForm.leaveTypeId}
+                    onChange={(e) => handleLeaveFormChange('leaveTypeId', e.target.value)}
+                    label="Leave Type"
+                  >
+                    {leaveTypes?.map((leaveType: any) => (
+                      <MenuItem key={leaveType.id} value={leaveType.id}>
+                        {leaveType.name} {leaveType.maxDays ? `(Max: ${leaveType.maxDays} days)` : ''}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Box sx={{ flex: 1, minWidth: '200px' }}>
+                <TextField
+                  fullWidth
+                  label="Start Date"
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  value={leaveForm.startDate}
+                  onChange={(e) => handleLeaveFormChange('startDate', e.target.value)}
+                />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: '200px' }}>
+                <TextField
+                  fullWidth
+                  label="End Date"
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  value={leaveForm.endDate}
+                  onChange={(e) => handleLeaveFormChange('endDate', e.target.value)}
+                />
+              </Box>
+            </Box>
+            <TextField
+              fullWidth
+              label="Reason"
+              multiline
+              rows={3}
+              value={leaveForm.reason}
+              onChange={(e) => handleLeaveFormChange('reason', e.target.value)}
+            />
+            <TextField
+              fullWidth
+              label="Comments (Optional)"
+              multiline
+              rows={2}
+              value={leaveForm.comments}
+              onChange={(e) => handleLeaveFormChange('comments', e.target.value)}
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setLeaveDialogOpen(false)}>Cancel</Button>
@@ -497,6 +499,12 @@ const LeaveManagement: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Leave Type Management Dialog */}
+      <LeaveTypeManagement
+        open={leaveTypeDialogOpen}
+        onClose={() => setLeaveTypeDialogOpen(false)}
+      />
     </Container>
   );
 };

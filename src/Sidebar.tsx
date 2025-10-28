@@ -271,9 +271,17 @@ const menuItems = [
                 <ListItemText primary="View Employees" />
               </ListItemButton>
               {!isEmployee && (
-                <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/employees/create'); recordRecent('Create Employee', '/employees/create'); }} selected={location.pathname === '/employees/create'}>
-                  <ListItemText primary="Create Employee" />
-                </ListItemButton>
+                <>
+                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/employees/create'); recordRecent('Create Employee', '/employees/create'); }} selected={location.pathname === '/employees/create'}>
+                    <ListItemText primary="Create Employee" />
+                  </ListItemButton>
+                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/departments'); recordRecent('Departments', '/departments'); }} selected={location.pathname === '/departments'}>
+                    <ListItemText primary="Departments" />
+                  </ListItemButton>
+                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/positions'); recordRecent('Positions', '/positions'); }} selected={location.pathname === '/positions'}>
+                    <ListItemText primary="Positions" />
+                  </ListItemButton>
+                </>
               )}
             </List>
           </Collapse>

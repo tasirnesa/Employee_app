@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Box, CssBaseline, Typography, Button, Card, IconButton } from '@mui/material';
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import axios from 'axios';
+import api from './lib/axios';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Login from './pages/Login';
@@ -22,6 +22,7 @@ import RightRail from './components/RightRail';
 import Sidebar from './Sidebar';
 import ProtectedRoute from './components/ProtectedRoute';
 import { UserProvider, useUser } from './context/UserContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import theme from './theme';
 import type { User } from './types/interfaces';
 import ScheduleMenu from './pages/ScheduleMenu';
@@ -38,14 +39,9 @@ import Recruitment from './pages/Recruitment';
 import Benefits from './pages/Benefits';
 import Timesheets from './pages/Timesheets';
 import LeaveManagement from './pages/LeaveManagement';
+import DepartmentManagement from './pages/DepartmentManagement';
+import PositionManagement from './pages/PositionManagement';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-    },
-  },
-});
 
 const AppContent: React.FC = () => {
   console.log('App component rendering');
@@ -61,9 +57,7 @@ const AppContent: React.FC = () => {
         console.error('No token found');
         throw new Error('No authentication token');
       }
-      const response = await axios.get('http://localhost:3000/api/users/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get('/api/users/me');
       console.log('Fetched current user from API:', response.data);
       return response.data as User;
     },
@@ -174,6 +168,8 @@ const AppContent: React.FC = () => {
             <Route path="/timesheets" element={<ProtectedRoute><Timesheets /></ProtectedRoute>} />
             <Route path="/leave-management" element={<ProtectedRoute><LeaveManagement /></ProtectedRoute>} />
             <Route path="/todo" element={<ProtectedRoute><TodoList /></ProtectedRoute>} />
+            <Route path="/departments" element={<ProtectedRoute blockEmployee={true}><DepartmentManagement /></ProtectedRoute>} />
+            <Route path="/positions" element={<ProtectedRoute blockEmployee={true}><PositionManagement /></ProtectedRoute>} />
             <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
           </Routes>
         </Box>
@@ -185,7 +181,7 @@ const AppContent: React.FC = () => {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <ErrorBoundary>
       <ThemeProvider theme={theme}>
         <UserProvider>
           <BrowserRouter>
@@ -193,7 +189,7 @@ function App() {
           </BrowserRouter>
         </UserProvider>
       </ThemeProvider>
-    </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

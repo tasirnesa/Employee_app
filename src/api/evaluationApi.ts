@@ -1,9 +1,7 @@
-import axios from 'axios';
-import type { EvaluationSession } from '../types'; // Use type-only import
-
-const API_URL = 'http://localhost:3000/api';
+import api from '../lib/axios';
+import type { EvaluationSession } from '../types/interfaces';
 
 export const getEvaluationSessions = async (): Promise<EvaluationSession[]> => {
-  const response = await axios.get(`${API_URL}/sessions`);
+  const response = await api.get('/api/sessions');
   return response.data;
 };
