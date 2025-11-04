@@ -12,9 +12,9 @@ const app = express();
 app.use(securityHeaders);
 app.use(generalLimiter);
 
-// CORS configuration
+// CORS configuration - allow any origin (adjust to a whitelist for production)
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => callback(null, true),
   credentials: true,
 }));
 

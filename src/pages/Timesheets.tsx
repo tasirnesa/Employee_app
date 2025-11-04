@@ -90,6 +90,22 @@ const Timesheets: React.FC = () => {
     },
   });
 
+  // Filter projects based on selected employee (e.g., projects managed by that user)
+  const filteredProjects = React.useMemo(() => {
+    const list = projects || [];
+    const empId = parseInt(timesheetForm.employeeId || '');
+    if (Number.isFinite(empId)) {
+      const owned = list.filter((p: any) => p.managerId === empId);
+      return owned.length ? owned : list;
+    }
+    return list;
+  }, [projects, timesheetForm.employeeId]);
+
+  // Reset project selection when employee changes
+  React.useEffect(() => {
+    setTimesheetForm((prev) => ({ ...prev, projectId: '' }));
+  }, [timesheetForm.employeeId]);
+
   // Fetch users for dropdown
   const { data: employees } = useQuery({
     queryKey: ['users'],
@@ -187,13 +203,17 @@ const Timesheets: React.FC = () => {
       alert('Please fill in all required fields');
       return;
     }
+    // Compose ISO strings that backend can parse as Date
+    const dateOnly = timesheetForm.date; // YYYY-MM-DD
+    const startIso = `${dateOnly}T${timesheetForm.startTime}:00`;
+    const endIso = `${dateOnly}T${timesheetForm.endTime}:00`;
     const payload = {
       employeeId: parseInt(timesheetForm.employeeId),
       projectId: timesheetForm.projectId ? parseInt(timesheetForm.projectId) : null,
       taskDescription: timesheetForm.taskDescription,
-      date: timesheetForm.date,
-      startTime: timesheetForm.startTime,
-      endTime: timesheetForm.endTime,
+      date: dateOnly,
+      startTime: startIso,
+      endTime: endIso,
       overtimeHours: parseFloat(timesheetForm.overtimeHours) || 0,
       notes: timesheetForm.notes
     };
@@ -399,7 +419,7 @@ const Timesheets: React.FC = () => {
                   label="Project"
                 >
                   <MenuItem value="">No Project</MenuItem>
-                  {projects?.map((project: any) => (
+                  {filteredProjects.map((project: any) => (
                     <MenuItem key={project.id} value={project.id}>
                       {project.name}
                     </MenuItem>

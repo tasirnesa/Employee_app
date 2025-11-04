@@ -59,7 +59,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create new department
-router.post('/', requireRoles('admin', 'superadmin'), async (req, res) => {
+router.post('/', requireRoles('Admin', 'SuperAdmin'), async (req, res) => {
   try {
     console.log('POST /api/departments - Request received');
     console.log('Request body:', req.body);

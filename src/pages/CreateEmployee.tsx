@@ -94,7 +94,8 @@ const CreateEmployee: React.FC = () => {
       if (form.password) fd.append('password', form.password);
       if (form.userId) fd.append('userId', form.userId);
       if (file) fd.append('profileImage', file);
-      const res = await api.post('/api/employees', fd);
+      const token = localStorage.getItem('token');
+      const res = await api.post('/api/employees', fd, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
       return res.data;
     },
     onSuccess: () => navigate('/employees/view'),

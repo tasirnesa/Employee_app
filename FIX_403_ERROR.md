@@ -77,12 +77,12 @@ User role: ...
 ### **Option 4: Test with curl**
 ```bash
 # Get token first (replace username/password)
-curl -X POST http://localhost:3000/api/auth/login \
+curl -X POST http://10.1.15.33:3000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"yourpassword"}'
 
 # Use the token
-curl -X POST http://localhost:3000/api/departments \
+curl -X POST http://10.1.15.33:3000/api/departments \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -d '{"name":"IT Department"}'

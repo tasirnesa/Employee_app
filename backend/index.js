@@ -78,7 +78,9 @@ const authenticateToken = (req, res, next) => {
 };
 
 const authorizeRole = (roles) => (req, res, next) => {
-  if (!req.user || !roles.includes(req.user.role)) {
+  const userRole = req.user?.role || '';
+  console.log(`[authorizeRole] Expected:`, roles, `Got:`, userRole);
+  if (!req.user || !roles.includes(userRole)) {
     return res.status(403).json({ error: 'Access denied: Insufficient permissions' });
   }
   next();
@@ -176,7 +178,7 @@ app.post('/api/auth/login', async (req, res) => {
       }
       return res.status(403).json({ error: 'Your account is Deactiveted. Contact system administrator.' });
     }
-    const token = jwt.sign({ id: user.id, username: user.userName }, SECRET_KEY, { expiresIn: '1h' });
+    const token = jwt.sign({ id: user.id, username: user.userName, role: user.role }, SECRET_KEY, { expiresIn: '1h' });
     console.log('Login successful:', username, 'isFirstLogin:', user.isFirstLogin, user.password);
    let profileImageUrl = null;
     try {
@@ -1029,9 +1031,16 @@ app.get('/api/evaluation-sessions/stats', authenticateToken, async (req, res) =>
 app.get('/api/performance', authenticateToken, async (req, res) => {
   console.log('Fetching performance data');
   try {
+    const currentUser = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const isAdmin = ['Admin', 'SuperAdmin'].includes(currentUser?.role || '');
+    const whereClause = isAdmin ? {} : { userId: req.user.id };
     const performanceData = await prisma.performance.findMany({
-      where: { userId: req.user.id },
+      where: whereClause,
       orderBy: { date: 'desc' },
+      include: {
+        user: { select: { id: true, fullName: true, userName: true } },
+        evaluator: { select: { id: true, fullName: true, userName: true } },
+      },
     });
     console.log('Performance data fetched:', performanceData);
     res.status(200).json(performanceData);
@@ -1062,6 +1071,73 @@ const mapScoreTo100 = (score, min = 1, max = 5) => {
 
 const safeAvg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
 
+// Calculate on-time threshold 09:15 local time
+const getOnTimeThreshold = (d) => {
+  const t = new Date(d);
+  t.setHours(9, 15, 0, 0);
+  return t;
+};
+
+// Helper: count business days (Mon-Fri) inclusive
+const countBusinessDays = (start, end) => {
+  const s = toStartOfDay(start);
+  const e = toStartOfDay(end);
+  let days = 0;
+  for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+    const day = d.getDay();
+    if (day !== 0 && day !== 6) days += 1; // Mon-Fri
+  }
+  return Math.max(days, 1);
+};
+
+// Reusable calculator for performance components
+async function calculatePerformanceComponents(prisma, userId, start, end) {
+  // Evaluation results → 0..100
+  const evalResults = await prisma.evaluationResult.findMany({
+    where: {
+      evaluation: {
+        evaluateeID: userId,
+        evaluationDate: { gte: start, lte: end },
+      },
+    },
+    select: { score: true },
+  });
+  const evalScores100 = evalResults.map((r) => mapScoreTo100(r.score)).filter((x) => x != null);
+  const evaluation = safeAvg(evalScores100);
+
+  // Goals progress → 0..100 average
+  const goals = await prisma.goal.findMany({
+    where: { activatedBy: userId, OR: [{ duedate: { gte: start, lte: end } }, { duedate: null }] },
+    select: { progress: true },
+  });
+  const goalProgress = goals.map((g) => (g.progress == null ? 0 : Number(g.progress))).filter((n) => !Number.isNaN(n));
+  const goalsScore = safeAvg(goalProgress);
+
+  // Productivity from timesheets (hoursWorked vs expected hours)
+  const times = await prisma.timesheet.findMany({
+    where: { employeeId: userId, date: { gte: start, lte: end } },
+    select: { hoursWorked: true, overtimeHours: true },
+  });
+  const totalHours = times.reduce((s, r) => s + (r.hoursWorked || 0) + (r.overtimeHours || 0), 0);
+  const businessDays = countBusinessDays(start, end);
+  const expectedHours = businessDays * 8; // 8h per business day
+  const productivity = Math.min(100, Math.round((totalHours / expectedHours) * 100));
+
+  // Punctuality from attendance (on-time check-ins / attendance days)
+  const attendance = await prisma.attendance.findMany({
+    where: { employeeId: userId, date: { gte: start, lte: end } },
+    select: { date: true, checkInTime: true },
+  });
+  const punctualDays = attendance.filter((a) => {
+    if (!a.checkInTime) return false;
+    const threshold = getOnTimeThreshold(a.date);
+    return new Date(a.checkInTime) <= threshold;
+  }).length;
+  const punctuality = attendance.length ? Math.round((punctualDays / attendance.length) * 100) : 0;
+
+  return { evaluation, goalsScore, productivity, punctuality, totals: { totalHours, tasksCount: times.length } };
+}
+
 
 app.post('/api/performance/recalculate', authenticateToken, async (req, res) => {
   try {
@@ -1069,99 +1145,48 @@ app.post('/api/performance/recalculate', authenticateToken, async (req, res) => 
     if (!userId) return res.status(400).json({ error: 'userId is required' });
     const { start, end, label } = coercePeriod(req.body);
 
-    
     const user = await prisma.user.findUnique({ where: { id: parseInt(userId) } });
     if (!user) return res.status(400).json({ error: `User ${userId} does not exist` });
-    const evalResults = await prisma.evaluationResult.findMany({
-      where: {
-        evaluation: {
-          evaluateeID: parseInt(userId),
-          evaluationDate: { gte: start, lte: end },
-        },
-      },
-      select: { score: true },
-    });
-    const evalScores100 = evalResults.map((r) => mapScoreTo100(r.score)).filter((x) => x != null);
-    const evaluationScore = safeAvg(evalScores100); // 0..100
- let goals = await prisma.goal.findMany({
-      where: {
-        activatedBy: parseInt(userId),
-        OR: [
-          { duedate: { gte: start, lte: end } },
-          { duedate: null },
-        ],
-      },
-      select: { progress: true },
-    });
-    const goalProgress = goals.map((g) => (g.progress == null ? 0 : Number(g.progress))).filter((n) => !Number.isNaN(n));
-    const goalsScore = safeAvg(goalProgress); 
-    const rawPerf = await prisma.performance.findMany({
-      where: { userId: parseInt(userId), date: { gte: start, lte: end } },
-      select: { tasksCompleted: true, hoursWorked: true },
-    });
-    let productivityScore = null;
-    if (rawPerf.length) {
-      const totalTasks = rawPerf.reduce((s, r) => s + (r.tasksCompleted || 0), 0);
-      
-      const targetTasks = 40;
-      productivityScore = Math.min(100, (totalTasks / targetTasks) * 100);
-    }
-    const punctualityScore = null;
 
-    
+    const { evaluation, goalsScore, productivity, punctuality, totals } = await calculatePerformanceComponents(prisma, parseInt(userId), start, end);
+
     const weights = { evaluation: 0.5, goals: 0.25, productivity: 0.15, punctuality: 0.1 };
     const components = {
-      evaluation: isNaN(evaluationScore) ? 0 : evaluationScore,
+      evaluation: isNaN(evaluation) ? 0 : evaluation,
       goals: isNaN(goalsScore) ? 0 : goalsScore,
-      productivity: productivityScore == null ? 0 : productivityScore,
-      punctuality: punctualityScore == null ? 0 : punctualityScore,
+      productivity: isNaN(productivity) ? 0 : productivity,
+      punctuality: isNaN(punctuality) ? 0 : punctuality,
     };
-    const overallRating =
+    const overallRating100 =
       components.evaluation * weights.evaluation +
       components.goals * weights.goals +
       components.productivity * weights.productivity +
       components.punctuality * weights.punctuality;
+    const overallRating = Math.round((overallRating100 / 20) * 10) / 10; // scale 0..100 -> 1..5 by /20
+
     const existing = await prisma.performance.findFirst({ where: { userId: parseInt(userId), evaluationPeriod: label } });
+    const baseData = {
+      evaluatorId: req.user.id,
+      tasksCompleted: totals.tasksCount,
+      hoursWorked: totals.totalHours,
+      efficiencyScore: null,
+      qualityScore: null,
+      punctualityScore: components.punctuality,
+      collaborationScore: null,
+      innovationScore: null,
+      overallRating,
+      feedback: null,
+      evaluationPeriod: label,
+      date: end,
+    };
     let saved;
     if (existing) {
-      saved = await prisma.performance.update({
-        where: { id: existing.id },
-        data: {
-          evaluatorId: req.user.id,
-          tasksCompleted: rawPerf.reduce((s, r) => s + (r.tasksCompleted || 0), 0),
-          hoursWorked: rawPerf.reduce((s, r) => s + (r.hoursWorked || 0), 0),
-          efficiencyScore: null,
-          qualityScore: null,
-          punctualityScore: punctualityScore,
-          collaborationScore: null,
-          innovationScore: null,
-          overallRating,
-          feedback: null,
-          evaluationPeriod: label,
-          date: end,
-        },
-      });
+      saved = await prisma.performance.update({ where: { id: existing.id }, data: baseData });
     } else {
-      saved = await prisma.performance.create({
-        data: {
-          userId: parseInt(userId),
-          evaluatorId: req.user.id,
-          tasksCompleted: rawPerf.reduce((s, r) => s + (r.tasksCompleted || 0), 0),
-          hoursWorked: rawPerf.reduce((s, r) => s + (r.hoursWorked || 0), 0),
-          overallRating,
-          evaluationPeriod: label,
-          date: end,
-        },
-      });
+      saved = await prisma.performance.create({ data: { userId: parseInt(userId), ...baseData } });
     }
 
-    return res.status(200).json({
-      message: 'Recalculated',
-      period: { start, end, label },
-      components,
-      overallRating,
-      performance: saved,
-    });
+    return res.status(200).json({ message: 'Recalculated', period: { start, end, label }, components, overallRating, performance: saved });
   } catch (error) {
     console.error('Recalculate performance error:', error.message);
     return res.status(500).json({ error: 'Server error', details: error.message });
@@ -1172,47 +1197,39 @@ app.post('/api/performance/recalculate-all', authenticateToken, async (req, res)
   try {
     const { start, end, label } = coercePeriod(req.body);
     const users = await prisma.user.findMany({ select: { id: true } });
+    const weights = { evaluation: 0.5, goals: 0.25, productivity: 0.15, punctuality: 0.1 };
     const results = [];
     for (const u of users) {
-      const r = await fetch(`http://localhost:3000/api/performance/recalculate`);
-      const evalResults = await prisma.evaluationResult.findMany({
-        where: { evaluation: { evaluateeID: u.id, evaluationDate: { gte: start, lte: end } } },
-        select: { score: true },
-      });
-      const evalScores100 = evalResults.map((r) => mapScoreTo100(r.score)).filter((x) => x != null);
-      const evaluationScore = safeAvg(evalScores100);
-      let goals = await prisma.goal.findMany({
-        where: { activatedBy: u.id, OR: [{ duedate: { gte: start, lte: end } }, { duedate: null }] },
-        select: { progress: true },
-      });
-      const goalProgress = goals.map((g) => (g.progress == null ? 0 : Number(g.progress))).filter((n) => !Number.isNaN(n));
-      const goalsScore = safeAvg(goalProgress);
-      const rawPerf = await prisma.performance.findMany({ where: { userId: u.id, date: { gte: start, lte: end } }, select: { tasksCompleted: true, hoursWorked: true } });
-      let productivityScore = null;
-      if (rawPerf.length) {
-        const totalTasks = rawPerf.reduce((s, r) => s + (r.tasksCompleted || 0), 0);
-        const targetTasks = 40;
-        productivityScore = Math.min(100, (totalTasks / targetTasks) * 100);
-      }
+      const { evaluation, goalsScore, productivity, punctuality, totals } = await calculatePerformanceComponents(prisma, u.id, start, end);
       const components = {
-        evaluation: isNaN(evaluationScore) ? 0 : evaluationScore,
+        evaluation: isNaN(evaluation) ? 0 : evaluation,
         goals: isNaN(goalsScore) ? 0 : goalsScore,
-        productivity: productivityScore == null ? 0 : productivityScore,
-        punctuality: 0,
+        productivity: isNaN(productivity) ? 0 : productivity,
+        punctuality: isNaN(punctuality) ? 0 : punctuality,
       };
-      const weights = { evaluation: 0.5, goals: 0.25, productivity: 0.15, punctuality: 0.1 };
-      const overallRating =
+      const overallRating100 =
         components.evaluation * weights.evaluation +
         components.goals * weights.goals +
         components.productivity * weights.productivity +
         components.punctuality * weights.punctuality;
+      const overallRating = Math.round((overallRating100 / 20) * 10) / 10;
+
       const existing = await prisma.performance.findFirst({ where: { userId: u.id, evaluationPeriod: label } });
+      const baseData = {
+        evaluatorId: req.user.id,
+        tasksCompleted: totals.tasksCount,
+        hoursWorked: totals.totalHours,
+        punctualityScore: components.punctuality,
+        overallRating,
+        evaluationPeriod: label,
+        date: end,
+      };
       if (existing) {
-        await prisma.performance.update({ where: { id: existing.id }, data: { overallRating, evaluationPeriod: label, date: end } });
+        await prisma.performance.update({ where: { id: existing.id }, data: baseData });
       } else {
-        await prisma.performance.create({ data: { userId: u.id, evaluatorId: req.user.id, tasksCompleted: 0, hoursWorked: 0, overallRating, evaluationPeriod: label, date: end } });
+        await prisma.performance.create({ data: { userId: u.id, ...baseData } });
       }
-      results.push({ userId: u.id, overallRating });
+      results.push({ userId: u.id, components, overallRating });
     }
     return res.status(200).json({ message: 'Recalculated for all users', period: { start, end, label }, results });
   } catch (error) {
@@ -1502,6 +1519,8 @@ app.post('/api/employees', authenticateToken, blockEmployee, upload.fields([{ na
     const phone = pick(req.body.phone);
     const department = pick(req.body.department);
     const position = pick(req.body.position);
+    const departmentIdRaw = pick(req.body.departmentId);
+    const positionIdRaw = pick(req.body.positionId);
     const hireDate = pick(req.body.hireDate);
     const isActive = pick(req.body.isActive);
     const userId = pick(req.body.userId);
@@ -1525,13 +1544,39 @@ app.post('/api/employees', authenticateToken, blockEmployee, upload.fields([{ na
       return res.status(409).json({ error: 'Email already exists' });
     }
 
+    // Resolve department/position names if IDs provided
+    let departmentResolved = department || null;
+    let positionResolved = position || null;
+    let departmentIdFK = null;
+    let positionIdFK = null;
+    if (departmentIdRaw != null && String(departmentIdRaw).trim() !== '') {
+      const depId = parseInt(departmentIdRaw, 10);
+      if (!Number.isNaN(depId)) {
+        const dep = await prisma.department.findUnique({ where: { id: depId } });
+        if (dep) {
+          departmentResolved = dep.name;
+          departmentIdFK = dep.id;
+        }
+      }
+    }
+    if (positionIdRaw != null && String(positionIdRaw).trim() !== '') {
+      const posId = parseInt(positionIdRaw, 10);
+      if (!Number.isNaN(posId)) {
+        const pos = await prisma.position.findUnique({ where: { id: posId } });
+        if (pos) {
+          positionResolved = pos.name;
+          positionIdFK = pos.id;
+        }
+      }
+    }
+
     const baseEmployeeData = {
       firstName: firstNameTrim,
       lastName: lastNameTrim,
       email: emailTrim,
       phone: phone || null,
-      department: department || null,
-      position: position || null,
+      department: departmentResolved,
+      position: positionResolved,
       hireDate: hireDate ? new Date(hireDate) : null,
       gender: gender || null,
       age: age == null || age === '' ? null : parseInt(age, 10),
@@ -1571,9 +1616,13 @@ app.post('/api/employees', authenticateToken, blockEmployee, upload.fields([{ na
       if (createdEmployee.userId) {
         await tx.user.update({
           where: { id: createdEmployee.userId },
-          data: createdEmployee.isActive
-            ? { activeStatus: 'true', status: 'true', locked: 'false' }
-            : { activeStatus: 'false', status: 'false', locked: 'true' },
+          data: {
+            ...(createdEmployee.isActive
+              ? { activeStatus: 'true', status: 'true', locked: 'false' }
+              : { activeStatus: 'false', status: 'false', locked: 'true' }),
+            ...(departmentIdFK ? { departmentId: departmentIdFK } : {}),
+            ...(positionIdFK ? { positionId: positionIdFK } : {}),
+          },
         });
       }
 
@@ -1603,6 +1652,8 @@ app.put('/api/employees/:id', authenticateToken, blockEmployee, upload.fields([{
     const phone = pick(req.body.phone);
     const department = pick(req.body.department);
     const position = pick(req.body.position);
+    const departmentIdRaw = pick(req.body.departmentId);
+    const positionIdRaw = pick(req.body.positionId);
     const hireDate = pick(req.body.hireDate);
     const isActive = pick(req.body.isActive);
     const userId = pick(req.body.userId);
@@ -1613,6 +1664,42 @@ app.put('/api/employees/:id', authenticateToken, blockEmployee, upload.fields([{
 
     const uploadedFile = Array.isArray(req.files?.profileImage) ? req.files.profileImage[0] : null;
 
+    // Resolve department/position when ids are provided
+    let departmentResolved = department === undefined ? existing.department : department;
+    let positionResolved = position === undefined ? existing.position : position;
+    let departmentIdFK = undefined;
+    let positionIdFK = undefined;
+    if (departmentIdRaw !== undefined) {
+      if (departmentIdRaw == null || String(departmentIdRaw).trim() === '') {
+        departmentResolved = null;
+        departmentIdFK = null;
+      } else {
+        const depId = parseInt(departmentIdRaw, 10);
+        if (!Number.isNaN(depId)) {
+          const dep = await prisma.department.findUnique({ where: { id: depId } });
+          if (dep) {
+            departmentResolved = dep.name;
+            departmentIdFK = dep.id;
+          }
+        }
+      }
+    }
+    if (positionIdRaw !== undefined) {
+      if (positionIdRaw == null || String(positionIdRaw).trim() === '') {
+        positionResolved = null;
+        positionIdFK = null;
+      } else {
+        const posId = parseInt(positionIdRaw, 10);
+        if (!Number.isNaN(posId)) {
+          const pos = await prisma.position.findUnique({ where: { id: posId } });
+          if (pos) {
+            positionResolved = pos.name;
+            positionIdFK = pos.id;
+          }
+        }
+      }
+    }
+
     const updated = await prisma.employee.update({
       where: { id },
       data: {
@@ -1620,8 +1707,8 @@ app.put('/api/employees/:id', authenticateToken, blockEmployee, upload.fields([{
         lastName: lastName ?? existing.lastName,
         email: email ?? existing.email,
         phone: phone === undefined ? existing.phone : phone,
-        department: department === undefined ? existing.department : department,
-        position: position === undefined ? existing.position : position,
+        department: departmentResolved,
+        position: positionResolved,
         hireDate: hireDate === undefined ? existing.hireDate : (hireDate ? new Date(hireDate) : null),
         gender: gender === undefined ? existing.gender : gender,
         age: age === undefined ? existing.age : (age == null || age === '' ? null : parseInt(age, 10)),
@@ -1631,13 +1718,19 @@ app.put('/api/employees/:id', authenticateToken, blockEmployee, upload.fields([{
         userId: userId === undefined ? existing.userId : (userId != null && userId !== '' ? parseInt(userId, 10) : null),
       },
     });
-    if (updated.userId != null && updated.isActive !== existing.isActive) {
-      await prisma.user.update({
-        where: { id: updated.userId },
-        data: updated.isActive
+    if (updated.userId != null) {
+      const activeData = updated.isActive !== existing.isActive
+        ? (updated.isActive
           ? { activeStatus: 'true', status: 'true', locked: 'false' }
-          : { activeStatus: 'false', status: 'false', locked: 'true' },
-      });
+          : { activeStatus: 'false', status: 'false', locked: 'true' })
+        : {};
+      const orgData = {
+        ...(departmentIdFK !== undefined ? { departmentId: departmentIdFK } : {}),
+        ...(positionIdFK !== undefined ? { positionId: positionIdFK } : {}),
+      };
+      if (Object.keys(activeData).length || Object.keys(orgData).length) {
+        await prisma.user.update({ where: { id: updated.userId }, data: { ...activeData, ...orgData } });
+      }
     }
     res.json(updated);
   } catch (error) {

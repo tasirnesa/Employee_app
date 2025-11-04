@@ -64,7 +64,7 @@ const PerformanceMenu = () => {
     if (token) {
       const payload = JSON.parse(atob(token.split('.')[1]));
       setUserId(payload.id);
-      setUserRole(payload.role);
+      setUserRole(typeof payload.role === 'string' ? payload.role.toLowerCase() : null);
     }
   }, []);
 
@@ -128,6 +128,48 @@ const PerformanceMenu = () => {
       return data;
     },
     enabled: !!localStorage.getItem('token'),
+  });
+
+  // Recalculate performance for current user
+  const recalcMine = useMutation({
+    mutationFn: async () => {
+      const token = localStorage.getItem('token');
+      if (!token || !userId) throw new Error('No token or userId');
+      const res = await api.post(
+        '/api/performance/recalculate',
+        { userId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['performanceData'] });
+    },
+    onError: (e: any) => {
+      console.error('Recalc mine failed', e);
+      alert(e?.response?.data?.error || e.message);
+    }
+  });
+
+  // Recalculate performance for all users (admin only)
+  const recalcAll = useMutation({
+    mutationFn: async () => {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No token');
+      const res = await api.post(
+        '/api/performance/recalculate-all',
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['performanceData'] });
+    },
+    onError: (e: any) => {
+      console.error('Recalc all failed', e);
+      alert(e?.response?.data?.error || e.message);
+    }
   });
 
   // Fetch users for dropdowns
@@ -245,6 +287,25 @@ const PerformanceMenu = () => {
             Add Performance Record
           </Button>
         )}
+        <Box sx={{ ml: 2, display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            onClick={() => recalcMine.mutate()}
+            disabled={recalcMine.isPending || !userId}
+          >
+            {recalcMine.isPending ? 'Recalculating...' : 'Recalculate My Performance'}
+          </Button>
+          {(userRole === 'admin' || userRole === 'superadmin') && (
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={() => recalcAll.mutate()}
+              disabled={recalcAll.isPending}
+            >
+              {recalcAll.isPending ? 'Recalculating All...' : 'Recalculate All Users'}
+            </Button>
+          )}
+        </Box>
       </Box>
 
       {/* Performance Metrics Cards */}

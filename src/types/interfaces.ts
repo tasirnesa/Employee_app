@@ -299,6 +299,15 @@ export interface LeaveType {
   createdAt: string;
   updatedAt: string;
 }
+export interface Attendance {
+  id: number;
+  userId: number;
+  checkIn: string;
+  checkOut?: string;
+  status: string;
+  notes?: string;
+  user?: User;
+}
 
 export interface Leave {
   id: number;

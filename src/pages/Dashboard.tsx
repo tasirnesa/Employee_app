@@ -254,6 +254,39 @@ const Dashboard: React.FC = () => {
     },
   });
 
+  // Recent Chats from localStorage (local chat prototype)
+  type ChatMsg = { sender: 'me' | 'them'; text: string; at: string };
+  type ChatThread = { withId: number; withName: string; lastText: string; lastAt: string };
+  const { data: allEmployees } = useQuery({
+    queryKey: ['employees-for-chat'],
+    queryFn: async () => await listEmployees(true),
+    staleTime: 5 * 60 * 1000,
+  });
+  const employeeName = (id: number) => {
+    const e = (allEmployees || []).find((x: any) => x.id === id);
+    return e ? `${e.firstName} ${e.lastName}` : `Employee ${id}`;
+  };
+  const myUserId = currentUser?.id;
+  const chatThreads: ChatThread[] = React.useMemo(() => {
+    if (!myUserId) return [];
+    const items: ChatThread[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i) as string;
+      if (!key || !key.startsWith(`chat:${myUserId}:`)) continue;
+      const toIdStr = key.split(':')[2];
+      const toId = Number(toIdStr);
+      if (!Number.isFinite(toId)) continue;
+      try {
+        const msgs: ChatMsg[] = JSON.parse(localStorage.getItem(key) || '[]');
+        if (msgs.length === 0) continue;
+        const last = msgs[msgs.length - 1];
+        items.push({ withId: toId, withName: employeeName(toId), lastText: last.text, lastAt: last.at });
+      } catch {}
+    }
+    // Sort by latest first
+    return items.sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime()).slice(0, 6);
+  }, [myUserId, allEmployees, localStorage.length]);
+
   return (
     <Container disableGutters maxWidth={false} sx={{ mt: 0, px: 0 }}>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 0.75 }}>
@@ -287,6 +320,35 @@ const Dashboard: React.FC = () => {
                   </List>
                 </Box>
               </Box>
+            </CardContent>
+          </Card>
+        </Box>
+
+        {/* Recent Chats */}
+        <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 4' } }}>
+          <Card sx={{ borderRadius: 3, bgcolor: 'background.paper', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h6">Recent Chats</Typography>
+                <Button size="small" variant="text" onClick={() => navigate('/contacts')}>Open</Button>
+              </Box>
+              <List dense sx={{ mt: 1, maxHeight: 260, overflow: 'auto', pr: 1 }}>
+                {chatThreads.map((t) => (
+                  <ListItem key={t.withId} sx={{ px: 0 }}>
+                    <ListItemAvatar>
+                      <Avatar>{t.withName.charAt(0)}</Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={<Typography variant="body2" fontWeight={600} noWrap>{currentUser?.fullName} → {t.withName}</Typography>}
+                      secondary={<Typography variant="caption" color="text.secondary" noWrap>{t.lastText}</Typography>}
+                    />
+                    <Chip size="small" variant="outlined" label={new Date(t.lastAt).toLocaleTimeString()} />
+                  </ListItem>
+                ))}
+                {chatThreads.length === 0 && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>No chats yet.</Typography>
+                )}
+              </List>
             </CardContent>
           </Card>
         </Box>
