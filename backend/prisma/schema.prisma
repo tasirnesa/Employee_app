@@ -51,6 +51,8 @@ model User {
   approvedTimesheets      Timesheet[]             @relation("TimesheetApprover")
   leaves                  Leave[]                @relation("LeaveEmployee")
   approvedLeaves          Leave[]                @relation("LeaveApprover")
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
 
   @@index([managerId])
 }
@@ -398,4 +400,16 @@ model Leave {
   approver    User?    @relation("LeaveApprover", fields: [approvedBy], references: [id])
 
   @@map("Leave")
+}
+model Message {
+  id        String   @id @default(uuid())
+  senderId  Int
+  receiverId Int
+  text      String?
+  image     String?   // base64 or URL
+  status    String    @default("sent") // sent, delivered, read
+  createdAt DateTime @default(now())
+
+  sender    User @relation("SentMessages", fields: [senderId], references: [id])
+  receiver  User @relation("ReceivedMessages", fields: [receiverId], references: [id])
 }
