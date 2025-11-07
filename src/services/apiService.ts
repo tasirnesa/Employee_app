@@ -141,8 +141,8 @@ class ApiService {
     return response.data;
   }
 
-  async approveLeave(id: number, approvedBy: number, comments?: string): Promise<Leave> {
-    const response = await api.patch(`/api/leaves/${id}/approve`, { approvedBy, comments });
+  async approveLeave(id: number, comments?: string): Promise<Leave> {
+    const response = await api.patch(`/api/leaves/${id}/approve`, { comments });
     return response.data;
   }
 

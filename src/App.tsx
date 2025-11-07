@@ -41,6 +41,7 @@ import Timesheets from './pages/Timesheets';
 import LeaveManagement from './pages/LeaveManagement';
 import DepartmentManagement from './pages/DepartmentManagement';
 import PositionManagement from './pages/PositionManagement';
+import Projects from './pages/Projects';
 
 
 const AppContent: React.FC = () => {
@@ -165,6 +166,7 @@ const AppContent: React.FC = () => {
             <Route path="/payroll" element={<ProtectedRoute><Payroll /></ProtectedRoute>} />
             <Route path="/recruitment" element={<ProtectedRoute><Recruitment /></ProtectedRoute>} />
             <Route path="/benefits" element={<ProtectedRoute><Benefits /></ProtectedRoute>} />
+            <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
             <Route path="/timesheets" element={<ProtectedRoute><Timesheets /></ProtectedRoute>} />
             <Route path="/leave-management" element={<ProtectedRoute><LeaveManagement /></ProtectedRoute>} />
             <Route path="/todo" element={<ProtectedRoute><TodoList /></ProtectedRoute>} />

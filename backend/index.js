@@ -1529,6 +1529,7 @@ app.post('/api/employees', authenticateToken, blockEmployee, upload.fields([{ na
     const birthDate = pick(req.body.birthDate);
     const profileImageUrl = pick(req.body.profileImageUrl);
     const username = pick(req.body.username);
+    const scaleKey = pick(req.body.scaleKey);
     const password = pick(req.body.password);
 
     const firstNameTrim = typeof firstName === 'string' ? firstName.trim() : '';
@@ -1628,6 +1629,23 @@ app.post('/api/employees', authenticateToken, blockEmployee, upload.fields([{ na
 
       return createdEmployee;
     });
+
+    // Save scale assignment (if provided) to payroll scale assignment map
+    if (scaleKey && created?.userId) {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const assignFile = path.join(__dirname, 'routes', '..', 'payroll.scale.assignments.json');
+        let map = {};
+        if (fs.existsSync(assignFile)) {
+          try { map = JSON.parse(fs.readFileSync(assignFile, 'utf8') || '{}'); } catch {}
+        }
+        map[String(created.userId)] = String(scaleKey);
+        fs.writeFileSync(assignFile, JSON.stringify(map, null, 2), 'utf8');
+      } catch (e) {
+        console.warn('Failed to set scale assignment for new employee:', e?.message);
+      }
+    }
 
     res.status(201).json(created);
   } catch (error) {

@@ -1,0 +1,26 @@
+{
+  "1": {
+    "positionName": "Back office",
+    "basicSalary": 33557.2,
+    "allowances": 2098,
+    "bonus": 0,
+    "overtimeMultiplier": 1.5,
+    "pensionEmployeePct": 0.07,
+    "taxFixed": 15,
+    "insuranceEmployeeFixed": 2,
+    "otherDeductionsFixed": 233,
+    "updatedAt": "2025-11-06T23:48:39.177Z"
+  },
+  "3": {
+    "positionName": "Back office",
+    "basicSalary": 33557.2,
+    "allowances": 2098,
+    "bonus": 0,
+    "overtimeMultiplier": 1.5,
+    "pensionEmployeePct": 0.07,
+    "taxFixed": 0,
+    "insuranceEmployeeFixed": 0,
+    "otherDeductionsFixed": 0,
+    "updatedAt": "2025-11-07T00:48:34.410Z"
+  }
+}

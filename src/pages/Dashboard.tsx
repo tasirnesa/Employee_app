@@ -19,6 +19,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import type { User, Evaluation, EvaluationCriteria, EvaluationResult, Employee, Goal } from '../types/interfaces';
 import { listEmployees } from '../api/employeeApi';
+import api from '../lib/axios';
 
 const Dashboard: React.FC = () => {
   const token = localStorage.getItem('token');
@@ -147,10 +148,30 @@ const Dashboard: React.FC = () => {
   if (entitlementCacheKey && entitlementDaysCalc > 0) {
     localStorage.setItem(entitlementCacheKey, String(entitlementDaysCalc));
   }
-  // TODO: subtract approved leave days when Leave API exists (persist used as well)
-  const usedCacheKey = currentUser?.id ? `timeoff_used_${currentUser.id}` : undefined;
-  const cachedUsed = usedCacheKey ? Number(localStorage.getItem(usedCacheKey) || '0') : 0;
-  const usedDays = cachedUsed;
+  // Leave usage (approved days this year) and recent approved leave for current user
+  const { data: leaveUsage } = useQuery({
+    queryKey: ['leave-usage', currentUser?.id],
+    queryFn: async () => {
+      if (!token || !currentUser?.id) return { usedDaysYear: 0 } as { usedDaysYear: number };
+      const res = await api.get(`/api/leaves/usage/${currentUser.id}`);
+      return res.data as { usedDaysYear: number };
+    },
+    enabled: !!token && !!currentUser?.id,
+  });
+  const { data: myLeavesAll } = useQuery({
+    queryKey: ['my-leaves', currentUser?.id],
+    queryFn: async () => {
+      if (!token || !currentUser?.id) return [] as any[];
+      const res = await api.get('/api/leaves');
+      return res.data as any[];
+    },
+    enabled: !!token && !!currentUser?.id,
+  });
+  const lastApprovedLeave = (myLeavesAll || [])
+    .filter((l: any) => l.status === 'Approved')
+    .sort((a: any, b: any) => new Date(b.approvedAt || b.endDate).getTime() - new Date(a.approvedAt || a.endDate).getTime())[0];
+
+  const usedDays = Number(leaveUsage?.usedDaysYear ?? 0);
   const remainingDays = Math.max(0, entitlementDays - usedDays);
 
   const { data: sessionStats } = useQuery({
@@ -296,7 +317,7 @@ const Dashboard: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Typography variant="h6">Time Off</Typography>
-                <Button size="small" variant="text" onClick={() => navigate('/employees/view')}>See more</Button>
+                <Button size="small" variant="text" onClick={() => navigate('/leave-management')}>See more</Button>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
                 <Box sx={{ width: 120, height: 120, position: 'relative' }}>
@@ -359,7 +380,7 @@ const Dashboard: React.FC = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Typography variant="h6">Current Project</Typography>
-                <Button size="small" variant="text" onClick={() => navigate('/goals')}>See more</Button>
+                <Button size="small" variant="text" onClick={() => navigate('/projects')}>See more</Button>
               </Box>
               {(!myGoals || !myGoals.length) ? (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>No goals yet.</Typography>

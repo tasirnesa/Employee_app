@@ -406,6 +406,11 @@ const menuItems = [
               <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={handleGoals} selected={location.pathname === '/goals'}>
                 <ListItemText primary="Goals & OKRs" />
               </ListItemButton>
+              {!isEmployee && (
+                <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/projects'); recordRecent('Projects', '/projects'); }} selected={location.pathname === '/projects'}>
+                  <ListItemText primary="Projects" />
+                </ListItemButton>
+              )}
               <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={handleAnalyticsPerformance} selected={location.pathname === '/analytics-performance'}>
                 <ListItemText primary="Performance" />
               </ListItemButton>

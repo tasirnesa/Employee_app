@@ -3,16 +3,36 @@ const { PrismaClient } = require('@prisma/client');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+const startOfYear = (d = new Date()) => new Date(d.getFullYear(), 0, 1);
+
 // Get all leaves
 router.get('/', async (req, res) => {
   try {
+    const current = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const role = current?.role || '';
+    let where = {};
+    if (role === 'Employee') {
+      where = { employeeId: req.user.id };
+    } else if (role === 'Manager') {
+      // Manager sees only their department's employees
+      const myDeptId = current?.departmentId || null;
+      if (myDeptId) {
+        const deptUserIds = await prisma.user.findMany({ where: { departmentId: myDeptId }, select: { id: true } });
+        where = { employeeId: { in: deptUserIds.map(u => u.id) } };
+      } else {
+        where = { employeeId: -1 }; // nothing if manager has no department
+      }
+    } // Admin/SuperAdmin see all
+
     const leaves = await prisma.leave.findMany({
+      where,
       include: {
         employee: {
           select: {
             id: true,
             fullName: true,
-            userName: true
+            userName: true,
+            departmentId: true,
           }
         },
         leaveType: {
@@ -75,6 +95,23 @@ router.get('/employee/:employeeId', async (req, res) => {
   } catch (error) {
     console.error('Error fetching employee leaves:', error);
     res.status(500).json({ error: 'Failed to fetch employee leaves' });
+  }
+});
+
+// Usage summary for an employee (current year approved days)
+router.get('/usage/:employeeId', async (req, res) => {
+  try {
+    const employeeId = parseInt(req.params.employeeId);
+    if (Number.isNaN(employeeId)) return res.status(400).json({ error: 'Invalid employeeId' });
+    const usedAgg = await prisma.leave.aggregate({
+      _sum: { days: true },
+      where: { employeeId, status: 'Approved', startDate: { gte: startOfYear() } },
+    });
+    const usedDaysYear = Number(usedAgg._sum.days || 0);
+    return res.json({ employeeId, usedDaysYear });
+  } catch (error) {
+    console.error('Error computing leave usage:', error);
+    return res.status(500).json({ error: 'Failed to compute usage' });
   }
 });
 
@@ -262,8 +299,13 @@ router.put('/:id', async (req, res) => {
         }
       }
     });
-    
-    res.json(leave);
+    // compute used days for this employee in current year (Approved only)
+    const usedAgg = await prisma.leave.aggregate({
+      _sum: { days: true },
+      where: { employeeId: leave.employeeId, status: 'Approved', startDate: { gte: startOfYear() } },
+    });
+    const usedDaysYear = Number(usedAgg._sum.days || 0);
+    res.json({ ...leave, usedDaysYear });
   } catch (error) {
     console.error('Error updating leave:', error);
     res.status(500).json({ error: 'Failed to update leave' });
@@ -274,10 +316,26 @@ router.put('/:id', async (req, res) => {
 router.patch('/:id/approve', async (req, res) => {
   try {
     const { id } = req.params;
-    const { approvedBy, comments } = req.body;
-    
-    if (!approvedBy) {
-      return res.status(400).json({ error: 'Approver ID is required' });
+    const { comments } = req.body;
+    const approverId = req.user.id;
+    const approver = await prisma.user.findUnique({ where: { id: approverId } });
+    const role = approver?.role || '';
+    const isAdmin = role === 'Admin' || role === 'SuperAdmin';
+    const isManager = role === 'Manager';
+    if (!approver || (!isManager && !isAdmin)) {
+      return res.status(403).json({ error: 'Only managers or admins can approve leaves' });
+    }
+    const leaveRecord = await prisma.leave.findUnique({
+      where: { id: parseInt(id) },
+      include: { employee: { select: { id: true, departmentId: true } } },
+    });
+    if (!leaveRecord) return res.status(404).json({ error: 'Leave not found' });
+    if (!isAdmin) {
+      if (!leaveRecord.employee?.departmentId) return res.status(403).json({ error: 'Employee has no department' });
+      const dept = await prisma.department.findUnique({ where: { id: leaveRecord.employee.departmentId } });
+      if (!dept || dept.managerId !== approverId) {
+        return res.status(403).json({ error: 'Not authorized to approve this employee\'s leave' });
+      }
     }
     
     const leave = await prisma.leave.update({
@@ -286,9 +344,9 @@ router.patch('/:id/approve', async (req, res) => {
       },
       data: {
         status: 'Approved',
-        approvedBy: parseInt(approvedBy),
+        approvedBy: approverId,
         approvedAt: new Date(),
-        comments: comments || leave.comments
+        comments: comments || undefined,
       },
       include: {
         employee: {
@@ -315,8 +373,13 @@ router.patch('/:id/approve', async (req, res) => {
         }
       }
     });
-    
-    res.json(leave);
+    // compute used days for this employee in current year (Approved only)
+    const usedAgg = await prisma.leave.aggregate({
+      _sum: { days: true },
+      where: { employeeId: leave.employeeId, status: 'Approved', startDate: { gte: startOfYear() } },
+    });
+    const usedDaysYear = Number(usedAgg._sum.days || 0);
+    res.json({ ...leave, usedDaysYear });
   } catch (error) {
     console.error('Error approving leave:', error);
     res.status(500).json({ error: 'Failed to approve leave' });
@@ -328,13 +391,35 @@ router.patch('/:id/reject', async (req, res) => {
   try {
     const { id } = req.params;
     const { comments } = req.body;
-    
+    const approverId = req.user.id;
+    const approver = await prisma.user.findUnique({ where: { id: approverId } });
+    const role = approver?.role || '';
+    const isAdmin = role === 'Admin' || role === 'SuperAdmin';
+    const isManager = role === 'Manager';
+    if (!approver || (!isManager && !isAdmin)) {
+      return res.status(403).json({ error: 'Only managers or admins can reject leaves' });
+    }
+    const leaveRecord = await prisma.leave.findUnique({
+      where: { id: parseInt(id) },
+      include: { employee: { select: { id: true, departmentId: true } } },
+    });
+    if (!leaveRecord) return res.status(404).json({ error: 'Leave not found' });
+    if (!isAdmin) {
+      if (!leaveRecord.employee?.departmentId) return res.status(403).json({ error: 'Employee has no department' });
+      const dept = await prisma.department.findUnique({ where: { id: leaveRecord.employee.departmentId } });
+      if (!dept || dept.managerId !== approverId) {
+        return res.status(403).json({ error: 'Not authorized to reject this employee\'s leave' });
+      }
+    }
+
     const leave = await prisma.leave.update({
       where: {
         id: parseInt(id)
       },
       data: {
         status: 'Rejected',
+        approvedBy: approverId,
+        approvedAt: new Date(),
         comments: comments || 'Rejected by manager'
       },
       include: {

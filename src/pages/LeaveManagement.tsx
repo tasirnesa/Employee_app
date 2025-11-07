@@ -57,8 +57,10 @@ const LeaveManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
 
   // Check user role for access control
-  const userRole = JSON.parse(localStorage.getItem('userProfile') || '{}').role;
-  const isEmployee = userRole === 'Employee';
+  const currentUser = JSON.parse(localStorage.getItem('userProfile') || '{}');
+  const role = (currentUser?.role || '').toLowerCase();
+  const isEmployee = role === 'employee';
+  const canApprove = role === 'manager' || role === 'admin' || role === 'superadmin';
 
   // Form state
   const [leaveForm, setLeaveForm] = useState({
@@ -87,6 +89,13 @@ const LeaveManagement: React.FC = () => {
     queryKey: ['users'],
     queryFn: () => apiService.getUsers(),
   });
+
+  const getEmployeeNameById = (id?: string | number) => {
+    const numId = typeof id === 'string' ? parseInt(id) : id;
+    if (!numId) return '';
+    const emp = (employees || []).find((e: any) => e.id === numId);
+    return emp?.fullName || '';
+  };
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -126,8 +135,8 @@ const LeaveManagement: React.FC = () => {
   });
 
   const approveLeaveMutation = useMutation({
-    mutationFn: ({ id, approvedBy, comments }: { id: number; approvedBy: number; comments?: string }) => 
-      apiService.approveLeave(id, approvedBy, comments),
+    mutationFn: ({ id, comments }: { id: number; comments?: string }) => 
+      apiService.approveLeave(id, comments),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
     },
@@ -239,24 +248,28 @@ const LeaveManagement: React.FC = () => {
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           {!isEmployee && (
-            <>
-              <Button
-                variant="outlined"
-                onClick={() => setLeaveTypeDialogOpen(true)}
-                sx={{ borderColor: 'primary.main', color: 'primary.main' }}
-              >
-                Manage Leave Types
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setLeaveDialogOpen(true)}
-                sx={{ backgroundColor: 'primary.main' }}
-              >
-                Add Leave Request
-              </Button>
-            </>
+            <Button
+              variant="outlined"
+              onClick={() => setLeaveTypeDialogOpen(true)}
+              sx={{ borderColor: 'primary.main', color: 'primary.main' }}
+            >
+              Manage Leave Types
+            </Button>
           )}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => {
+              // For employees default to self
+              if (isEmployee) {
+                setLeaveForm((prev) => ({ ...prev, employeeId: String(currentUser?.id || '') }));
+              }
+              setLeaveDialogOpen(true);
+            }}
+            sx={{ backgroundColor: 'primary.main' }}
+          >
+            Add Leave Request
+          </Button>
         </Box>
       </Box>
 
@@ -372,15 +385,13 @@ const LeaveManagement: React.FC = () => {
                     />
                   </TableCell>
                   <TableCell>
-                    {!isEmployee && leave.status === 'Pending' && (
+                    {canApprove && leave.status === 'Pending' && (
                       <Box sx={{ display: 'flex', gap: 1 }}>
                         <IconButton
                           size="small"
                           onClick={() => {
-                            const currentUser = JSON.parse(localStorage.getItem('userProfile') || '{}');
                             approveLeaveMutation.mutate({ 
-                              id: leave.id, 
-                              approvedBy: currentUser.id 
+                              id: leave.id 
                             });
                           }}
                           color="success"
@@ -411,7 +422,9 @@ const LeaveManagement: React.FC = () => {
 
       {/* Add Leave Dialog */}
       <Dialog open={leaveDialogOpen} onClose={() => setLeaveDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Add Leave Request</DialogTitle>
+        <DialogTitle>
+          {`Add Leave Request${isEmployee ? (currentUser?.fullName ? ` - ${currentUser.fullName}` : '') : (leaveForm.employeeId ? ` - ${getEmployeeNameById(leaveForm.employeeId)}` : '')}`}
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -422,6 +435,7 @@ const LeaveManagement: React.FC = () => {
                     value={leaveForm.employeeId}
                     onChange={(e) => handleLeaveFormChange('employeeId', e.target.value)}
                     label="Employee"
+                    disabled={isEmployee}
                   >
                     {employees?.map((employee: any) => (
                       <MenuItem key={employee.id} value={employee.id}>

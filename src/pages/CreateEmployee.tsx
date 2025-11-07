@@ -23,6 +23,7 @@ const CreateEmployee: React.FC = () => {
     username: '',
     password: '',
     userId: '',
+    scaleKey: '',
   });
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +72,17 @@ const CreateEmployee: React.FC = () => {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Fetch payroll scales
+  const { data: scales = [] } = useQuery({
+    queryKey: ['payroll-scales'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      const res = await api.get('/api/payroll/scale-config', { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const cfg = res.data || {};
+      return Object.keys(cfg).map((k) => ({ key: k, label: cfg[k]?.label || k }));
+    },
+  });
+
   const mutation = useMutation({
     mutationFn: async () => {
       const fd = new FormData();
@@ -93,6 +105,7 @@ const CreateEmployee: React.FC = () => {
       if (form.username) fd.append('username', form.username);
       if (form.password) fd.append('password', form.password);
       if (form.userId) fd.append('userId', form.userId);
+      if (form.scaleKey) fd.append('scaleKey', form.scaleKey);
       if (file) fd.append('profileImage', file);
       const token = localStorage.getItem('token');
       const res = await api.post('/api/employees', fd, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
@@ -203,6 +216,23 @@ const CreateEmployee: React.FC = () => {
           {positionsError && <Typography color="error">Error loading positions: {positionsError.message}</Typography>}
         </FormControl>
         <TextField name="hireDate" label="Hire Date" type="date" value={form.hireDate} onChange={handleChange} fullWidth InputLabelProps={{ shrink: true }} />
+      </Stack>
+
+      <Stack direction="row" spacing={2}>
+        <FormControl fullWidth>
+          <InputLabel id="scale-label">Payroll Scale</InputLabel>
+          <Select
+            labelId="scale-label"
+            label="Payroll Scale"
+            value={form.scaleKey}
+            onChange={(e) => setForm({ ...form, scaleKey: e.target.value as string })}
+          >
+            <MenuItem value="">No Scale</MenuItem>
+            {scales.map((s: any) => (
+              <MenuItem key={s.key} value={s.key}>{s.label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </Stack>
 
       <Stack direction="row" spacing={2}>
