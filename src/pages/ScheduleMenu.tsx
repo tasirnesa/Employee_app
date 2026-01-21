@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AxiosError } from 'axios';
 import api from '../lib/axios';
 import { Box, Card, CardContent, TextField, Button, Typography, Alert, Tab, Tabs, CardHeader, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, FormControl, InputLabel, Select, MenuItem, Switch, Stack } from '@mui/material';
+import apiService from '../services/apiService';
 import { TabContext, TabPanel } from '@mui/lab';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Calendar from 'react-calendar';
@@ -14,6 +15,10 @@ const ScheduleMenu = () => {
   const [endDate, setEndDate] = useState('');
   const [department, setDepartment] = useState('');
   const [error, setError] = useState('');
+  const { data: departments } = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => apiService.getDepartments(),
+  });
   const [tabValue, setTabValue] = useState('1');
   const [openDialog, setOpenDialog] = useState(false);
   const [openActivateDialog, setOpenActivateDialog] = useState(false);
@@ -26,8 +31,8 @@ const ScheduleMenu = () => {
     setTabValue(newValue);
   };
 
-const userRole = JSON.parse(localStorage.getItem('userProfile') || '{}').role;
-const isEmployee = userRole === 'Employee';
+  const userRole = JSON.parse(localStorage.getItem('userProfile') || '{}').role;
+  const isEmployee = userRole === 'Employee';
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
@@ -137,7 +142,7 @@ const isEmployee = userRole === 'Employee';
           return start.getTime() <= todayDate.getTime() && end.getTime() >= todayDate.getTime();
         });
       case 'Meetings':
-        return sessions.filter(session => session.title.toLowerCase().includes('meeting')); 
+        return sessions.filter(session => session.title.toLowerCase().includes('meeting'));
       case 'Pending':
         return sessions.filter(session => new Date(session.endDate) > new Date());
       default:
@@ -146,8 +151,8 @@ const isEmployee = userRole === 'Employee';
   };
 
   const handleCategoryClick = (category: string) => {
-    console.log('Clicked category:', category, 'Selected:', selectedCategory); 
-    setSelectedCategory(category === selectedCategory ? null : category); 
+    console.log('Clicked category:', category, 'Selected:', selectedCategory);
+    setSelectedCategory(category === selectedCategory ? null : category);
   };
 
   return (
@@ -157,41 +162,41 @@ const isEmployee = userRole === 'Employee';
       </Typography>
       <Card elevation={3} sx={{ mb: 4 }}>
         <CardHeader
-  title={<Typography variant="h6" color="primary">Schedule</Typography>}
-  action={
-    <Box>
-      <Typography variant="body1" color="text.secondary" sx={{ mr: 2 }}>
-        Manage the Session and Events
-      </Typography>
-      {!isEmployee && (
-        <Stack direction="row" spacing={1} alignItems="center">
-          <IconButton color="primary" onClick={() => setOpenDialog(true)} title="Create New Event">
-            +
-          </IconButton>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Switch
-              checked={openActivateDialog}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                if (checked) {
-                  // default selection
-                  const firstId = sessions[0]?.id ? Number(sessions[0].id) : '';
-                  setActivateSessionId(firstId);
-                  setActivateEndDate('');
-                  setOpenActivateDialog(true);
-                } else {
-                  setOpenActivateDialog(false);
-                }
-              }}
-              inputProps={{ 'aria-label': 'Activate evaluation' }}
-            />
-            <Typography variant="body2">Activate</Typography>
-          </Stack>
-        </Stack>
-      )}
-    </Box>
-  }
-/>
+          title={<Typography variant="h6" color="primary">Schedule</Typography>}
+          action={
+            <Box>
+              <Typography variant="body1" color="text.secondary" sx={{ mr: 2 }}>
+                Manage the Session and Events
+              </Typography>
+              {!isEmployee && (
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <IconButton color="primary" onClick={() => setOpenDialog(true)} title="Create New Event">
+                    +
+                  </IconButton>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Switch
+                      checked={openActivateDialog}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        if (checked) {
+                          // default selection
+                          const firstId = sessions[0]?.id ? Number(sessions[0].id) : '';
+                          setActivateSessionId(firstId);
+                          setActivateEndDate('');
+                          setOpenActivateDialog(true);
+                        } else {
+                          setOpenActivateDialog(false);
+                        }
+                      }}
+                      inputProps={{ 'aria-label': 'Activate evaluation' }}
+                    />
+                    <Typography variant="body2">Activate</Typography>
+                  </Stack>
+                </Stack>
+              )}
+            </Box>
+          }
+        />
         <CardContent>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
             <Button
@@ -290,7 +295,7 @@ const isEmployee = userRole === 'Employee';
             <TabPanel value="3">
               <Calendar
                 value={new Date()}
-                onChange={() => {}}
+                onChange={() => { }}
                 tileContent={({ date }) => {
                   const dateStr = date.toISOString().split('T')[0];
                   const session = sessions.find(s => new Date(s.startDate).toISOString().split('T')[0] <= dateStr && new Date(s.endDate).toISOString().split('T')[0] >= dateStr);
@@ -314,15 +319,25 @@ const isEmployee = userRole === 'Employee';
             margin="normal"
             variant="outlined"
           />
-          <TextField
-            fullWidth
-            label="Department"
-            value={department}
-            onChange={(e) => setDepartment(e.target.value)}
-            placeholder="e.g., HR, Finance, Engineering"
-            margin="normal"
-            variant="outlined"
-          />
+          <FormControl fullWidth margin="normal">
+            <InputLabel id="department-label">Department (Optional)</InputLabel>
+            <Select
+              labelId="department-label"
+              id="department-select"
+              value={department}
+              label="Department (Optional)"
+              onChange={(e) => setDepartment(e.target.value)}
+            >
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
+              {departments?.map((dept: any) => (
+                <MenuItem key={dept.id} value={dept.name}>
+                  {dept.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <TextField
             fullWidth
             label="Start Date"

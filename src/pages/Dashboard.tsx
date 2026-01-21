@@ -19,7 +19,33 @@ import {
 import { useNavigate } from 'react-router-dom';
 import type { User, Evaluation, EvaluationCriteria, EvaluationResult, Employee, Goal } from '../types/interfaces';
 import { listEmployees } from '../api/employeeApi';
+import { getThreads } from '../api/messageApi';
 import api from '../lib/axios';
+import {
+  Info as InfoIcon,
+  CheckCircle as CheckIcon,
+  Warning as WarningIcon,
+  Error as ErrorIcon,
+  Assignment as EvalIcon,
+  FlightTakeoff as LeaveIcon,
+  Flag as GoalIcon,
+  ArrowForward as ArrowIcon,
+} from '@mui/icons-material';
+
+interface DashboardAction {
+  id: number;
+  type: 'LEAVE' | 'EVALUATION' | 'GOAL';
+  title: string;
+  subtitle: string;
+  link: string;
+}
+
+interface DashboardActions {
+  pendingLeaves: DashboardAction[];
+  activeSessions: DashboardAction[];
+  pendingGoals: DashboardAction[];
+  unreadCount: number;
+}
 
 const Dashboard: React.FC = () => {
   const token = localStorage.getItem('token');
@@ -36,19 +62,11 @@ const Dashboard: React.FC = () => {
   const { data: users, isLoading: usersLoading, error: usersError } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
-      if (!token) throw new Error('No authentication token');
       try {
-        const response = await axios.get('http://localhost:3000/api/users', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        console.log('Fetched users:', response.data);
+        const response = await api.get('/api/users');
         return response.data as User[];
       } catch (err: any) {
-        // If forbidden (e.g., Employee role), return empty list so dashboard still loads
-        if (err?.response?.status === 403) {
-          console.warn('Users fetch forbidden; returning empty list for dashboard');
-          return [] as User[];
-        }
+        if (err?.response?.status === 403) return [] as User[];
         throw err;
       }
     },
@@ -58,11 +76,7 @@ const Dashboard: React.FC = () => {
   const { data: evaluations, isLoading: evaluationsLoading, error: evaluationsError } = useQuery({
     queryKey: ['evaluations'],
     queryFn: async () => {
-      if (!token) throw new Error('No authentication token');
-      const response = await axios.get('http://localhost:3000/api/evaluations', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      console.log('Fetched evaluations:', response.data);
+      const response = await api.get('/api/evaluations');
       return response.data as Evaluation[];
     },
   });
@@ -70,11 +84,7 @@ const Dashboard: React.FC = () => {
   const { data: criteria, isLoading: criteriaLoading, error: criteriaError } = useQuery({
     queryKey: ['criteria'],
     queryFn: async () => {
-      if (!token) throw new Error('No authentication token');
-      const response = await axios.get('http://localhost:3000/api/criteria', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      console.log('Fetched criteria:', response.data);
+      const response = await api.get('/api/criteria');
       return response.data as EvaluationCriteria[];
     },
   });
@@ -97,6 +107,14 @@ const Dashboard: React.FC = () => {
     queryFn: async () => await listEmployees(true),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+  });
+
+  const { data: actions, isLoading: actionsLoading } = useQuery({
+    queryKey: ['dashboard-actions'],
+    queryFn: async () => {
+      const response = await api.get('/api/dashboard/actions');
+      return response.data as DashboardActions;
+    },
   });
   const employeeCacheKey = currentUser?.id ? `meEmployee_${currentUser.id}` : undefined;
   const cachedMe = (() => {
@@ -137,7 +155,7 @@ const Dashboard: React.FC = () => {
     return 20 + (years - 2) * 2; // add 2 days per year after third
   };
   const entitlementCacheKey = currentUser?.id && meEmployee?.hireDate
-    ? `timeoff_entitlement_${currentUser.id}_${new Date(meEmployee.hireDate).toISOString().slice(0,10)}`
+    ? `timeoff_entitlement_${currentUser.id}_${new Date(meEmployee.hireDate).toISOString().slice(0, 10)}`
     : undefined;
   const cachedEntitlement = entitlementCacheKey ? Number(localStorage.getItem(entitlementCacheKey) || 'NaN') : NaN;
   const entitlementDaysCalc = computeEntitlement(meEmployee?.hireDate || null);
@@ -267,50 +285,44 @@ const Dashboard: React.FC = () => {
   const { data: sessionsList } = useQuery({
     queryKey: ['sessions-dashboard'],
     queryFn: async () => {
-      if (!token) return [] as Array<{ sessionID: number; title: string; startDate: string; endDate: string }>;
-      const res = await axios.get('http://localhost:3000/api/evaluation-sessions', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get('/api/evaluation-sessions');
       return res.data;
     },
   });
 
-  // Recent Chats from localStorage (local chat prototype)
-  type ChatMsg = { sender: 'me' | 'them'; text: string; at: string };
-  type ChatThread = { withId: number; withName: string; lastText: string; lastAt: string };
+  // Recent Chats from backend
+  const { data: threads = [] } = useQuery({
+    queryKey: ['chat-threads'],
+    queryFn: getThreads,
+    refetchInterval: 10000, // Poll every 10s for dashboard
+  });
+
+  type ChatThread = { withId: number; withName: string; lastText: string; lastAt: string; avatar?: string | null; isMe: boolean };
   const { data: allEmployees } = useQuery({
     queryKey: ['employees-for-chat'],
     queryFn: async () => await listEmployees(true),
     staleTime: 5 * 60 * 1000,
   });
-  const employeeName = (id: number) => {
-    const e = (allEmployees || []).find((x: any) => x.id === id);
-    return e ? `${e.firstName} ${e.lastName}` : `Employee ${id}`;
+  const employeeByUserId = (uid: number) => {
+    return (allEmployees || []).find((x: any) => x.userId === uid);
   };
-  const myUserId = currentUser?.id;
   const chatThreads: ChatThread[] = React.useMemo(() => {
-    if (!myUserId) return [];
-    const items: ChatThread[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i) as string;
-      if (!key || !key.startsWith(`chat:${myUserId}:`)) continue;
-      const toIdStr = key.split(':')[2];
-      const toId = Number(toIdStr);
-      if (!Number.isFinite(toId)) continue;
-      try {
-        const msgs: ChatMsg[] = JSON.parse(localStorage.getItem(key) || '[]');
-        if (msgs.length === 0) continue;
-        const last = msgs[msgs.length - 1];
-        items.push({ withId: toId, withName: employeeName(toId), lastText: last.text, lastAt: last.at });
-      } catch {}
-    }
-    // Sort by latest first
-    return items.sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime()).slice(0, 6);
-  }, [myUserId, allEmployees, localStorage.length]);
+    return threads.map((t: any) => {
+      const emp = employeeByUserId(t.otherId);
+      return {
+        withId: t.otherId,
+        withName: t.otherName || (emp ? `${emp.firstName} ${emp.lastName}` : `User ${t.otherId}`),
+        lastText: t.text || '',
+        lastAt: t.createdAt,
+        avatar: t.otherAvatar || emp?.profileImageUrl,
+        isMe: t.senderId === currentUser?.id
+      };
+    });
+  }, [threads, allEmployees, currentUser?.id]);
 
   return (
-    <Container disableGutters maxWidth={false} sx={{ mt: 0, px: 0 }}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 0.75 }}>
+    <Container disableGutters maxWidth={false} sx={{ mt: 0, px: 0, width: '100%' }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 2, width: '100%', p: 3 }}>
         {/* Time Off */}
         <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 4' } }}>
           <Card sx={{ borderRadius: 3, bgcolor: 'background.paper', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' }}>
@@ -323,7 +335,7 @@ const Dashboard: React.FC = () => {
                 <Box sx={{ width: 120, height: 120, position: 'relative' }}>
                   <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%' }}>
                     <path d="M18 2 a16 16 0 1 1 0 32 a16 16 0 1 1 0 -32" fill="none" stroke="#e5e7eb" strokeWidth="4" />
-                    <path d="M18 2 a16 16 0 1 1 0 32" fill="none" stroke="#8b5cf6" strokeWidth="4" strokeDasharray={`${Math.round((remainingDays/Math.max(1, entitlementDays))*100)}, 100`} strokeLinecap="round" />
+                    <path d="M18 2 a16 16 0 1 1 0 32" fill="none" stroke="#8b5cf6" strokeWidth="4" strokeDasharray={`${Math.round((remainingDays / Math.max(1, entitlementDays)) * 100)}, 100`} strokeLinecap="round" />
                   </svg>
                   <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
                     <Typography variant="h5" fontWeight={700}>{remainingDays}</Typography>
@@ -350,20 +362,30 @@ const Dashboard: React.FC = () => {
           <Card sx={{ borderRadius: 3, bgcolor: 'background.paper', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="h6">Recent Chats</Typography>
-                <Button size="small" variant="text" onClick={() => navigate('/contacts')}>Open</Button>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', mb: 1 }}>
+                  <Typography variant="h6" fontWeight={700}>Recent Chats</Typography>
+                  <Button size="small" variant="text" sx={{ fontWeight: 600 }}>All Contacts</Button>
+                </Box>
               </Box>
-              <List dense sx={{ mt: 1, maxHeight: 260, overflow: 'auto', pr: 1 }}>
+              <List dense sx={{ mt: 1, maxHeight: 400, overflow: 'auto', pr: 1 }}>
                 {chatThreads.map((t) => (
-                  <ListItem key={t.withId} sx={{ px: 0 }}>
+                  <ListItem
+                    key={t.withId}
+                    sx={{ px: 0, py: 1, '&:hover': { bgcolor: 'action.hover' }, borderRadius: 1, cursor: 'pointer' }}
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('open-chat', {
+                        detail: { user: { id: t.withId, fullName: t.withName, profileImageUrl: t.avatar } }
+                      }));
+                    }}
+                  >
                     <ListItemAvatar>
-                      <Avatar>{t.withName.charAt(0)}</Avatar>
+                      <Avatar src={t.avatar || undefined}>{t.withName.charAt(0)}</Avatar>
                     </ListItemAvatar>
                     <ListItemText
-                      primary={<Typography variant="body2" fontWeight={600} noWrap>{currentUser?.fullName} → {t.withName}</Typography>}
+                      primary={<Typography variant="body2" fontWeight={600} noWrap>{t.isMe ? `To: ${t.withName}` : `From: ${t.withName}`}</Typography>}
                       secondary={<Typography variant="caption" color="text.secondary" noWrap>{t.lastText}</Typography>}
                     />
-                    <Chip size="small" variant="outlined" label={new Date(t.lastAt).toLocaleTimeString()} />
+                    <Chip size="small" variant="outlined" label={new Date(t.lastAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} />
                   </ListItem>
                 ))}
                 {chatThreads.length === 0 && (
@@ -435,53 +457,96 @@ const Dashboard: React.FC = () => {
           </Card>
         </Box>
 
-        {/* Status Tracker */}
-        <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 4' } }}>
-          <Card sx={{ borderRadius: 3, bgcolor: 'background.paper', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="h6">Status Tracker</Typography>
-                <Button size="small" variant="text" onClick={() => navigate('/analytics-performance')}>See more</Button>
+        {/* Action Center - Replacing Status Tracker and Announcements */}
+        <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 8' } }}>
+          <Card sx={{ borderRadius: 3, bgcolor: 'background.paper', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)', border: '1px solid #eef2ff' }}>
+            <CardContent sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Box>
+                  <Typography variant="h6" fontWeight={700} sx={{ color: '#1e293b' }}>Action Center</Typography>
+                  <Typography variant="body2" color="text.secondary">Tasks that require your immediate attention</Typography>
+                </Box>
+                {actions?.unreadCount ? (
+                  <Chip
+                    label={`${actions.unreadCount} New Alerts`}
+                    color="primary"
+                    size="small"
+                    onClick={() => navigate('/notifications')}
+                    sx={{ fontWeight: 600, animation: 'pulse 2s infinite' }}
+                  />
+                ) : null}
               </Box>
-              <List dense sx={{ mt: 1, maxHeight: 260, overflow: 'auto', pr: 1 }}>
-                {(myGoals || []).slice(0, 3).map((g) => (
-                  <ListItem key={g.gid} sx={{ px: 0 }}>
-                    <ListItemAvatar>
-                      <Avatar>{g.objective.charAt(0).toUpperCase()}</Avatar>
-                    </ListItemAvatar>
-                    <ListItemText primary={g.objective} secondary={`Due ${g.duedate ? new Date(g.duedate as any).toLocaleDateString() : '—'}`} />
-                    <Chip size="small" label={`${Math.round(Number(g.progress || 0))}%`} />
-                  </ListItem>
-                ))}
-                {(!myGoals || !myGoals.length) && (
-                  <Typography variant="body2" color="text.secondary">No items yet.</Typography>
-                )}
-              </List>
-            </CardContent>
-          </Card>
-        </Box>
 
-        {/* Announcements */}
-        <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 4' } }}>
-          <Card sx={{ borderRadius: 3, bgcolor: 'background.paper', boxShadow: '0 1px 2px rgba(16,24,40,0.08)' }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="h6">Announcements</Typography>
-                <Button size="small" variant="text" onClick={() => navigate('/reports')}>See more</Button>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                <Box>
+                  <Typography variant="subtitle2" color="primary" fontWeight={600} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LeaveIcon fontSize="small" /> Pending Approvals
+                  </Typography>
+                  <List dense disablePadding>
+                    {actions?.pendingLeaves.length ? actions.pendingLeaves.map(action => (
+                      <ListItem
+                        key={`${action.type}-${action.id}`}
+                        sx={{ px: 1, py: 1, borderRadius: 2, '&:hover': { bgcolor: '#f8fafc' }, cursor: 'pointer', mb: 0.5 }}
+                        onClick={() => navigate(action.link)}
+                      >
+                        <ListItemText
+                          primary={<Typography variant="body2" fontWeight={600}>{action.title}</Typography>}
+                          secondary={action.subtitle}
+                        />
+                        <ArrowIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+                      </ListItem>
+                    )) : (
+                      <Typography variant="body2" color="text.disabled" sx={{ fontStyle: 'italic', py: 1 }}>No pending approvals</Typography>
+                    )}
+                  </List>
+                </Box>
+
+                <Box>
+                  <Typography variant="subtitle2" color="secondary" fontWeight={600} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <EvalIcon fontSize="small" /> Active Evaluations
+                  </Typography>
+                  <List dense disablePadding>
+                    {actions?.activeSessions.length ? actions.activeSessions.map(action => (
+                      <ListItem
+                        key={`${action.type}-${action.id}`}
+                        sx={{ px: 1, py: 1, borderRadius: 2, '&:hover': { bgcolor: '#f8fafc' }, cursor: 'pointer', mb: 0.5 }}
+                        onClick={() => navigate(action.link)}
+                      >
+                        <ListItemText
+                          primary={<Typography variant="body2" fontWeight={600}>{action.title}</Typography>}
+                          secondary={action.subtitle}
+                        />
+                        <ArrowIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+                      </ListItem>
+                    )) : (
+                      <Typography variant="body2" color="text.disabled" sx={{ fontStyle: 'italic', py: 1 }}>No active evaluations</Typography>
+                    )}
+                  </List>
+                </Box>
               </Box>
-              <List dense sx={{ mt: 1, maxHeight: 260, overflow: 'auto', pr: 1 }}>
-                <ListItem sx={{ px: 0 }}>
-                  <ListItemText primary="Meeting with John" secondary={<Typography variant="caption" color="text.secondary">9:00 - 10:30</Typography>} />
-                </ListItem>
-                <Divider />
-                <ListItem sx={{ px: 0 }}>
-                  <ListItemText primary="Check neutral colors" secondary={<Typography variant="caption" color="text.secondary">Design System</Typography>} />
-                </ListItem>
-                <Divider />
-                <ListItem sx={{ px: 0 }}>
-                  <ListItemText primary="Text inputs for design system" secondary={<Typography variant="caption" color="text.secondary">UX</Typography>} />
-                </ListItem>
-              </List>
+
+              <Divider sx={{ my: 2 }} />
+
+              <Box>
+                <Typography variant="subtitle2" color="warning.main" fontWeight={600} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <GoalIcon fontSize="small" /> Upcoming Deadlines
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 1 }}>
+                  {actions?.pendingGoals.length ? actions.pendingGoals.map(action => (
+                    <Card
+                      key={`${action.type}-${action.id}`}
+                      variant="outlined"
+                      sx={{ minWidth: 200, flexShrink: 0, borderRadius: 2, p: 1.5, cursor: 'pointer', '&:hover': { borderColor: 'primary.main', bgcolor: '#f0f9ff' } }}
+                      onClick={() => navigate(action.link)}
+                    >
+                      <Typography variant="body2" fontWeight={600} noWrap>{action.title}</Typography>
+                      <Typography variant="caption" color="text.secondary">{action.subtitle}</Typography>
+                    </Card>
+                  )) : (
+                    <Typography variant="body2" color="text.disabled" sx={{ fontStyle: 'italic' }}>No upcoming deadlines</Typography>
+                  )}
+                </Box>
+              </Box>
             </CardContent>
           </Card>
         </Box>

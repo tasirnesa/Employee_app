@@ -1,7 +1,6 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const { prisma } = require('../prisma/client');
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Get all candidates
 router.get('/candidates', async (req, res) => {
@@ -41,21 +40,21 @@ router.get('/candidates/:id', async (req, res) => {
 // Create new candidate
 router.post('/candidates', async (req, res) => {
   try {
-    const { 
-      firstName, 
-      lastName, 
-      email, 
-      phone, 
-      position, 
-      experience, 
-      education, 
-      skills, 
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      position,
+      experience,
+      education,
+      skills,
       status,
       resumeUrl,
       interviewDate,
-      notes 
+      notes
     } = req.body;
-    
+
     const candidate = await prisma.candidate.create({
       data: {
         firstName,
@@ -88,21 +87,21 @@ router.post('/candidates', async (req, res) => {
 router.put('/candidates/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
-      firstName, 
-      lastName, 
-      email, 
-      phone, 
-      position, 
-      experience, 
-      education, 
-      skills, 
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      position,
+      experience,
+      education,
+      skills,
       status,
       resumeUrl,
       interviewDate,
-      notes 
+      notes
     } = req.body;
-    
+
     const candidate = await prisma.candidate.update({
       where: { id: parseInt(id) },
       data: {
@@ -136,7 +135,7 @@ router.put('/candidates/:id', async (req, res) => {
 router.delete('/candidates/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     await prisma.candidate.delete({
       where: { id: parseInt(id) }
     });
@@ -153,7 +152,7 @@ router.patch('/candidates/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
     const { status, interviewDate, notes } = req.body;
-    
+
     const candidate = await prisma.candidate.update({
       where: { id: parseInt(id) },
       data: {
@@ -192,9 +191,9 @@ router.get('/candidates/status/:status', async (req, res) => {
 router.get('/candidates/search', async (req, res) => {
   try {
     const { q, position, status } = req.query;
-    
+
     let whereClause = {};
-    
+
     if (q) {
       whereClause.OR = [
         { firstName: { contains: q, mode: 'insensitive' } },
@@ -203,15 +202,15 @@ router.get('/candidates/search', async (req, res) => {
         { position: { contains: q, mode: 'insensitive' } }
       ];
     }
-    
+
     if (position) {
       whereClause.position = { contains: position, mode: 'insensitive' };
     }
-    
+
     if (status) {
       whereClause.status = status;
     }
-    
+
     const candidates = await prisma.candidate.findMany({
       where: whereClause,
       orderBy: {

@@ -48,9 +48,9 @@ app.post('/api/auth/login', async (req, res) => {
     if (!req.body) {
       return res.status(400).json({ error: 'Request body is missing' });
     }
-    
+
     const { username, password } = req.body;
-    
+
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password are required' });
     }
@@ -65,7 +65,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Check password
     const validPassword = await bcrypt.compare(password, user.password);
-    
+
     if (!validPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -107,6 +107,8 @@ const leavesRoutes = require('./routes/leaves');
 const leaveTypesRoutes = require('./routes/leaveTypes');
 const departmentsRoutes = require('./routes/departments');
 const positionsRoutes = require('./routes/positions');
+const notificationsRoutes = require('./routes/notifications');
+const onboardingRoutes = require('./routes/onboarding');
 
 app.use('/api/evaluations', authenticateToken, evalRoutes);
 app.use('/api/employees', authenticateToken, empRoutes);
@@ -125,6 +127,8 @@ app.use('/api/leaves', authenticateToken, leavesRoutes);
 app.use('/api/leave-types', authenticateToken, leaveTypesRoutes);
 app.use('/api/departments', authenticateToken, departmentsRoutes);
 app.use('/api/positions', authenticateToken, positionsRoutes);
+app.use('/api/notifications', authenticateToken, notificationsRoutes);
+app.use('/api/onboarding', authenticateToken, onboardingRoutes);
 
 // Test route
 app.get('/api/test', (req, res) => {
@@ -137,11 +141,11 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id }
     });
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
     const { password: _, ...userWithoutPassword } = user;
     res.json(userWithoutPassword);
   } catch (error) {
@@ -153,7 +157,7 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   logger.error('Unhandled error:', err);
-  res.status(500).json({ 
+  res.status(500).json({
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
   });

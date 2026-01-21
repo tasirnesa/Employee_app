@@ -97,3 +97,17 @@ export const deleteAttendanceRecord = async (id: number): Promise<void> => {
     throw error;
   }
 };
+
+export const getLeaveCalendar = async (employeeId: number, month?: number, year?: number): Promise<any[]> => {
+  try {
+    let url = `/api/attendance/leave-calendar/${employeeId}`;
+    if (month && year) {
+      url += `?month=${month}&year=${year}`;
+    }
+    const response = await axios.get(url);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching leave calendar:', error);
+    throw error;
+  }
+};

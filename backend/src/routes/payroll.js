@@ -63,27 +63,27 @@ router.post('/payslips', async (req, res) => {
   try {
     console.log('Received payslip request:', req.body);
     const { employeeId, period, basicSalary, allowances, deductions, status } = req.body;
-    
+
     console.log('Parsed data:', { employeeId, period, basicSalary, allowances, deductions, status });
-    
+
     // Validate required fields
     if (!employeeId || !period || basicSalary === undefined || allowances === undefined || deductions === undefined) {
       return res.status(400).json({ error: 'Missing required fields: employeeId, period, basicSalary, allowances, deductions' });
     }
-    
+
     // Check if employee exists
     const employee = await prisma.user.findUnique({
       where: { id: parseInt(employeeId) }
     });
-    
+
     if (!employee) {
       return res.status(404).json({ error: 'Employee not found' });
     }
-    
+
     const netSalary = parseFloat(basicSalary) + parseFloat(allowances) - parseFloat(deductions);
-    
+
     console.log('Calculated net salary:', netSalary);
-    
+
     const payslip = await prisma.payslip.create({
       data: {
         employeeId: parseInt(employeeId),
@@ -120,9 +120,9 @@ router.put('/payslips/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { period, basicSalary, allowances, deductions, status, paidDate } = req.body;
-    
+
     const netSalary = parseFloat(basicSalary) + parseFloat(allowances) - parseFloat(deductions);
-    
+
     const payslip = await prisma.payslip.update({
       where: { id: parseInt(id) },
       data: {
@@ -156,7 +156,7 @@ router.put('/payslips/:id', async (req, res) => {
 router.delete('/payslips/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     await prisma.payslip.delete({
       where: { id: parseInt(id) }
     });
@@ -226,23 +226,23 @@ router.get('/compensations/employee/:employeeId', async (req, res) => {
 router.post('/compensations', async (req, res) => {
   try {
     const { employeeId, position, basicSalary, allowances, bonus, effectiveDate, status } = req.body;
-    
+
     // Validate required fields
     if (!employeeId || !position || basicSalary === undefined || allowances === undefined || bonus === undefined || !effectiveDate) {
       return res.status(400).json({ error: 'Missing required fields: employeeId, position, basicSalary, allowances, bonus, effectiveDate' });
     }
-    
+
     // Check if employee exists
     const employee = await prisma.user.findUnique({
       where: { id: parseInt(employeeId) }
     });
-    
+
     if (!employee) {
       return res.status(404).json({ error: 'Employee not found' });
     }
-    
+
     const totalCompensation = parseFloat(basicSalary) + parseFloat(allowances) + parseFloat(bonus);
-    
+
     const compensation = await prisma.compensation.create({
       data: {
         employeeId: parseInt(employeeId),
@@ -277,9 +277,9 @@ router.put('/compensations/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { position, basicSalary, allowances, bonus, effectiveDate, status } = req.body;
-    
+
     const totalCompensation = parseFloat(basicSalary) + parseFloat(allowances) + parseFloat(bonus);
-    
+
     const compensation = await prisma.compensation.update({
       where: { id: parseInt(id) },
       data: {
@@ -313,7 +313,7 @@ router.put('/compensations/:id', async (req, res) => {
 router.delete('/compensations/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     await prisma.compensation.delete({
       where: { id: parseInt(id) }
     });
@@ -412,6 +412,7 @@ async function aggregateTimesheets(prisma, userId, start, end) {
 }
 
 async function aggregateUnpaidLeaveDays(prisma, userId, start, end) {
+  // 1. Get Approved Unpaid Leaves
   const leaves = await prisma.leave.findMany({
     where: {
       employeeId: userId,
@@ -423,10 +424,32 @@ async function aggregateUnpaidLeaveDays(prisma, userId, start, end) {
     },
     include: { leaveType: true },
   });
-  // Count only unpaid leave types
-  return leaves
+
+  const unpaidLeaveDays = leaves
     .filter((l) => l.leaveType && l.leaveType.isPaid === false)
     .reduce((s, l) => s + (l.days || 0), 0);
+
+  // 2. Get Absences from Attendance (that are NOT covered by any Approved Leave)
+  const attendanceAbsences = await prisma.attendance.findMany({
+    where: {
+      employeeId: userId,
+      date: { gte: start, lte: end },
+      status: 'absent'
+    }
+  });
+
+  // Filter out attendance absences that overlap with ANY approved leave (paid or unpaid)
+  const unexplainedAbsences = attendanceAbsences.filter(att => {
+    const isCovered = leaves.some(l => {
+      const attDate = new Date(att.date).getTime();
+      const lStart = new Date(l.startDate).getTime();
+      const lEnd = new Date(l.endDate).getTime();
+      return attDate >= lStart && attDate <= lEnd;
+    });
+    return !isCovered;
+  }).length;
+
+  return unpaidLeaveDays + unexplainedAbsences;
 }
 
 async function aggregateBenefits(prisma, userId, start, end) {

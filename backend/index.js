@@ -11,6 +11,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+
 // Ensure uploads directory exists and serve statically
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -44,11 +45,11 @@ try {
 const getAuthHeader = (req) => {
   const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
   console.log('Raw auth header:', authHeader);
-  return authHeader; 
+  return authHeader;
 };
 
 
-const SECRET_KEY = 'a-very-secure-secret-key-2025'; 
+const SECRET_KEY = 'a-very-secure-secret-key-2025';
 
 // Helpers to normalize boolean-like strings stored in DB (e.g. 'true','false','1','0','yes','no','active','inactive')
 const toLowerString = (v) => (v == null ? '' : String(v).trim().toLowerCase());
@@ -126,6 +127,7 @@ const timesheetsRoutes = require('./src/routes/timesheets');
 const projectsRoutes = require('./src/routes/projects');
 const leavesRoutes = require('./src/routes/leaves');
 const leaveTypesRoutes = require('./src/routes/leaveTypes');
+const notificationsRoutes = require('./src/routes/notifications');
 app.use('/api/attendance', authenticateToken, attendanceRoutes);
 app.use('/api/todos', authenticateToken, todoRoutes);
 app.use('/api/payroll', authenticateToken, payrollRoutes);
@@ -135,22 +137,28 @@ app.use('/api/timesheets', authenticateToken, timesheetsRoutes);
 app.use('/api/projects', authenticateToken, projectsRoutes);
 app.use('/api/leaves', authenticateToken, leavesRoutes);
 app.use('/api/leave-types', authenticateToken, leaveTypesRoutes);
+app.use('/api/notifications', authenticateToken, notificationsRoutes);
+
+const onboardingRoutes = require('./src/routes/onboarding');
+const messagesRoutes = require('./src/routes/messages');
+app.use('/api/onboarding', authenticateToken, onboardingRoutes);
+app.use('/api/messages', authenticateToken, messagesRoutes);
 
 // Login endpoint
 app.post('/api/auth/login', async (req, res) => {
   try {
- 
+
     if (!req.body) {
       console.log('Missing request body');
       return res.status(400).json({ error: 'Request body is missing' });
     }
     const { username, password } = req.body;
-    
+
     if (!username || !password) {
       console.log('Missing username or password:', { username, password });
       return res.status(400).json({ error: 'Username and password are required' });
     }
-    
+
     const user = await prisma.user.findFirst({ where: { userName: username } });
     if (!user) {
       console.log('User not found:', username);
@@ -166,7 +174,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (isInactive || isLocked) {
       return res.status(403).json({ error: 'Your account is Deactiveted. Contact system administrator.' });
     }
-   const linkedEmployee = await prisma.employee.findFirst({ where: { userId: user.id } });
+    const linkedEmployee = await prisma.employee.findFirst({ where: { userId: user.id } });
     if (linkedEmployee && linkedEmployee.isActive === false) {
       try {
         await prisma.user.update({
@@ -180,7 +188,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
     const token = jwt.sign({ id: user.id, username: user.userName, role: user.role }, SECRET_KEY, { expiresIn: '1h' });
     console.log('Login successful:', username, 'isFirstLogin:', user.isFirstLogin, user.password);
-   let profileImageUrl = null;
+    let profileImageUrl = null;
     try {
       const emp = await prisma.employee.findFirst({ where: { userId: user.id }, select: { profileImageUrl: true } });
       profileImageUrl = emp?.profileImageUrl || null;
@@ -191,14 +199,14 @@ app.post('/api/auth/login', async (req, res) => {
     console.log('Sending user data to frontend:', { id: userResponse.id, isFirstLogin: userResponse.isFirstLogin });
     res.json({ token, user: userResponse });
   } catch (error) {
-    console.error('Login error:', error.message, error.stack); 
+    console.error('Login error:', error.message, error.stack);
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
 
 function passwordsDifferByAtLeast4Chars(oldPassword, newPassword) {
-  if (!oldPassword || !newPassword) return true; 
-  
+  if (!oldPassword || !newPassword) return true;
+
   const old = oldPassword.toLowerCase();
   const newPwd = newPassword.toLowerCase();
   if (old === newPwd) return false;
@@ -209,21 +217,21 @@ function passwordsDifferByAtLeast4Chars(oldPassword, newPassword) {
   for (let j = 0; j <= old.length; j++) {
     matrix[0][j] = j;
   }
-  
+
   for (let i = 1; i <= newPwd.length; i++) {
     for (let j = 1; j <= old.length; j++) {
       if (newPwd.charAt(i - 1) === old.charAt(j - 1)) {
         matrix[i][j] = matrix[i - 1][j - 1];
       } else {
         matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1, 
-          matrix[i][j - 1] + 1,     
-          matrix[i - 1][j] + 1    
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
         );
       }
     }
   }
-  
+
   return matrix[newPwd.length][old.length] >= 4;
 }
 
@@ -238,16 +246,16 @@ app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    
+
     if (!currentPassword) {
       return res.status(400).json({ error: 'Current password is required' });
     }
-    
-   
+
+
     const ok = await bcrypt.compare(currentPassword, user.password);
     if (!ok) return res.status(401).json({ error: 'Current password is incorrect' });
 
-    
+
     if (!passwordsDifferByAtLeast4Chars(currentPassword, newPassword)) {
       return res.status(400).json({ error: 'New password must differ from current password by at least 4 characters' });
     }
@@ -258,10 +266,10 @@ app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
       data: { password: hashed, isFirstLogin: 'false', locked: 'false' },
     });
 
-    console.log('Password change successful. Updated user:', { 
-      id: updated.id, 
+    console.log('Password change successful. Updated user:', {
+      id: updated.id,
       isFirstLogin: updated.isFirstLogin,
-      userName: updated.userName 
+      userName: updated.userName
     });
 
     return res.json({ message: 'Password updated successfully', user: { id: updated.id, isFirstLogin: updated.isFirstLogin } });
@@ -274,8 +282,8 @@ app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
 
 app.get('/api/users/me', authenticateToken, async (req, res) => {
   try {
-  
-    const userId = req.user.id; 
+
+    const userId = req.user.id;
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       console.log('User not found for id:', userId);
@@ -289,10 +297,10 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
       console.warn('Failed to load employee profile image for current user:', user.id, e?.message);
     }
     const enriched = { ...user, profileImageUrl };
-    console.log('Current user fetched from DB:', { 
-      id: enriched.id, 
-      userName: enriched.userName, 
-      isFirstLogin: enriched.isFirstLogin 
+    console.log('Current user fetched from DB:', {
+      id: enriched.id,
+      userName: enriched.userName,
+      isFirstLogin: enriched.isFirstLogin
     });
     res.json(enriched);
   } catch (error) {
@@ -304,7 +312,7 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
 app.get('/api/debug/user-status', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const user = await prisma.user.findUnique({ 
+    const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, userName: true, isFirstLogin: true, locked: true }
     });
@@ -322,7 +330,7 @@ app.get('/api/debug/user-status', authenticateToken, async (req, res) => {
 app.put('/api/users/me', authenticateToken, async (req, res) => {
   try {
     console.log('Headers for /api/users/me:', req.headers);
-    const userId = req.user.id; 
+    const userId = req.user.id;
     const { fullName, userName, password } = req.body;
     if (!fullName || !userName) {
       console.log('Missing required fields:', { fullName, userName });
@@ -532,10 +540,10 @@ app.post('/api/evaluations', authenticateToken, requireNonEmployee, async (req, 
       const employee = await prisma.employee.findUnique({ where: { id: empId } });
       if (!employee) return res.status(400).json({ error: `Employee with id ${empId} does not exist` });
       if (!employee.userId) {
-        
+
         const baseUserName = (employee.email?.split('@')[0] || `${employee.firstName}.${employee.lastName}`).replace(/[^a-zA-Z0-9._-]/g, '').toLowerCase();
         let userName = baseUserName || `emp${empId}`;
-       
+
         let suffix = 0;
         while (true) {
           const exists = await prisma.user.findFirst({ where: { userName } });
@@ -567,7 +575,7 @@ app.post('/api/evaluations', authenticateToken, requireNonEmployee, async (req, 
         evaluateeID = employee.userId;
       }
     }
- if (evaluateeID && !Number.isNaN(parseInt(evaluateeID))) {
+    if (evaluateeID && !Number.isNaN(parseInt(evaluateeID))) {
       const userCandidate = await prisma.user.findUnique({ where: { id: parseInt(evaluateeID) } });
       if (!userCandidate) {
         const empIdFromEvaluatee = parseInt(evaluateeID);
@@ -629,18 +637,22 @@ app.post('/api/evaluations', authenticateToken, requireNonEmployee, async (req, 
       if (!session) {
         return res.status(400).json({ error: `Session with id ${sessionID} does not exist` });
       }
+      const isLowerString = (v) => String(v || '').toLowerCase();
       const now = new Date();
       const isOn = String(session.type || '').toLowerCase() === 'on';
       if (!isOn) {
+        console.log(`Evaluation creation failed: session ${sessionID} is not 'on' (type: ${session.type})`);
         return res.status(403).json({ error: 'Evaluation is not active for this session' });
       }
       if (now < new Date(session.startDate) || now > new Date(session.endDate)) {
+        console.log(`Evaluation creation failed: outside date range. Now: ${now}, Session: ${session.startDate} - ${session.endDate}`);
         return res.status(403).json({ error: 'Evaluation is outside the active date range' });
       }
       if (session.department) {
         const evaluateeEmployee = await prisma.employee.findFirst({ where: { userId: parseInt(evaluateeID) } });
         const evaluateeDept = evaluateeEmployee?.department || null;
         if (!evaluateeDept || String(evaluateeDept).trim().toLowerCase() !== String(session.department).trim().toLowerCase()) {
+          console.log(`Evaluation creation failed: department mismatch. Evaluatee Dept: ${evaluateeDept}, Session Dept: ${session.department}`);
           return res.status(403).json({ error: 'Evaluatee not in the session department' });
         }
       }
@@ -680,6 +692,31 @@ app.post('/api/evaluations', authenticateToken, requireNonEmployee, async (req, 
       }
     } else {
       console.log('No evaluation results provided');
+    }
+
+    // Create detailed notification for the evaluatee
+    try {
+      const evaluator = await prisma.user.findUnique({ where: { id: parseInt(evaluatorID) }, select: { fullName: true } });
+
+      let scoreDetail = '';
+      if (results && Array.isArray(results) && results.length > 0) {
+        const totalScore = results.reduce((sum, r) => sum + (r.score || 0), 0);
+        const avgScore = (totalScore / results.length).toFixed(1);
+        scoreDetail = ` with an average score of ${avgScore}/5`;
+      }
+
+      await prisma.notification.create({
+        data: {
+          userId: parseInt(evaluateeID),
+          title: 'Evaluation Completed',
+          message: `Your ${evaluationType} evaluation has been completed by ${evaluator?.fullName || 'a manager'}${scoreDetail}. Click here to view details.`,
+          type: 'SUCCESS',
+          link: `/evaluations/${evaluationResult.evaluationID}`
+        }
+      });
+      console.log('Detailed notification created for evaluatee:', evaluateeID);
+    } catch (notifErr) {
+      console.warn('Failed to create notification for evaluation:', notifErr.message);
     }
 
     res.status(201).json({
@@ -931,7 +968,7 @@ app.post('/api/evaluation-sessions', authenticateToken, requireNonEmployee, asyn
       return res.status(400).json({ error: 'endDate must be after startDate' });
     }
 
-    const activatedBy = req.user.id; 
+    const activatedBy = req.user.id;
     if (!activatedBy) {
       console.log('No user ID found in token:', req.user);
       return res.status(400).json({ error: 'No user ID available to set activatedBy' });
@@ -942,7 +979,7 @@ app.post('/api/evaluation-sessions', authenticateToken, requireNonEmployee, asyn
         title,
         startDate: start,
         endDate: end,
-        activatedBy: activatedBy, 
+        activatedBy: activatedBy,
         type: 'on',
         department: department || null,
       },
@@ -1001,12 +1038,12 @@ app.put('/api/evaluation-sessions/:id/status', authenticateToken, requireNonEmpl
 app.get('/api/evaluation-sessions/stats', authenticateToken, async (req, res) => {
   try {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); 
+    today.setHours(0, 0, 0, 0);
     const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay()); 
+    weekStart.setDate(today.getDate() - today.getDay());
 
     const stats = await prisma.$queryRaw`
-      SELECT
+      SELECT 
         COUNT(*) FILTER (WHERE "StartDate" <= ${today} AND "EndDate" >= ${weekStart}) AS this_week,
         COUNT(*) FILTER (WHERE "EndDate" = ${today}) AS today,
         COUNT(*) FILTER (WHERE "EndDate" >= ${today}) AS pending
@@ -1018,10 +1055,80 @@ app.get('/api/evaluation-sessions/stats', authenticateToken, async (req, res) =>
       thisWeek: Number(stats[0].this_week) || 0,
       today: Number(stats[0].today) || 0,
       pending: Number(stats[0].pending) || 0,
-      meetings: 0 
+      meetings: 0
     });
   } catch (error) {
     console.error('Error fetching session stats:', error.message);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+});
+
+app.get('/api/dashboard/actions', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const isAdmin = ['Admin', 'SuperAdmin'].includes(userRole);
+    const isManager = userRole === 'Manager';
+
+    const [pendingLeaves, activeSessions, pendingGoals, unreadNotifications] = await Promise.all([
+      // 1. Pending Leaves (For Managers/Admin)
+      (isAdmin || isManager) ? prisma.leave.findMany({
+        where: { status: 'Pending' },
+        include: { employee: { select: { fullName: true } }, leaveType: { select: { name: true } } },
+        take: 5
+      }) : [],
+
+      // 2. Active Evaluation Sessions
+      prisma.evaluationSession.findMany({
+        where: { type: 'on', endDate: { gte: new Date() } },
+        take: 5
+      }),
+
+      // 3. Goals due within next 7 days
+      prisma.goal.findMany({
+        where: {
+          activatedBy: userId,
+          status: { not: 'Completed' },
+          duedate: {
+            gte: new Date(),
+            lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+          }
+        },
+        take: 5
+      }),
+
+      // 4. Unread notifications count
+      prisma.notification.count({
+        where: { userId, isRead: false }
+      })
+    ]);
+
+    res.json({
+      pendingLeaves: pendingLeaves.map(l => ({
+        id: l.id,
+        type: 'LEAVE',
+        title: `Leave: ${l.employee.fullName}`,
+        subtitle: `${l.leaveType.name} (${new Date(l.startDate).toLocaleDateString()} - ${new Date(l.endDate).toLocaleDateString()})`,
+        link: '/leave-management'
+      })),
+      activeSessions: activeSessions.map(s => ({
+        id: s.sessionID,
+        type: 'EVALUATION',
+        title: `Evaluation: ${s.title}`,
+        subtitle: `Ends ${new Date(s.endDate).toLocaleDateString()}`,
+        link: '/evaluations/create'
+      })),
+      pendingGoals: pendingGoals.map(g => ({
+        id: g.gid,
+        type: 'GOAL',
+        title: `Goal: ${g.objective}`,
+        subtitle: `Due ${new Date(g.duedate).toLocaleDateString()}`,
+        link: '/goals'
+      })),
+      unreadCount: unreadNotifications
+    });
+  } catch (error) {
+    console.error('Dashboard actions error:', error);
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
@@ -1322,7 +1429,7 @@ app.post('/api/goals', authenticateToken, async (req, res) => {
     const goal = await prisma.goal.create({
       data: {
         objective,
-        keyResult: Array.isArray(keyResult) ? keyResult : [keyResult || ''], 
+        keyResult: Array.isArray(keyResult) ? keyResult : [keyResult || ''],
         priority,
         status,
         progress: parseInt(progress) || 0,
@@ -1638,7 +1745,7 @@ app.post('/api/employees', authenticateToken, blockEmployee, upload.fields([{ na
         const assignFile = path.join(__dirname, 'routes', '..', 'payroll.scale.assignments.json');
         let map = {};
         if (fs.existsSync(assignFile)) {
-          try { map = JSON.parse(fs.readFileSync(assignFile, 'utf8') || '{}'); } catch {}
+          try { map = JSON.parse(fs.readFileSync(assignFile, 'utf8') || '{}'); } catch { }
         }
         map[String(created.userId)] = String(scaleKey);
         fs.writeFileSync(assignFile, JSON.stringify(map, null, 2), 'utf8');
@@ -1861,7 +1968,51 @@ app.delete('/api/departments/:id', authenticateToken, authorizeRole(['Admin', 'S
   }
 });
 
-// === POSITIONS ENDPOINTS ===
+// Get all users with their employee profile data for unified contact list
+app.get('/api/users', authenticateToken, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      include: {
+        department: true,
+        position: true,
+        employees: {
+          select: { profileImageUrl: true, firstName: true, lastName: true }
+        }
+      }
+    });
+
+    console.log(`[/api/users] Normalizing ${users.length} users`);
+
+    // Flatten and normalize for contact list
+    const normalized = users.map(u => {
+      const emp = u.employees?.[0];
+      // Prisma often returns capitalized names if @map is used and no custom naming strategy is set
+      const fName = u.fullName || u.FullName || '';
+      const uName = u.userName || u.UserName || '';
+      const uRole = u.role || u.Role || '';
+      const uStatus = u.status || u.Status || 'true';
+
+      return {
+        id: u.id,
+        userId: u.id, // For compatibility
+        fullName: fName,
+        firstName: emp?.firstName || fName.split(' ')[0] || 'User',
+        lastName: emp?.lastName || fName.split(' ').slice(1).join(' ') || '',
+        email: uName,
+        role: uRole,
+        department: u.department?.name || null,
+        position: u.position?.name || null,
+        profileImageUrl: emp?.profileImageUrl || null,
+        status: uStatus
+      };
+    });
+
+    res.json(normalized);
+  } catch (error) {
+    console.error('Fetch users error:', error);
+    res.status(500).json({ error: 'Failed to fetch users', details: error.message });
+  }
+});
 
 // Create Position
 app.post('/api/positions', authenticateToken, authorizeRole(['Admin', 'SuperAdmin']), async (req, res) => {

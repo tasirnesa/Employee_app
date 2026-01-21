@@ -34,6 +34,7 @@ import {
   Delete as DeleteIcon,
   CheckCircle as CheckInIcon,
   Cancel as CheckOutIcon,
+  EventBusy as EventBusyIcon,
 } from '@mui/icons-material';
 import { useUser } from '../context/UserContext';
 import type { AttendanceRecord } from '../types/interfaces';
@@ -52,6 +53,9 @@ const Attendance: React.FC = () => {
   const [loading, setLoading] = useState(true);
   // Track days that have planned schedules applied
   const [daysWithPlannedSchedule, setDaysWithPlannedSchedule] = useState<Set<string>>(new Set());
+  // Track current leave status
+  const [currentLeaveStatus, setCurrentLeaveStatus] = useState<any>(null);
+  const [isOnLeaveToday, setIsOnLeaveToday] = useState(false);
 
   // Load attendance records on component mount
   useEffect(() => {
@@ -65,15 +69,15 @@ const Attendance: React.FC = () => {
         const userRecords = await attendanceApi.getAttendanceRecords(user.id);
         setRecords(userRecords);
         setFilteredRecords(userRecords);
-        
+
         // Update the set of days with planned schedules
         const plannedDays = new Set<string>();
         userRecords.forEach(record => {
           // Check if this is a planned schedule record (morning shift)
           // More robust check that handles different time formats
-          if (record.checkInTime && record.checkInTime.startsWith('08:00') && 
-              record.checkOutTime && record.checkOutTime.startsWith('12:00') && 
-              record.notes === 'Morning shift') {
+          if (record.checkInTime && record.checkInTime.startsWith('08:00') &&
+            record.checkOutTime && record.checkOutTime.startsWith('12:00') &&
+            record.notes === 'Morning shift') {
             plannedDays.add(record.date);
           }
         });
@@ -85,6 +89,37 @@ const Attendance: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Check if user is on leave today
+  useEffect(() => {
+    const checkLeaveStatus = async () => {
+      if (!user?.id) return;
+
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const response = await attendanceApi.getLeaveCalendar(user.id);
+
+        // Check if any leave includes today
+        const leaveToday = response.find((leave: any) => {
+          const startDate = new Date(leave.startDate).toISOString().split('T')[0];
+          const endDate = new Date(leave.endDate).toISOString().split('T')[0];
+          return today >= startDate && today <= endDate;
+        });
+
+        if (leaveToday) {
+          setCurrentLeaveStatus(leaveToday);
+          setIsOnLeaveToday(true);
+        } else {
+          setCurrentLeaveStatus(null);
+          setIsOnLeaveToday(false);
+        }
+      } catch (error) {
+        console.error('Error checking leave status:', error);
+      }
+    };
+
+    checkLeaveStatus();
+  }, [user?.id]);
 
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
@@ -114,18 +149,18 @@ const Attendance: React.FC = () => {
       await attendanceApi.deleteAttendanceRecord(id);
       setRecords(records.filter(record => record.id !== id));
       setFilteredRecords(filteredRecords.filter(record => record.id !== id));
-      
+
       // If this was a planned schedule record, update the set
       const deletedRecord = records.find(record => record.id === id);
-      if (deletedRecord && 
-          deletedRecord.checkInTime && deletedRecord.checkInTime.startsWith('08:00') && 
-          deletedRecord.checkOutTime && deletedRecord.checkOutTime.startsWith('12:00') && 
-          deletedRecord.notes === 'Morning shift') {
+      if (deletedRecord &&
+        deletedRecord.checkInTime && deletedRecord.checkInTime.startsWith('08:00') &&
+        deletedRecord.checkOutTime && deletedRecord.checkOutTime.startsWith('12:00') &&
+        deletedRecord.notes === 'Morning shift') {
         const updatedDays = new Set(daysWithPlannedSchedule);
         updatedDays.delete(deletedRecord.date);
         setDaysWithPlannedSchedule(updatedDays);
       }
-      
+
       showSnackbar('Attendance record deleted successfully', 'success');
     } catch (error) {
       showSnackbar('Error deleting attendance record', 'error');
@@ -135,13 +170,13 @@ const Attendance: React.FC = () => {
   const handleSaveRecord = async () => {
     try {
       if (!currentRecord || !user?.id) return;
-      
+
       let savedRecord: AttendanceRecord;
-      
+
       if (currentRecord.id) {
         // Update existing record
         savedRecord = await attendanceApi.updateAttendanceRecord(currentRecord.id, currentRecord);
-        setRecords(records.map(record => 
+        setRecords(records.map(record =>
           record.id === currentRecord.id ? savedRecord : record
         ));
         showSnackbar('Attendance record updated successfully', 'success');
@@ -150,23 +185,30 @@ const Attendance: React.FC = () => {
         savedRecord = await attendanceApi.addAttendanceRecord(currentRecord as Omit<AttendanceRecord, 'id'>);
         setRecords([savedRecord, ...records]);
         showSnackbar('Attendance record added successfully', 'success');
-        
+
         // If this was a planned schedule record, update the set
-        if (savedRecord.checkInTime && savedRecord.checkInTime.startsWith('08:00') && 
-            savedRecord.checkOutTime && savedRecord.checkOutTime.startsWith('12:00') && 
-            savedRecord.notes === 'Morning shift') {
+        if (savedRecord.checkInTime && savedRecord.checkInTime.startsWith('08:00') &&
+          savedRecord.checkOutTime && savedRecord.checkOutTime.startsWith('12:00') &&
+          savedRecord.notes === 'Morning shift') {
           const updatedDays = new Set(daysWithPlannedSchedule);
           updatedDays.add(savedRecord.date);
           setDaysWithPlannedSchedule(updatedDays);
         }
       }
-      
+
       setOpenDialog(false);
       setCurrentRecord(null);
       // Refresh filtered records
       setFilteredRecords(records);
-    } catch (error) {
-      showSnackbar('Error saving attendance record', 'error');
+    } catch (error: any) {
+      // Check if error is due to leave
+      if (error.response?.data?.onLeave) {
+        showSnackbar(error.response.data.error, 'error');
+        setIsOnLeaveToday(true);
+        setCurrentLeaveStatus(error.response.data.leaveDetails);
+      } else {
+        showSnackbar('Error saving attendance record', 'error');
+      }
     }
   };
 
@@ -185,7 +227,7 @@ const Attendance: React.FC = () => {
     try {
       if (!user?.id) return;
       const record = await attendanceApi.checkOut(user.id);
-      
+
       // Update the record in the list
       setRecords(records.map(r => r.id === record.id ? record : r));
       showSnackbar('Checked out successfully', 'success');
@@ -196,15 +238,15 @@ const Attendance: React.FC = () => {
 
   const handleApplyPlanned = async () => {
     if (!user?.id) return;
-    
+
     const today = new Date().toISOString().split('T')[0];
-    
+
     // Check if planned schedule already exists for today
     if (daysWithPlannedSchedule.has(today)) {
       showSnackbar('Planned schedule already applied for today', 'error');
       return;
     }
-    
+
     try {
       // Create morning shift record
       const morningRecord = await attendanceApi.addAttendanceRecord({
@@ -217,7 +259,7 @@ const Attendance: React.FC = () => {
         timeType: 'working',
         notes: 'Morning shift'
       });
-      
+
       // Create break record
       const breakRecord = await attendanceApi.addAttendanceRecord({
         employeeId: user.id,
@@ -229,7 +271,7 @@ const Attendance: React.FC = () => {
         timeType: 'break',
         notes: 'Lunch break'
       });
-      
+
       // Create afternoon shift record
       const afternoonRecord = await attendanceApi.addAttendanceRecord({
         employeeId: user.id,
@@ -241,17 +283,17 @@ const Attendance: React.FC = () => {
         timeType: 'working',
         notes: 'Afternoon shift'
       });
-      
+
       // Add the new records to the existing records
       const newRecords = [morningRecord, breakRecord, afternoonRecord, ...records];
       setRecords(newRecords);
       setFilteredRecords(newRecords);
-      
+
       // Update the set of days with planned schedules
       const updatedDays = new Set(daysWithPlannedSchedule);
       updatedDays.add(today);
       setDaysWithPlannedSchedule(updatedDays);
-      
+
       showSnackbar('Planned schedule applied successfully', 'success');
     } catch (error) {
       showSnackbar('Error applying planned schedule', 'error');
@@ -260,14 +302,14 @@ const Attendance: React.FC = () => {
 
   const calculateHoursWorked = (checkIn: string, checkOut: string): number => {
     if (!checkIn || !checkOut) return 0;
-    
+
     const [checkInHours, checkInMinutes] = checkIn.split(':').map(Number);
     const [checkOutHours, checkOutMinutes] = checkOut.split(':').map(Number);
-    
-    
+
+
     const checkInTotalMinutes = checkInHours * 60 + checkInMinutes;
     const checkOutTotalMinutes = checkOutHours * 60 + checkOutMinutes;
-    
+
     // Handle case where checkout is next day (if needed)
     const hoursWorked = (checkOutTotalMinutes - checkInTotalMinutes) / 60;
     return Math.round(hoursWorked * 100) / 100; // Round to 2 decimal places
@@ -275,8 +317,8 @@ const Attendance: React.FC = () => {
 
   const handleCheckInTimeChange = (time: string) => {
     const hoursWorked = calculateHoursWorked(time, currentRecord?.checkOutTime || '');
-    setCurrentRecord({ 
-      ...currentRecord, 
+    setCurrentRecord({
+      ...currentRecord,
       checkInTime: time,
       hoursWorked: currentRecord?.checkOutTime ? hoursWorked : currentRecord?.hoursWorked
     });
@@ -284,8 +326,8 @@ const Attendance: React.FC = () => {
 
   const handleCheckOutTimeChange = (time: string) => {
     const hoursWorked = calculateHoursWorked(currentRecord?.checkInTime || '', time);
-    setCurrentRecord({ 
-      ...currentRecord, 
+    setCurrentRecord({
+      ...currentRecord,
       checkOutTime: time,
       hoursWorked: currentRecord?.checkInTime ? hoursWorked : currentRecord?.hoursWorked
     });
@@ -337,23 +379,23 @@ const Attendance: React.FC = () => {
 
   const handleFilter = () => {
     let filtered = records;
-    
+
     // Date filter
     if (dateFilter.start && dateFilter.end) {
-      filtered = filtered.filter(record => 
+      filtered = filtered.filter(record =>
         record.date >= dateFilter.start && record.date <= dateFilter.end
       );
     }
-    
+
     // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(record => 
-        record.date.includes(searchTerm) || 
+      filtered = filtered.filter(record =>
+        record.date.includes(searchTerm) ||
         record.status.includes(searchTerm) ||
         (record.notes && record.notes.includes(searchTerm))
       );
     }
-    
+
     setFilteredRecords(filtered);
   };
 
@@ -371,7 +413,7 @@ const Attendance: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         Attendance Management
       </Typography>
-      
+
       <Box sx={{ mb: 3 }}>
         <Card>
           <CardContent>
@@ -411,7 +453,26 @@ const Attendance: React.FC = () => {
           </CardContent>
         </Card>
       </Box>
-      
+
+      {/* Leave Status Indicator */}
+      {isOnLeaveToday && currentLeaveStatus && (
+        <Alert
+          severity="info"
+          icon={<EventBusyIcon />}
+          sx={{ mb: 3 }}
+        >
+          <Typography variant="body1" fontWeight="bold">
+            You are currently on {currentLeaveStatus.leaveType?.name} leave
+          </Typography>
+          <Typography variant="body2">
+            From {new Date(currentLeaveStatus.startDate).toLocaleDateString()} to {new Date(currentLeaveStatus.endDate).toLocaleDateString()}
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            Attendance submission is disabled during your leave period.
+          </Typography>
+        </Alert>
+      )}
+
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -421,13 +482,13 @@ const Attendance: React.FC = () => {
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={handleAddRecord}
-                disabled={loading}
+                disabled={loading || isOnLeaveToday}
               >
                 Add Record
               </Button>
             </Box>
           </Box>
-          
+
           <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
             <TextField
               label="Start Date"
@@ -452,7 +513,7 @@ const Attendance: React.FC = () => {
               sx={{ width: 200 }}
             />
           </Box>
-          
+
           {loading ? (
             <Typography color="textSecondary" align="center" sx={{ py: 3 }}>
               Loading attendance records...
@@ -480,17 +541,17 @@ const Attendance: React.FC = () => {
                       <TableCell>{record.checkOutTime || '-'}</TableCell>
                       <TableCell>{record.hoursWorked || '-'}</TableCell>
                       <TableCell>
-                        <Chip 
-                          label={getStatusLabel(record.status)} 
-                          color={getStatusColor(record.status) as any} 
+                        <Chip
+                          label={getStatusLabel(record.status)}
+                          color={getStatusColor(record.status) as any}
                           size="small"
                         />
                       </TableCell>
                       <TableCell>
                         {record.timeType && (
-                          <Chip 
-                            label={getTimeTypeLabel(record.timeType)} 
-                            color={getTimeTypeColor(record.timeType) as any} 
+                          <Chip
+                            label={getTimeTypeLabel(record.timeType)}
+                            color={getTimeTypeColor(record.timeType) as any}
                             size="small"
                           />
                         )}
@@ -512,7 +573,7 @@ const Attendance: React.FC = () => {
           )}
         </CardContent>
       </Card>
-      
+
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
           {currentRecord?.id ? 'Edit Attendance Record' : 'Add Attendance Record'}
@@ -597,16 +658,16 @@ const Attendance: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDialog(false)} disabled={loading}>Cancel</Button>
-          <Button 
-            onClick={handleSaveRecord} 
-            variant="contained" 
+          <Button
+            onClick={handleSaveRecord}
+            variant="contained"
             disabled={loading || (currentRecord && !currentRecord.id && currentRecord.date ? hasPlannedSchedule(currentRecord.date) : false)}
           >
             Save
           </Button>
         </DialogActions>
       </Dialog>
-      
+
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}

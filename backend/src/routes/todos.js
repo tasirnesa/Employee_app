@@ -31,11 +31,11 @@ router.get('/:id', async (req, res) => {
         id: parseInt(id),
       },
     });
-    
+
     if (!todo) {
       return res.status(404).json({ error: 'Todo not found' });
     }
-    
+
     res.json(todo);
   } catch (error) {
     console.error('Error fetching todo:', error);
@@ -54,6 +54,23 @@ router.post('/', async (req, res) => {
         userId: parseInt(data.userId),
       },
     });
+    // Notify user if assigned by someone else
+    if (todo.userId && req.user?.id && todo.userId !== req.user.id) {
+      try {
+        const assigner = await prisma.user.findUnique({ where: { id: req.user.id }, select: { fullName: true } });
+        await prisma.notification.create({
+          data: {
+            userId: todo.userId,
+            title: 'New Task Assigned',
+            message: `${assigner?.fullName || 'A manager'} assigned a new task to you: "${todo.title}".`,
+            type: 'INFO',
+            link: '/todo'
+          }
+        });
+      } catch (notifErr) {
+        console.warn('Failed to notify user of new todo:', notifErr.message);
+      }
+    }
     res.json(todo);
   } catch (error) {
     console.error('Error creating todo:', error);
@@ -106,11 +123,11 @@ router.patch('/:id/toggle', async (req, res) => {
         id: parseInt(id),
       },
     });
-    
+
     if (!todo) {
       return res.status(404).json({ error: 'Todo not found' });
     }
-    
+
     const updatedTodo = await prisma.todo.update({
       where: {
         id: parseInt(id),

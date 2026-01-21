@@ -21,6 +21,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import RateReviewIcon from '@mui/icons-material/RateReview';
 import BarChartIcon from '@mui/icons-material/BarChart';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import ExpandLess from '@mui/icons-material/ExpandLess';
@@ -53,23 +54,24 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
   // const userManagementOpen = false;
   // const criteriaManagementOpen = false;
   // const evaluationsOpen = false;
-const userRole = JSON.parse(localStorage.getItem('userProfile') || '{}').role;
+  const userRole = JSON.parse(localStorage.getItem('userProfile') || '{}').role;
 
-const isEmployee = userRole === 'Employee';
+  const isEmployee = userRole === 'Employee';
 
-const menuItems = [
-  { text: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
-  !isEmployee && { text: 'User Management', path: '/users', icon: <PeopleIcon /> },
-  { text: 'Evaluations', path: '/evaluations/view', icon: <AssignmentIcon /> },
-  !isEmployee && { text: 'Create Evaluation', path: '/evaluations/create', icon: <AssignmentIcon /> },
-  { text: 'Criteria Management', path: '/criteria/view', icon: <SettingsIcon /> },
-  !isEmployee && { text: 'Create Criteria', path: '/criteria/create', icon: <SettingsIcon /> },
-  { text: 'Goals', path: '/goals', icon: <FlagIcon /> },
-  { text: 'Performance', path: '/analytics-performance', icon: <AssessmentIcon /> },
-  { text: 'Schedule', path: '/schedule', icon: <EventIcon /> },
-  { text: 'Reports', path: '/reports', icon: <BarChartIcon /> },
-  { text: 'Settings', path: '/settings', icon: <SettingsIcon /> },
-].filter(Boolean);
+  const menuItems = [
+    { text: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
+    { text: 'Notifications', path: '/notifications', icon: <NotificationsIcon /> },
+    !isEmployee && { text: 'User Management', path: '/users', icon: <PeopleIcon /> },
+    { text: 'Evaluations', path: '/evaluations/view', icon: <AssignmentIcon /> },
+    !isEmployee && { text: 'Create Evaluation', path: '/evaluations/create', icon: <AssignmentIcon /> },
+    { text: 'Criteria Management', path: '/criteria/view', icon: <SettingsIcon /> },
+    !isEmployee && { text: 'Create Criteria', path: '/criteria/create', icon: <SettingsIcon /> },
+    { text: 'Goals', path: '/goals', icon: <FlagIcon /> },
+    { text: 'Performance', path: '/analytics-performance', icon: <AssessmentIcon /> },
+    { text: 'Schedule', path: '/schedule', icon: <EventIcon /> },
+    { text: 'Reports', path: '/reports', icon: <BarChartIcon /> },
+    { text: 'Settings', path: '/settings', icon: <SettingsIcon /> },
+  ].filter(Boolean);
   // Recent actions (last 3)
   const [recent, setRecent] = useState<Array<{ label: string; path: string }>>([]);
 
@@ -191,14 +193,14 @@ const menuItems = [
         }}
       >
         <List>
-            {!collapsed && (
-              <ListItem disablePadding sx={{ justifyContent: collapsed ? 'center' : 'flex-start', py: 1 }}>
-                <ListItemText
-                  primary={`Logged in as: ${user?.userName || 'Unknown User'}`}
-                  sx={{ pl: collapsed ? 0 : 2, opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }}
-                />
-              </ListItem>
-            )}
+          {!collapsed && (
+            <ListItem disablePadding sx={{ justifyContent: collapsed ? 'center' : 'flex-start', py: 1 }}>
+              <ListItemText
+                primary={`Logged in as: ${user?.userName || 'Unknown User'}`}
+                sx={{ pl: collapsed ? 0 : 2, opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }}
+              />
+            </ListItem>
+          )}
           <ListItem disablePadding sx={{ justifyContent: 'center', py: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Box
@@ -217,7 +219,7 @@ const menuItems = [
               </Button>
             </Box>
           </ListItem>
-         
+
           <ListItem disablePadding>
             <ListItemButton
               selected={location.pathname === '/dashboard'}
@@ -233,27 +235,27 @@ const menuItems = [
 
           {/* User Management */}
           {!isEmployee && (
-          <>
-            <ListItem disablePadding>
-              <ListItemButton onClick={() => setOpenUserMgmt(!openUserMgmt)} sx={{ justifyContent: 'flex-start' }}>
-                <ListItemIcon sx={{ minWidth: 56, justifyContent: 'center' }}>
-                  <PeopleIcon />
-                </ListItemIcon>
-                <ListItemText primary="User Management" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
-                {!collapsed && (openUserMgmt ? <ExpandLess /> : <ExpandMore />)}
-              </ListItemButton>
-            </ListItem>
-            <Collapse in={openUserMgmt} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding>
-                <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={handleCreateUser} selected={location.pathname === '/users/create'}>
-                  <ListItemText primary="Create User" />
+            <>
+              <ListItem disablePadding>
+                <ListItemButton onClick={() => setOpenUserMgmt(!openUserMgmt)} sx={{ justifyContent: 'flex-start' }}>
+                  <ListItemIcon sx={{ minWidth: 56, justifyContent: 'center' }}>
+                    <PeopleIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="User Management" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
+                  {!collapsed && (openUserMgmt ? <ExpandLess /> : <ExpandMore />)}
                 </ListItemButton>
-                <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={handleViewUsers} selected={location.pathname.startsWith('/users/view')}>
-                  <ListItemText primary="View Users" />
-                </ListItemButton>
-              </List>
-            </Collapse>
-          </>)}
+              </ListItem>
+              <Collapse in={openUserMgmt} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={handleCreateUser} selected={location.pathname === '/users/create'}>
+                    <ListItemText primary="Create User" />
+                  </ListItemButton>
+                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={handleViewUsers} selected={location.pathname.startsWith('/users/view')}>
+                    <ListItemText primary="View Users" />
+                  </ListItemButton>
+                </List>
+              </Collapse>
+            </>)}
 
           {/* Employee Management */}
           <ListItem disablePadding>
@@ -280,6 +282,9 @@ const menuItems = [
                   </ListItemButton>
                   <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/positions'); recordRecent('Positions', '/positions'); }} selected={location.pathname === '/positions'}>
                     <ListItemText primary="Positions" />
+                  </ListItemButton>
+                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/onboarding/wizard'); recordRecent('New Hire Wizard', '/onboarding/wizard'); }} selected={location.pathname === '/onboarding/wizard'}>
+                    <ListItemText primary="New Hire Wizard" sx={{ fontWeight: 600, color: 'primary.main' }} />
                   </ListItemButton>
                 </>
               )}
@@ -339,9 +344,9 @@ const menuItems = [
           </ListItem>
           <Collapse in={openAttendance} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
-              <ListItemButton 
-                sx={{ pl: collapsed ? 2 : 7 }} 
-                onClick={handleAttendance} 
+              <ListItemButton
+                sx={{ pl: collapsed ? 2 : 7 }}
+                onClick={handleAttendance}
                 selected={location.pathname === '/attendance'}
               >
                 <ListItemText primary="Attendance Records" />
@@ -417,9 +422,9 @@ const menuItems = [
               <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={handleSchedule} selected={location.pathname === '/schedule'}>
                 <ListItemText primary="Schedule" />
               </ListItemButton>
-              <ListItemButton 
-                sx={{ pl: collapsed ? 2 : 7 }} 
-                onClick={handleTodoList} 
+              <ListItemButton
+                sx={{ pl: collapsed ? 2 : 7 }}
+                onClick={handleTodoList}
                 selected={location.pathname === '/todo'}
               >
                 <ListItemText primary="Todo List" />
@@ -478,18 +483,18 @@ const menuItems = [
               </ListItemButton>
             </List>
           </Collapse>
-          
-          
-          
-          
-          
-          
-          
-          
-          
+
+
+
+
+
+
+
+
+
         </List>
       </Drawer>
-      
+
     </>
   );
 };

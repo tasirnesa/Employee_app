@@ -1,15 +1,11 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const { prisma } = require('../prisma/client');
 const router = express.Router();
-const prisma = new PrismaClient();
 
-// Get all leave types
+// Get all leave types (including inactive for management)
 router.get('/', async (req, res) => {
   try {
     const leaveTypes = await prisma.leaveType.findMany({
-      where: {
-        isActive: true
-      },
       orderBy: {
         name: 'asc'
       }
@@ -30,11 +26,11 @@ router.get('/:id', async (req, res) => {
         id: parseInt(id)
       }
     });
-    
+
     if (!leaveType) {
       return res.status(404).json({ error: 'Leave type not found' });
     }
-    
+
     res.json(leaveType);
   } catch (error) {
     console.error('Error fetching leave type:', error);
@@ -52,12 +48,12 @@ router.post('/', async (req, res) => {
       isPaid,
       isActive
     } = req.body;
-    
+
     // Validate required fields
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
     }
-    
+
     const leaveType = await prisma.leaveType.create({
       data: {
         name,
@@ -67,7 +63,7 @@ router.post('/', async (req, res) => {
         isActive: isActive !== undefined ? isActive : true
       }
     });
-    
+
     res.status(201).json(leaveType);
   } catch (error) {
     console.error('Error creating leave type:', error);
@@ -90,7 +86,7 @@ router.put('/:id', async (req, res) => {
       isPaid,
       isActive
     } = req.body;
-    
+
     const leaveType = await prisma.leaveType.update({
       where: {
         id: parseInt(id)
@@ -103,7 +99,7 @@ router.put('/:id', async (req, res) => {
         isActive
       }
     });
-    
+
     res.json(leaveType);
   } catch (error) {
     console.error('Error updating leave type:', error);
@@ -119,24 +115,24 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Check if there are any leaves using this type
     const leavesCount = await prisma.leave.count({
       where: {
         leaveTypeId: parseInt(id)
       }
     });
-    
+
     if (leavesCount > 0) {
       return res.status(400).json({ error: 'Cannot delete leave type that is being used by existing leave requests' });
     }
-    
+
     await prisma.leaveType.delete({
       where: {
         id: parseInt(id)
       }
     });
-    
+
     res.json({ message: 'Leave type deleted successfully' });
   } catch (error) {
     console.error('Error deleting leave type:', error);

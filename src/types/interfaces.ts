@@ -5,11 +5,11 @@ export interface User {
   password: string;
   gender?: string;
   age?: number;
-  status: string; 
+  status: string;
   role: string;
-  locked: string; 
-  isFirstLogin: string; 
-  activeStatus: string; 
+  locked: string;
+  isFirstLogin: string;
+  activeStatus: string;
   createdDate: string;
   createdBy: number;
   departmentId?: number | null; // New field
@@ -287,6 +287,18 @@ export interface Timesheet {
     id: number;
     fullName: string;
   };
+}
+
+export interface Message {
+  id: string;
+  senderId: number;
+  receiverId: number;
+  text?: string;
+  image?: string;
+  status: string;
+  parentId?: string | null;
+  parent?: Message | null;
+  createdAt: string;
 }
 
 export interface LeaveType {

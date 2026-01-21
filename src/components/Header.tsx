@@ -28,6 +28,7 @@ import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useUser } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';
+import NotificationCenter from './NotificationCenter';
 
 interface HeaderProps {
   collapsed: boolean;
@@ -105,13 +106,7 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
                 <TuneIcon />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Notifications">
-              <IconButton color="inherit" aria-label="notifications">
-                <Badge color="error" variant="dot">
-                  <NotificationsNoneIcon />
-                </Badge>
-              </IconButton>
-            </Tooltip>
+            <NotificationCenter />
             <Tooltip title="What is employee performance evaluation?">
               <IconButton color="inherit" onClick={() => setOpenHelp(true)} aria-label="help">
                 <HelpOutlineIcon />

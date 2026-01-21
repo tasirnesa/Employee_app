@@ -204,12 +204,22 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // Optionally update goal progress if goalsResults provided: [{ gid, progress }]
-    if (Array.isArray(goalsResults) && goalsResults.length) {
-      const updates = goalsResults
-        .filter((g) => g.gid != null && g.progress != null)
-        .map((g) => prisma.goal.update({ where: { gid: parseInt(g.gid) }, data: { progress: Math.max(0, Math.min(100, Number(g.progress))) } }));
-      if (updates.length) await prisma.$transaction(updates);
+    // Create notification for the evaluatee
+    try {
+      const totalScore = results.reduce((sum, r) => sum + (r.score || 0), 0);
+      const avgScore = (totalScore / results.length).toFixed(1);
+
+      await prisma.notification.create({
+        data: {
+          userId: parseInt(evaluateeID),
+          title: 'Evaluation Completed',
+          message: `Your ${evaluationType} evaluation has been completed by ${evaluatorExists.fullName} with an average score of ${avgScore}/5.`,
+          type: 'SUCCESS',
+          link: `/evaluations/${evaluationResult.evaluationID}`
+        }
+      });
+    } catch (notifErr) {
+      console.warn('Failed to create notification for evaluation:', notifErr.message);
     }
 
     return res.status(201).json({ ...evaluationResult, resultsCount: createManyResult.count });

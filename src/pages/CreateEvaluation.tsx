@@ -313,7 +313,7 @@ const CreateEvaluation: React.FC = () => {
               </Alert> */}
               {createEvaluationMutation.isError && (
                 <Alert severity="error" sx={{ borderRadius: 2 }}>
-                  Error creating evaluation: {createEvaluationMutation.error?.message || 'Unknown error'}
+                  Error creating evaluation: {createEvaluationMutation.error?.response?.data?.error || createEvaluationMutation.error?.message || 'Unknown error'}
                 </Alert>
               )}
               <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
@@ -324,7 +324,7 @@ const CreateEvaluation: React.FC = () => {
                   fullWidth
                   startIcon={isSubmitting || createEvaluationMutation.isPending ? <CircularProgress size={20} /> : null} // Changed to isPending
                 >
-                  {isSubmitting || createEvaluationMutation.isPending ? 'Creating...' : 'Save'} 
+                  {isSubmitting || createEvaluationMutation.isPending ? 'Creating...' : 'Save'}
                 </Button>
                 <Button
                   variant="outlined"

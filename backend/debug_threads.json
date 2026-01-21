@@ -1,0 +1,42 @@
+{
+  "myId": 2,
+  "count": 3,
+  "threads": [
+    {
+      "id": "08d32239-5d2c-4a93-8183-d24de2871457",
+      "text": "as",
+      "createdAt": "2026-01-20T14:19:55.794Z",
+      "status": "sent",
+      "senderId": 2,
+      "receiverId": 3,
+      "otherId": 3,
+      "parentId": null,
+      "otherName": "Soressa Merga",
+      "otherAvatar": "/uploads/employee-1762283910928-463743681.jpg"
+    },
+    {
+      "id": "1a8c7dcf-fad5-4d5b-8fb8-cd013d0630d2",
+      "text": "yess bosss",
+      "createdAt": "2026-01-20T13:00:20.336Z",
+      "status": "sent",
+      "senderId": 2,
+      "receiverId": 4,
+      "otherId": 4,
+      "parentId": null,
+      "otherName": "Thomas Geleta",
+      "otherAvatar": "/uploads/employee-1762293361697-879223516.jpg"
+    },
+    {
+      "id": "d1415704-fac6-4192-96da-5eab46f99b0b",
+      "text": "Yemy",
+      "createdAt": "2026-01-20T14:32:04.399Z",
+      "status": "sent",
+      "senderId": 2,
+      "receiverId": 6,
+      "otherId": 6,
+      "parentId": null,
+      "otherName": "yemy bekelu",
+      "otherAvatar": "/uploads/employee-1768892254204-931348966.jpg"
+    }
+  ]
+}

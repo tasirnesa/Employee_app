@@ -133,19 +133,19 @@ const Recruitment: React.FC = () => {
 
   const handleCandidateSubmit = () => {
     console.log('Form data before submission:', candidateForm);
-    
+
     // Validate form data
     if (!candidateForm.firstName || !candidateForm.lastName || !candidateForm.email || !candidateForm.position) {
       alert('Please fill in all required fields: First Name, Last Name, Email, and Position');
       return;
     }
-    
+
     // Process skills from comma-separated string to array
     const skillsArray = candidateForm.skills
       .split(',')
       .map(skill => skill.trim())
       .filter(skill => skill.length > 0);
-    
+
     const candidateData = {
       firstName: candidateForm.firstName,
       lastName: candidateForm.lastName,
@@ -159,9 +159,9 @@ const Recruitment: React.FC = () => {
       appliedDate: candidateForm.appliedDate || new Date().toISOString().split('T')[0],
       notes: candidateForm.notes
     };
-    
+
     console.log('Sending candidate data:', candidateData);
-    
+
     // Create candidate using mutation
     createCandidateMutation.mutate(candidateData);
   };
@@ -266,7 +266,7 @@ const Recruitment: React.FC = () => {
               {candidates?.map((candidate: any, index: number) => (
                 <TableRow
                   key={candidate.id}
-                  sx={{ 
+                  sx={{
                     backgroundColor: index % 2 === 0 ? '#f9fafb' : '#ffffff',
                     '&:hover': { backgroundColor: 'rgba(2, 136, 209, 0.04)' }
                   }}
@@ -300,18 +300,34 @@ const Recruitment: React.FC = () => {
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Chip 
-                      label={candidate.status} 
-                      size="small" 
+                    <Chip
+                      label={candidate.status}
+                      size="small"
                       color={getStatusColor(candidate.status) as any}
                     />
                   </TableCell>
                   <TableCell>{new Date(candidate.appliedDate).toLocaleDateString()}</TableCell>
                   <TableCell>
                     {!isEmployee && (
-                      <IconButton onClick={handleMenuClick}>
-                        <MoreVertIcon />
-                      </IconButton>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        {candidate.status !== 'Hired' && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="success"
+                            startIcon={<PersonAddIcon />}
+                            onClick={() => navigate(`/onboarding/wizard?candidateId=${candidate.id}`)}
+                          >
+                            Hire
+                          </Button>
+                        )}
+                        <IconButton onClick={(e) => {
+                          setSelectedCandidate(candidate);
+                          handleMenuClick(e);
+                        }}>
+                          <MoreVertIcon />
+                        </IconButton>
+                      </Box>
                     )}
                   </TableCell>
                 </TableRow>
@@ -341,7 +357,7 @@ const Recruitment: React.FC = () => {
                       </Typography>
                     </Box>
                   </Box>
-                  
+
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                       <EmailIcon sx={{ mr: 1, fontSize: 16 }} />
@@ -373,9 +389,9 @@ const Recruitment: React.FC = () => {
                   </Box>
 
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Chip 
-                      label={candidate.status} 
-                      size="small" 
+                    <Chip
+                      label={candidate.status}
+                      size="small"
                       color={getStatusColor(candidate.status) as any}
                     />
                     <Typography variant="caption" color="text.secondary">
@@ -383,7 +399,7 @@ const Recruitment: React.FC = () => {
                     </Typography>
                   </Box>
                 </CardContent>
-                
+
                 {!isEmployee && (
                   <CardActions>
                     <Button size="small" startIcon={<EditIcon />}>
@@ -392,6 +408,16 @@ const Recruitment: React.FC = () => {
                     <Button size="small" color="primary">
                       View Details
                     </Button>
+                    {candidate.status !== 'Hired' && (
+                      <Button
+                        size="small"
+                        color="success"
+                        variant="contained"
+                        onClick={() => navigate(`/onboarding/wizard?candidateId=${candidate.id}`)}
+                      >
+                        Hire
+                      </Button>
+                    )}
                   </CardActions>
                 )}
               </Card>
@@ -406,6 +432,15 @@ const Recruitment: React.FC = () => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
+        {selectedCandidate?.status !== 'Hired' && (
+          <MenuItem onClick={() => {
+            handleMenuClose();
+            navigate(`/onboarding/wizard?candidateId=${selectedCandidate?.id}`);
+          }}>
+            <PersonAddIcon sx={{ mr: 1, color: 'success.main' }} />
+            Hire Candidate
+          </MenuItem>
+        )}
         <MenuItem onClick={handleMenuClose}>
           <EditIcon sx={{ mr: 1 }} />
           Edit Candidate
@@ -548,8 +583,8 @@ const Recruitment: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCandidateDialogOpen(false)}>Cancel</Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             onClick={handleCandidateSubmit}
             disabled={createCandidateMutation.isPending}
           >

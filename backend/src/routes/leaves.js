@@ -1,7 +1,6 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const { prisma } = require('../prisma/client');
 const router = express.Router();
-const prisma = new PrismaClient();
 
 const startOfYear = (d = new Date()) => new Date(d.getFullYear(), 0, 1);
 
@@ -148,11 +147,11 @@ router.get('/:id', async (req, res) => {
         }
       }
     });
-    
+
     if (!leave) {
       return res.status(404).json({ error: 'Leave not found' });
     }
-    
+
     res.json(leave);
   } catch (error) {
     console.error('Error fetching leave:', error);
@@ -171,40 +170,75 @@ router.post('/', async (req, res) => {
       reason,
       comments
     } = req.body;
-    
+
     // Validate required fields
     if (!employeeId || !leaveTypeId || !startDate || !endDate || !reason) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
-    
+
     // Check if employee exists
     const employee = await prisma.user.findUnique({
       where: { id: parseInt(employeeId) }
     });
-    
+
     if (!employee) {
       return res.status(404).json({ error: 'Employee not found' });
     }
-    
+
     // Check if leave type exists
     const leaveType = await prisma.leaveType.findUnique({
       where: { id: parseInt(leaveTypeId) }
     });
-    
+
     if (!leaveType) {
       return res.status(404).json({ error: 'Leave type not found' });
     }
-    
+
     // Calculate days
     const start = new Date(startDate);
     const end = new Date(endDate);
     const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-    
+
     // Check if leave type has max days limit
     if (leaveType.maxDays && days > leaveType.maxDays) {
       return res.status(400).json({ error: `Leave request exceeds maximum allowed days (${leaveType.maxDays})` });
     }
-    
+
+    // Check for overlapping leaves
+    const overlappingLeaves = await prisma.leave.findMany({
+      where: {
+        employeeId: parseInt(employeeId),
+        OR: [
+          {
+            AND: [
+              { startDate: { lte: end } },
+              { endDate: { gte: start } }
+            ]
+          }
+        ]
+      },
+      include: {
+        leaveType: {
+          select: { name: true }
+        }
+      }
+    });
+
+    // Check for approved overlaps (hard block)
+    const approvedOverlap = overlappingLeaves.find(l => l.status === 'Approved');
+    if (approvedOverlap) {
+      return res.status(400).json({
+        error: `You already have approved ${approvedOverlap.leaveType.name} from ${new Date(approvedOverlap.startDate).toLocaleDateString()} to ${new Date(approvedOverlap.endDate).toLocaleDateString()}. Cannot request overlapping leave.`
+      });
+    }
+
+    // Check for pending overlaps (warning but allow)
+    const pendingOverlap = overlappingLeaves.find(l => l.status === 'Pending');
+    if (pendingOverlap) {
+      console.warn(`Employee ${employeeId} has pending leave overlap`);
+      // Optionally: return a warning but still allow creation
+    }
+
     const leave = await prisma.leave.create({
       data: {
         employeeId: parseInt(employeeId),
@@ -234,7 +268,25 @@ router.post('/', async (req, res) => {
         }
       }
     });
-    
+
+    // Create notification for manager
+    try {
+      const managerId = employee.managerId;
+      if (managerId) {
+        await prisma.notification.create({
+          data: {
+            userId: managerId,
+            title: 'New Leave Request',
+            message: `${employee.fullName} has requested ${days} days of ${leaveType.name} leave.`,
+            type: 'INFO',
+            link: '/leave-management'
+          }
+        });
+      }
+    } catch (notifErr) {
+      console.warn('Failed to create notification for leave request:', notifErr.message);
+    }
+
     res.status(201).json(leave);
   } catch (error) {
     console.error('Error creating leave:', error);
@@ -253,15 +305,51 @@ router.put('/:id', async (req, res) => {
       reason,
       comments
     } = req.body;
-    
+
     // Calculate days if dates are provided
     let days = undefined;
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
       days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+      // Get current leave to check employeeId
+      const currentLeave = await prisma.leave.findUnique({
+        where: { id: parseInt(id) }
+      });
+
+      if (currentLeave) {
+        // Check for overlapping leaves (excluding this leave)
+        const overlappingLeaves = await prisma.leave.findMany({
+          where: {
+            employeeId: currentLeave.employeeId,
+            id: { not: parseInt(id) }, // Exclude current leave
+            OR: [
+              {
+                AND: [
+                  { startDate: { lte: end } },
+                  { endDate: { gte: start } }
+                ]
+              }
+            ]
+          },
+          include: {
+            leaveType: {
+              select: { name: true }
+            }
+          }
+        });
+
+        // Check for approved overlaps
+        const approvedOverlap = overlappingLeaves.find(l => l.status === 'Approved');
+        if (approvedOverlap) {
+          return res.status(400).json({
+            error: `Cannot update: overlaps with approved ${approvedOverlap.leaveType.name} from ${new Date(approvedOverlap.startDate).toLocaleDateString()} to ${new Date(approvedOverlap.endDate).toLocaleDateString()}.`
+          });
+        }
+      }
     }
-    
+
     const leave = await prisma.leave.update({
       where: {
         id: parseInt(id)
@@ -337,7 +425,7 @@ router.patch('/:id/approve', async (req, res) => {
         return res.status(403).json({ error: 'Not authorized to approve this employee\'s leave' });
       }
     }
-    
+
     const leave = await prisma.leave.update({
       where: {
         id: parseInt(id)
@@ -379,6 +467,22 @@ router.patch('/:id/approve', async (req, res) => {
       where: { employeeId: leave.employeeId, status: 'Approved', startDate: { gte: startOfYear() } },
     });
     const usedDaysYear = Number(usedAgg._sum.days || 0);
+
+    // Create notification for employee
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: leave.employeeId,
+          title: 'Leave Approved',
+          message: `Your ${leave.leaveType?.name || 'leave'} request from ${new Date(leave.startDate).toLocaleDateString()} to ${new Date(leave.endDate).toLocaleDateString()} has been approved by ${leave.approver?.fullName || 'a manager'}.`,
+          type: 'SUCCESS',
+          link: '/leave-management'
+        }
+      });
+    } catch (notifErr) {
+      console.warn('Failed to notify employee of leave approval:', notifErr.message);
+    }
+
     res.json({ ...leave, usedDaysYear });
   } catch (error) {
     console.error('Error approving leave:', error);
@@ -441,7 +545,22 @@ router.patch('/:id/reject', async (req, res) => {
         }
       }
     });
-    
+
+    // Create notification for employee
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: leave.employeeId,
+          title: 'Leave Rejected',
+          message: `Your ${leave.leaveType?.name || 'leave'} request from ${new Date(leave.startDate).toLocaleDateString()} to ${new Date(leave.endDate).toLocaleDateString()} has been rejected by ${approver?.fullName || 'a manager'}. Reason: ${comments || 'No reason provided'}.`,
+          type: 'WARNING',
+          link: '/leave-management'
+        }
+      });
+    } catch (notifErr) {
+      console.warn('Failed to create notification for leave rejection:', notifErr.message);
+    }
+
     res.json(leave);
   } catch (error) {
     console.error('Error rejecting leave:', error);
@@ -453,13 +572,13 @@ router.patch('/:id/reject', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     await prisma.leave.delete({
       where: {
         id: parseInt(id)
       }
     });
-    
+
     res.json({ message: 'Leave deleted successfully' });
   } catch (error) {
     console.error('Error deleting leave:', error);

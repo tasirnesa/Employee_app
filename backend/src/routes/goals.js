@@ -59,6 +59,23 @@ router.post('/', async (req, res) => {
         activatedBy: activatedBy ? parseInt(activatedBy) : tokenUserId || null,
       },
     });
+    // Create notification for assigned user
+    if (created.activatedBy) {
+      try {
+        await prisma.notification.create({
+          data: {
+            userId: created.activatedBy,
+            title: 'New Goal Assigned',
+            message: `A new goal has been assigned to you: "${objective}". Priority: ${priority || 'Normal'}.`,
+            type: 'INFO',
+            link: '/goals'
+          }
+        });
+      } catch (notifErr) {
+        console.warn('Failed to notify user of new goal:', notifErr.message);
+      }
+    }
+
     res.status(201).json(created);
   } catch (error) {
     res.status(500).json({ error: 'Server error', details: error.message });

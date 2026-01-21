@@ -6,12 +6,14 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
   blockEmployee?: boolean;
   requireAuth?: boolean;
+  allowedRoles?: string[];
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  blockEmployee = false, 
-  requireAuth = true 
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  blockEmployee = false,
+  requireAuth = true,
+  allowedRoles
 }) => {
   const { user } = useUser();
   const token = localStorage.getItem('token');
@@ -26,14 +28,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   console.log('ProtectedRoute - user:', user);
   console.log('ProtectedRoute - user.isFirstLogin:', user?.isFirstLogin);
   console.log('ProtectedRoute - location.pathname:', location.pathname);
-  
+
   if (user && String(user.isFirstLogin).toLowerCase() === 'true' && location.pathname !== '/change-password') {
     console.log('ProtectedRoute - Redirecting to change-password');
     return <Navigate to="/change-password" replace />;
   }
 
   if (blockEmployee && user && user.role === 'Employee') {
+    return <Navigate to="/dashboard" replace />;
+  }
 
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
   }
 

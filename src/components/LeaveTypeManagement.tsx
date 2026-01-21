@@ -68,7 +68,7 @@ const LeaveTypeManagement: React.FC<LeaveTypeManagementProps> = ({ open, onClose
 
   // Update leave type mutation
   const updateLeaveTypeMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<LeaveType> }) => 
+    mutationFn: ({ id, data }: { id: number; data: Partial<LeaveType> }) =>
       apiService.updateLeaveType(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaveTypes'] });
@@ -118,7 +118,7 @@ const LeaveTypeManagement: React.FC<LeaveTypeManagementProps> = ({ open, onClose
 
     const submitData = {
       ...formData,
-      maxDays: formData.maxDays ? parseInt(formData.maxDays) : null,
+      maxDays: formData.maxDays ? parseInt(formData.maxDays) : undefined,
     };
 
     if (editingLeaveType) {
@@ -170,7 +170,7 @@ const LeaveTypeManagement: React.FC<LeaveTypeManagementProps> = ({ open, onClose
           </Button>
         </Box>
       </DialogTitle>
-      
+
       <DialogContent>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -187,7 +187,7 @@ const LeaveTypeManagement: React.FC<LeaveTypeManagementProps> = ({ open, onClose
             onChange={(e) => handleInputChange('name', e.target.value)}
             required
           />
-          
+
           <TextField
             fullWidth
             label="Description"
@@ -196,7 +196,7 @@ const LeaveTypeManagement: React.FC<LeaveTypeManagementProps> = ({ open, onClose
             value={formData.description}
             onChange={(e) => handleInputChange('description', e.target.value)}
           />
-          
+
           <TextField
             fullWidth
             label="Maximum Days (Optional)"
@@ -205,7 +205,7 @@ const LeaveTypeManagement: React.FC<LeaveTypeManagementProps> = ({ open, onClose
             onChange={(e) => handleInputChange('maxDays', e.target.value)}
             inputProps={{ min: 0 }}
           />
-          
+
           <Box sx={{ display: 'flex', gap: 2 }}>
             <FormControlLabel
               control={
@@ -216,7 +216,7 @@ const LeaveTypeManagement: React.FC<LeaveTypeManagementProps> = ({ open, onClose
               }
               label="Paid Leave"
             />
-            
+
             <FormControlLabel
               control={
                 <Switch
@@ -233,7 +233,7 @@ const LeaveTypeManagement: React.FC<LeaveTypeManagementProps> = ({ open, onClose
         <Typography variant="h6" gutterBottom>
           Existing Leave Types
         </Typography>
-        
+
         {isLoading ? (
           <Typography>Loading leave types...</Typography>
         ) : fetchError ? (
@@ -258,7 +258,7 @@ const LeaveTypeManagement: React.FC<LeaveTypeManagementProps> = ({ open, onClose
                   <TableRow key={leaveType.id}>
                     <TableCell>{leaveType.name}</TableCell>
                     <TableCell>{leaveType.description || '-'}</TableCell>
-                    <TableCell>{leaveType.maxDays || 'Unlimited'}</TableCell>
+                    <TableCell>{leaveType.maxDays ?? 'Unlimited'}</TableCell>
                     <TableCell>
                       <Chip
                         icon={leaveType.isPaid ? <CheckCircleIcon /> : <CancelIcon />}
@@ -297,7 +297,7 @@ const LeaveTypeManagement: React.FC<LeaveTypeManagementProps> = ({ open, onClose
           </TableContainer>
         )}
       </DialogContent>
-      
+
       <DialogActions>
         <Button onClick={handleClose}>Close</Button>
         <Button

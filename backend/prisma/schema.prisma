@@ -46,13 +46,14 @@ model User {
   compensations           Compensation[]
   benefits                Benefit[]
   perks                   Perk[]
-  managedProjects         Project[]               @relation("ProjectManager")
-  timesheets              Timesheet[]            @relation("TimesheetEmployee")
-  approvedTimesheets      Timesheet[]             @relation("TimesheetApprover")
-  leaves                  Leave[]                @relation("LeaveEmployee")
-  approvedLeaves          Leave[]                @relation("LeaveApprover")
-  sentMessages     Message[] @relation("SentMessages")
-  receivedMessages Message[] @relation("ReceivedMessages")
+  managedProjects         Project[]            @relation("ProjectManager")
+  timesheets              Timesheet[]          @relation("TimesheetEmployee")
+  approvedTimesheets      Timesheet[]          @relation("TimesheetApprover")
+  leaves                  Leave[]              @relation("LeaveEmployee")
+  approvedLeaves          Leave[]              @relation("LeaveApprover")
+  sentMessages            Message[]            @relation("SentMessages")
+  receivedMessages        Message[]            @relation("ReceivedMessages")
+  notifications           Notification[]
 
   @@index([managerId])
 }
@@ -205,18 +206,18 @@ model Employee {
 }
 
 model Attendance {
-  id          Int      @id @default(autoincrement())
-  employeeId  Int
-  date        DateTime
-  checkInTime DateTime?
+  id           Int       @id @default(autoincrement())
+  employeeId   Int
+  date         DateTime
+  checkInTime  DateTime?
   checkOutTime DateTime?
-  hoursWorked Float?
-  status      String
-  timeType    String?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  employee    User     @relation(fields: [employeeId], references: [id])
+  hoursWorked  Float?
+  status       String
+  timeType     String?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  employee     User      @relation(fields: [employeeId], references: [id])
 
   @@map("Attendance")
 }
@@ -235,19 +236,19 @@ model Todo {
 }
 
 model Payslip {
-  id                Int      @id @default(autoincrement())
-  employeeId        Int
-  period            String   // e.g., "January 2024"
-  basicSalary       Decimal  @db.Decimal(10, 2)
-  allowances        Decimal  @db.Decimal(10, 2)
-  deductions        Decimal  @db.Decimal(10, 2)
-  netSalary         Decimal  @db.Decimal(10, 2)
-  status            String   // Generated, Paid, Pending
-  generatedDate     DateTime @default(now())
-  paidDate          DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  employee          User     @relation(fields: [employeeId], references: [id])
+  id            Int       @id @default(autoincrement())
+  employeeId    Int
+  period        String // e.g., "January 2024"
+  basicSalary   Decimal   @db.Decimal(10, 2)
+  allowances    Decimal   @db.Decimal(10, 2)
+  deductions    Decimal   @db.Decimal(10, 2)
+  netSalary     Decimal   @db.Decimal(10, 2)
+  status        String // Generated, Paid, Pending
+  generatedDate DateTime  @default(now())
+  paidDate      DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  employee      User      @relation(fields: [employeeId], references: [id])
 
   @@map("Payslip")
 }
@@ -261,7 +262,7 @@ model Compensation {
   bonus             Decimal  @db.Decimal(10, 2)
   totalCompensation Decimal  @db.Decimal(10, 2)
   effectiveDate     DateTime
-  status            String   // Active, Inactive
+  status            String // Active, Inactive
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   employee          User     @relation(fields: [employeeId], references: [id])
@@ -270,98 +271,98 @@ model Compensation {
 }
 
 model Candidate {
-  id            Int      @id @default(autoincrement())
+  id            Int       @id @default(autoincrement())
   firstName     String
   lastName      String
-  email         String   @unique
+  email         String    @unique
   phone         String
   position      String
-  experience    Int      // years of experience
+  experience    Int // years of experience
   education     String
   skills        String[] // array of skills
-  status        String   // Applied, Screening, Interview, Offered, Hired, Rejected
-  appliedDate   DateTime @default(now())
+  status        String // Applied, Screening, Interview, Offered, Hired, Rejected
+  appliedDate   DateTime  @default(now())
   resumeUrl     String?
   interviewDate DateTime?
   notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@map("Candidate")
 }
 
 model Benefit {
-  id                  Int      @id @default(autoincrement())
-  employeeId          Int
-  benefitType         String   // Health Insurance, Dental, Vision, Life Insurance, Retirement, etc.
-  provider            String
-  coverage            String
-  monthlyCost         Decimal  @db.Decimal(10, 2)
-  employeeContribution Decimal @db.Decimal(10, 2)
-  companyContribution Decimal @db.Decimal(10, 2)
-  effectiveDate       DateTime
-  expiryDate          DateTime?
-  status              String   // Active, Inactive, Pending, Expired
-  notes               String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  employee            User     @relation(fields: [employeeId], references: [id])
+  id                   Int       @id @default(autoincrement())
+  employeeId           Int
+  benefitType          String // Health Insurance, Dental, Vision, Life Insurance, Retirement, etc.
+  provider             String
+  coverage             String
+  monthlyCost          Decimal   @db.Decimal(10, 2)
+  employeeContribution Decimal   @db.Decimal(10, 2)
+  companyContribution  Decimal   @db.Decimal(10, 2)
+  effectiveDate        DateTime
+  expiryDate           DateTime?
+  status               String // Active, Inactive, Pending, Expired
+  notes                String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  employee             User      @relation(fields: [employeeId], references: [id])
 
   @@map("Benefit")
 }
 
 model Perk {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   employeeId  Int
-  perkType    String   // Flexible Hours, Remote Work, Professional Development, etc.
+  perkType    String // Flexible Hours, Remote Work, Professional Development, etc.
   description String
-  value       Decimal  @db.Decimal(10, 2) // monetary value if applicable
-  frequency   String   // Monthly, Quarterly, Annually, One-time
-  status      String   // Active, Inactive, Pending
+  value       Decimal   @db.Decimal(10, 2) // monetary value if applicable
+  frequency   String // Monthly, Quarterly, Annually, One-time
+  status      String // Active, Inactive, Pending
   startDate   DateTime
   endDate     DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  employee    User     @relation(fields: [employeeId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  employee    User      @relation(fields: [employeeId], references: [id])
 
   @@map("Perk")
 }
 
 model Project {
-  id          Int      @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   name        String
   description String?
   startDate   DateTime
   endDate     DateTime?
-  status      String   @default("Active")
+  status      String      @default("Active")
   managerId   Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  manager     User     @relation("ProjectManager", fields: [managerId], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  manager     User        @relation("ProjectManager", fields: [managerId], references: [id])
   timesheets  Timesheet[]
 
   @@map("Project")
 }
 
 model Timesheet {
-  id             Int      @id @default(autoincrement())
-  employeeId     Int
-  projectId      Int?
+  id              Int       @id @default(autoincrement())
+  employeeId      Int
+  projectId       Int?
   taskDescription String
-  date           DateTime
-  startTime      DateTime
-  endTime        DateTime
-  hoursWorked    Float
-  overtimeHours  Float     @default(0)
-  status         String    @default("Pending")
-  approvedBy     Int?
-  approvedAt     DateTime?
-  notes          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  employee       User      @relation("TimesheetEmployee", fields: [employeeId], references: [id])
-  project        Project?  @relation(fields: [projectId], references: [id])
-  approver       User?     @relation("TimesheetApprover", fields: [approvedBy], references: [id])
+  date            DateTime
+  startTime       DateTime
+  endTime         DateTime
+  hoursWorked     Float
+  overtimeHours   Float     @default(0)
+  status          String    @default("Pending")
+  approvedBy      Int?
+  approvedAt      DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  employee        User      @relation("TimesheetEmployee", fields: [employeeId], references: [id])
+  project         Project?  @relation(fields: [projectId], references: [id])
+  approver        User?     @relation("TimesheetApprover", fields: [approvedBy], references: [id])
 
   @@map("Timesheet")
 }
@@ -381,35 +382,53 @@ model LeaveType {
 }
 
 model Leave {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   employeeId  Int
   leaveTypeId Int
   startDate   DateTime
   endDate     DateTime
   days        Int
   reason      String
-  status      String   @default("Pending") // Pending, Approved, Rejected
-  appliedDate DateTime @default(now())
+  status      String    @default("Pending") // Pending, Approved, Rejected
+  appliedDate DateTime  @default(now())
   approvedBy  Int?
   approvedAt  DateTime?
   comments    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  employee    User     @relation("LeaveEmployee", fields: [employeeId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  employee    User      @relation("LeaveEmployee", fields: [employeeId], references: [id])
   leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id])
-  approver    User?    @relation("LeaveApprover", fields: [approvedBy], references: [id])
+  approver    User?     @relation("LeaveApprover", fields: [approvedBy], references: [id])
 
   @@map("Leave")
 }
-model Message {
-  id        String   @id @default(uuid())
-  senderId  Int
-  receiverId Int
-  text      String?
-  image     String?   // base64 or URL
-  status    String    @default("sent") // sent, delivered, read
-  createdAt DateTime @default(now())
 
-  sender    User @relation("SentMessages", fields: [senderId], references: [id])
-  receiver  User @relation("ReceivedMessages", fields: [receiverId], references: [id])
+model Message {
+  id         String   @id @default(uuid())
+  senderId   Int
+  receiverId Int
+  text       String?
+  image      String? // base64 or URL
+  status     String   @default("sent") // sent, delivered, read
+  parentId   String? // For replies
+  createdAt  DateTime @default(now())
+
+  sender   User      @relation("SentMessages", fields: [senderId], references: [id])
+  receiver User      @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  parent   Message?  @relation("MessageReplies", fields: [parentId], references: [id])
+  replies  Message[] @relation("MessageReplies")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String
+  message   String
+  type      String // 'INFO', 'WARNING', 'SUCCESS', 'ERROR'
+  isRead    Boolean  @default(false)
+  link      String? // Optional URL to navigate to
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("Notification")
 }

@@ -42,6 +42,8 @@ import LeaveManagement from './pages/LeaveManagement';
 import DepartmentManagement from './pages/DepartmentManagement';
 import PositionManagement from './pages/PositionManagement';
 import Projects from './pages/Projects';
+import NewHireWizard from './pages/NewHireWizard';
+import NotificationsPage from './pages/NotificationsPage';
 
 
 const AppContent: React.FC = () => {
@@ -121,7 +123,7 @@ const AppContent: React.FC = () => {
   // Check if user is on first login and needs to change password
   const isFirstLogin = currentUser && String(currentUser.isFirstLogin).toLowerCase() === 'true';
   const showSidebarAndHeader = isAuthenticated && !isFirstLogin;
-  
+
   console.log('App render - currentUser:', currentUser);
   console.log('App render - isFirstLogin:', isFirstLogin);
   console.log('App render - showSidebarAndHeader:', showSidebarAndHeader);
@@ -135,9 +137,7 @@ const AppContent: React.FC = () => {
         sx={{
           flexGrow: 1,
           p: 0,
-          width: showSidebarAndHeader ? `calc(100% - ${sidebarCollapsed ? 72 : 240}px)` : '100%',
-          ml: showSidebarAndHeader ? `${sidebarCollapsed ? 72 : 240}px` : 0,
-          transition: 'width 0.3s, margin-left 0.3s',
+          transition: 'width 0.3s',
         }}
       >
         {showSidebarAndHeader && <Header collapsed={sidebarCollapsed} onToggle={toggleSidebar} />}
@@ -170,13 +170,15 @@ const AppContent: React.FC = () => {
             <Route path="/timesheets" element={<ProtectedRoute><Timesheets /></ProtectedRoute>} />
             <Route path="/leave-management" element={<ProtectedRoute><LeaveManagement /></ProtectedRoute>} />
             <Route path="/todo" element={<ProtectedRoute><TodoList /></ProtectedRoute>} />
+            <Route path="/onboarding/wizard" element={<ProtectedRoute allowedRoles={['Admin', 'SuperAdmin', 'Manager']}><NewHireWizard /></ProtectedRoute>} />
             <Route path="/departments" element={<ProtectedRoute blockEmployee={true}><DepartmentManagement /></ProtectedRoute>} />
             <Route path="/positions" element={<ProtectedRoute blockEmployee={true}><PositionManagement /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
           </Routes>
         </Box>
       </Box>
-      {showSidebarAndHeader && <RightRail />}
+      {isAuthenticated && <RightRail />}
     </Box>
   );
 };
