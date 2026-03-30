@@ -66,6 +66,7 @@ model Department {
   updatedAt DateTime @updatedAt
   manager   User?    @relation("DepartmentManager", fields: [managerId], references: [id])
   users     User[] // Users in this department
+  employees Employee[]
 }
 
 model Position {
@@ -79,6 +80,7 @@ model Position {
   reportsToPosition Position?  @relation("PositionHierarchy", fields: [reportsTo], references: [id])
   subordinates      Position[] @relation("PositionHierarchy")
   users             User[] // Users with this position
+  employees         Employee[]
 }
 
 model Evaluation {
@@ -189,8 +191,10 @@ model Employee {
   lastName        String
   email           String    @unique
   phone           String?
-  department      String?
-  position        String?
+  departmentId    Int?
+  positionId      Int?
+  department      Department? @relation(fields: [departmentId], references: [id])
+  position        Position?   @relation(fields: [positionId], references: [id])
   hireDate        DateTime?
   gender          String?
   age             Int?
