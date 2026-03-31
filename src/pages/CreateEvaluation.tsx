@@ -60,7 +60,7 @@ const CreateEvaluation: React.FC = () => {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
-      const response = await axios.get('http://localhost:3000/api/criteria', {
+      const response = await axios.get('http://localhost:5000/api/criteria', {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log('Fetched criteria:', response.data);
@@ -76,7 +76,7 @@ const CreateEvaluation: React.FC = () => {
       if (!evaluateeUserIdForGoals) return [] as Goal[];
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
-      const res = await axios.get('http://localhost:3000/api/goals', {
+      const res = await axios.get('http://localhost:5000/api/goals', {
         params: { userId: evaluateeUserIdForGoals },
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -91,7 +91,7 @@ const CreateEvaluation: React.FC = () => {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
-      const response = await axios.get('http://localhost:3000/api/evaluation-sessions', {
+      const response = await axios.get('http://localhost:5000/api/evaluation-sessions', {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data as Array<{ sessionID: number; title: string; startDate: string; endDate: string; department?: string }>;
@@ -102,7 +102,7 @@ const CreateEvaluation: React.FC = () => {
     mutationFn: async (evaluationData: { evaluation: Partial<Evaluation>; results: Partial<EvaluationResult>[] }) => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
-      const response = await axios.post('http://localhost:3000/api/evaluations', evaluationData, {
+      const response = await axios.post('http://localhost:5000/api/evaluations', evaluationData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;
@@ -115,7 +115,7 @@ const CreateEvaluation: React.FC = () => {
           const evaluateeUserId = pendingEvaluateeUserIdRef.current;
           if (token && evaluateeUserId) {
             await axios.post(
-              'http://localhost:3000/api/performance/recalculate',
+              'http://localhost:5000/api/performance/recalculate',
               { userId: evaluateeUserId },
               { headers: { Authorization: `Bearer ${token}` } }
             );

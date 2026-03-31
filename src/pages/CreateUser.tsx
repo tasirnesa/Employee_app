@@ -33,7 +33,7 @@ const CreateUser: React.FC = () => {
         throw new Error('No authentication token');
       }
       console.log('Fetching departments with token:', token.substring(0, 10) + '...');
-      const response = await axios.get('http://localhost:3000/api/departments', {
+      const response = await axios.get('http://localhost:5000/api/departments', {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log('Departments response data:', response.data);
@@ -55,7 +55,7 @@ const CreateUser: React.FC = () => {
         throw new Error('No authentication token');
       }
       console.log('Fetching positions with token:', token.substring(0, 10) + '...');
-      const response = await axios.get('http://localhost:3000/api/positions', {
+      const response = await axios.get('http://localhost:5000/api/positions', {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log('Positions response data:', response.data);
@@ -71,7 +71,7 @@ const CreateUser: React.FC = () => {
     mutationFn: async (userData: Partial<User>) => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
-      const response = await axios.post('http://localhost:3000/api/users', {
+      const response = await axios.post('http://localhost:5000/api/users', {
         ...userData,
         age: userData.age ? parseInt(userData.age as unknown as string) : undefined,
         createdBy: 1, // Assume current user ID is 1; replace with actual logic

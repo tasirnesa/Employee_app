@@ -35,15 +35,10 @@ const Performance: React.FC = () => {
     : 0;
 
   return (
-    <Box sx={{ mt: 3 }}>
-      <Card>
-        <CardContent>
-          <Typography variant="h6">Performance Metrics</Typography>
-          <Typography variant="body1">Overall Average Score: {overallAverageScore.toFixed(2)}</Typography>
-          {/* Additional performance metrics can be displayed here */}
-        </CardContent>
-      </Card>
-    </Box>
+    <>
+      <Typography variant="h6" fontWeight={700} gutterBottom>Performance Metrics</Typography>
+      <Typography variant="body1">Overall Average Score: {overallAverageScore.toFixed(2)}</Typography>
+    </>
   );
 };
 

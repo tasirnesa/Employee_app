@@ -45,7 +45,7 @@ const EvaluationDetails: React.FC = () => {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
-      const res = await axios.get(`http://localhost:3000/api/evaluations/${id}/details`, {
+      const res = await axios.get(`http://localhost:5000/api/evaluations/${id}/details`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return res.data as any;

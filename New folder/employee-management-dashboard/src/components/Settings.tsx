@@ -1,5 +1,5 @@
 import React from 'react';
-import { Container, Typography, Card, CardContent, TextField, Button } from '@mui/material';
+import { Container, Typography, Card, CardContent, TextField, Button, Box } from '@mui/material';
 
 const Settings: React.FC = () => {
   const [username, setUsername] = React.useState('');
@@ -11,33 +11,28 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <Container sx={{ mt: 8 }}>
-      <Typography variant="h4" gutterBottom>
-        Settings
-      </Typography>
-      <Card>
-        <CardContent>
-          <Typography variant="h6">Personal Information</Typography>
-          <TextField
-            label="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            fullWidth
-            margin="normal"
-          />
-          <TextField
-            label="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            fullWidth
-            margin="normal"
-          />
-          <Button variant="contained" color="primary" onClick={handleSave}>
-            Save Changes
-          </Button>
-        </CardContent>
-      </Card>
-    </Container>
+    <>
+      <Typography variant="h6" fontWeight={700} gutterBottom>Personal Information</Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <TextField
+          label="Username"
+          size="small"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          fullWidth
+        />
+        <TextField
+          label="Email"
+          size="small"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          fullWidth
+        />
+        <Button variant="contained" color="primary" onClick={handleSave} sx={{ alignSelf: 'flex-start' }}>
+          Save Changes
+        </Button>
+      </Box>
+    </>
   );
 };
 

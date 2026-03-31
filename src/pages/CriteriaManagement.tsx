@@ -21,7 +21,7 @@ function CriteriaManagement() {
 
   const onSubmit = async (data: CriteriaForm) => {
     try {
-      await axios.post('http://localhost:3000/api/criteria', {
+      await axios.post('http://localhost:5000/api/criteria', {
         ...data,
         createdBy: 1, // Replace with actual user ID
         createdDate: new Date().toISOString(),

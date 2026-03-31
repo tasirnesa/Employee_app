@@ -14,6 +14,7 @@ import {
   TableRow,
   Paper,
   Button,
+  Box,
 } from '@mui/material';
 import type { ScheduledSession } from '../types/interfaces';
 
@@ -44,41 +45,47 @@ const ScheduledSessions: React.FC = () => {
   }
 
   return (
-    <Container>
-      <Typography variant="h4" gutterBottom>
-        Scheduled Sessions
-      </Typography>
-      <Card>
-        <CardContent>
-          <Typography variant="h6">Your Scheduled Sessions</Typography>
-          <Button variant="contained" color="primary" disabled>
-            New Session
-          </Button>
-          <TableContainer component={Paper} sx={{ maxHeight: 300, overflow: 'auto' }}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Session ID</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Time</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sessions?.map((session: ScheduledSession) => (
-                  <TableRow key={session.sessionID}>
-                    <TableCell>{session.sessionID}</TableCell>
-                    <TableCell>{new Date(session.date).toLocaleDateString()}</TableCell>
-                    <TableCell>{session.time}</TableCell>
-                    <TableCell>{session.status}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
-    </Container>
+    <>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6" fontWeight={700}>Scheduled Sessions</Typography>
+        <Button variant="outlined" size="small" disabled>
+          New
+        </Button>
+      </Box>
+      <TableContainer component={Paper} elevation={0} sx={{ maxHeight: 300, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+        <Table stickyHeader size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 'bold', bgcolor: 'background.default' }}>Date</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', bgcolor: 'background.default' }}>Time</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', bgcolor: 'background.default' }}>Status</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {sessions?.map((session: ScheduledSession) => (
+              <TableRow key={session.sessionID} hover>
+                <TableCell>{new Date(session.date).toLocaleDateString()}</TableCell>
+                <TableCell>{session.time}</TableCell>
+                <TableCell>
+                  <Box sx={{ 
+                    px: 1, 
+                    py: 0.5, 
+                    borderRadius: 1, 
+                    fontSize: '0.75rem', 
+                    fontWeight: 700, 
+                    display: 'inline-block',
+                    bgcolor: session.status === 'completed' ? 'success.light' : 'warning.light',
+                    color: session.status === 'completed' ? 'success.dark' : 'warning.dark'
+                  }}>
+                    {session.status}
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </>
   );
 };
 

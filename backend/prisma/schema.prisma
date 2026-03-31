@@ -205,6 +205,7 @@ model Employee {
   updatedAt       DateTime  @updatedAt
   userId          Int?
   user            User?     @relation(fields: [userId], references: [id])
+  offboarding     Offboarding[]
 
   @@map("Employee")
 }
@@ -405,6 +406,38 @@ model Leave {
   approver    User?     @relation("LeaveApprover", fields: [approvedBy], references: [id])
 
   @@map("Leave")
+}
+
+model Offboarding {
+  id                    Int               @id @default(autoincrement())
+  employeeId            Int
+  status                String            @default("Draft") // Draft, InProgress, Completed, Cancelled
+  initiationDate        DateTime          @default(now())
+  plannedLastDate       DateTime?
+  actualLastDate        DateTime?
+  reason                String?
+  notes                 String?
+  exitInterviewScore    Int?
+  exitInterviewComments String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  employee              Employee          @relation(fields: [employeeId], references: [id])
+  tasks                 OffboardingTask[]
+
+  @@map("Offboarding")
+}
+
+model OffboardingTask {
+  id            Int         @id @default(autoincrement())
+  offboardingId Int
+  title         String
+  description   String?
+  status        String      @default("Pending") // Pending, Completed
+  completedAt   DateTime?
+  completedBy   Int? // User ID who verified completion
+  offboarding   Offboarding @relation(fields: [offboardingId], references: [id], onDelete: Cascade)
+
+  @@map("OffboardingTask")
 }
 
 model Message {

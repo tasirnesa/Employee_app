@@ -31,23 +31,19 @@ const CriteriaView: React.FC = () => {
   }
 
   return (
-    <Container sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
+    <>
+      <Typography variant="h6" fontWeight={700} gutterBottom>
         Evaluation Criteria
       </Typography>
-      <Card>
-        <CardContent>
-          <List>
-            {criteria?.map((criterion) => (
-              <ListItem key={criterion.criteriaID}>
-                <Typography variant="h6">{criterion.title}</Typography>
-                <Typography>{criterion.description}</Typography>
-              </ListItem>
-            ))}
-          </List>
-        </CardContent>
-      </Card>
-    </Container>
+      <List dense sx={{ maxHeight: 300, overflow: 'auto' }}>
+        {criteria?.map((criterion) => (
+          <ListItem key={criterion.criteriaID} divider sx={{ display: 'block', py: 1 }}>
+            <Typography variant="subtitle2" fontWeight={700}>{criterion.title}</Typography>
+            <Typography variant="body2" color="text.secondary">{criterion.description}</Typography>
+          </ListItem>
+        ))}
+      </List>
+    </>
   );
 };
 

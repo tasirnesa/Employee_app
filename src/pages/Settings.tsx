@@ -24,7 +24,7 @@ const Settings: React.FC = () => {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
-      const response = await axios.get('http://localhost:3000/api/users/me', {
+      const response = await axios.get('http://localhost:5000/api/users/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log('Fetched current user:', response.data);
@@ -36,7 +36,7 @@ const Settings: React.FC = () => {
     mutationFn: async (userData: Partial<User>) => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
-      const response = await axios.put('http://localhost:3000/api/users/me', userData, {
+      const response = await axios.put('http://localhost:5000/api/users/me', userData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;

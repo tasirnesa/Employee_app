@@ -57,8 +57,8 @@ const onboardingService = {
           lastName: employeeData.lastName || userData.fullName.split(' ').slice(1).join(' '),
           email: email,
           phone: employeeData.phone,
-          department: employeeData.department,
-          position: employeeData.position,
+          departmentId: deptId,
+          positionId: posId,
           hireDate: employeeData.hireDate ? new Date(employeeData.hireDate) : new Date(),
           userId: user.id,
           isActive: true

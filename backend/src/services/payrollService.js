@@ -206,7 +206,7 @@ const payrollService = {
     const hourlyRate = workingDays > 0 ? (basic / (workingDays * 8)) : 0;
     const overtimeRate = hourlyRate * Number(comp.overtimeMultiplier || 1.5);
     const overtimePay = Number(times.overtime || 0) * overtimeRate;
-    const unpaidDeduction = (basic / workingDays) * (unpaidDays || 0);
+    const unpaidDeduction = (basic / workingDays) * (unpaidDays.total || 0);
 
     const gross = basic + Number(comp.allowances || 0) + Number(comp.bonus || 0) + overtimePay + Number(perksTotal || 0) - unpaidDeduction;
     const pensionEmployee = basic * Number(comp.pensionEmployeePct ?? 0.07);
@@ -229,7 +229,9 @@ const payrollService = {
         insuranceEmp: Number(comp.insuranceEmployeeFixed || 0),
         overtimeHours: Number(times.overtime || 0),
         workingDays,
-        unpaidDays,
+        unpaidLeaveDays: unpaidDays.unpaidLeaveDays,
+        unexplainedAbsences: unpaidDays.unexplainedAbsences,
+        totalUnpaidDays: unpaidDays.total,
         benefitsEmployee: Number(benefits.employee || 0),
         benefitsEmployer: Number(benefits.employer || 0),
       },
@@ -282,7 +284,11 @@ const payrollService = {
       });
     }).length;
 
-    return unpaidLeaveDays + unexplainedAbsences;
+    return {
+      unpaidLeaveDays,
+      unexplainedAbsences,
+      total: unpaidLeaveDays + unexplainedAbsences
+    };
   },
 
   _aggregateBenefits: async (userId, start, end) => {

@@ -33,7 +33,7 @@ const UserDetail: React.FC = () => {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
-      const response = await axios.get(`http://localhost:3000/api/users/${id}`, {
+      const response = await axios.get(`http://localhost:5000/api/users/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data as User;

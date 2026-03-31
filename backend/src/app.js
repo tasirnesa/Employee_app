@@ -41,6 +41,7 @@ const todoRoutes = require('./routes/todos');
 const notificationRoutes = require('./routes/notifications');
 const messageRoutes = require('./routes/messages');
 const onboardingRoutes = require('./routes/onboarding');
+const offboardingRoutes = require('./routes/offboarding');
 
 // Public Routes
 app.use('/api/auth', authRoutes);
@@ -68,6 +69,7 @@ app.use('/api/todos', authenticateToken, todoRoutes);
 app.use('/api/notifications', authenticateToken, notificationRoutes);
 app.use('/api/messages', authenticateToken, messageRoutes);
 app.use('/api/onboarding', authenticateToken, onboardingRoutes);
+app.use('/api/offboarding', authenticateToken, offboardingRoutes);
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'UP', timestamp: new Date() }));

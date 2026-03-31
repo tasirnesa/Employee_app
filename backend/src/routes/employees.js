@@ -4,6 +4,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const employeeController = require('../controllers/employeeController');
+const { authenticateToken } = require('../middleware/auth');
+const authorize = require('../middleware/authorize');
+const { PERMISSIONS } = require('../constants/permissions');
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, '..', 'uploads');
@@ -24,20 +27,20 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // List employees
-router.get('/', employeeController.getEmployees);
+router.get('/', authenticateToken, authorize(PERMISSIONS.EMPLOYEE_VIEW), employeeController.getEmployees);
 
 // Get one employee
-router.get('/:id', employeeController.getEmployee);
+router.get('/:id', authenticateToken, authorize(PERMISSIONS.EMPLOYEE_VIEW), employeeController.getEmployee);
 
 // Create employee
-router.post('/', upload.fields([{ name: 'profileImage', maxCount: 1 }]), employeeController.createEmployee);
+router.post('/', authenticateToken, authorize(PERMISSIONS.EMPLOYEE_CREATE), upload.fields([{ name: 'profileImage', maxCount: 1 }]), employeeController.createEmployee);
 
 // Update employee
-router.put('/:id', upload.fields([{ name: 'profileImage', maxCount: 1 }]), employeeController.updateEmployee);
+router.put('/:id', authenticateToken, authorize(PERMISSIONS.EMPLOYEE_UPDATE), upload.fields([{ name: 'profileImage', maxCount: 1 }]), employeeController.updateEmployee);
 
 // Activate / Deactivate
-router.patch('/:id/activate', employeeController.activateEmployee);
-router.patch('/:id/deactivate', employeeController.deactivateEmployee);
+router.patch('/:id/activate', authenticateToken, authorize(PERMISSIONS.EMPLOYEE_UPDATE), employeeController.activateEmployee);
+router.patch('/:id/deactivate', authenticateToken, authorize(PERMISSIONS.EMPLOYEE_UPDATE), employeeController.deactivateEmployee);
 
 module.exports = router;
 

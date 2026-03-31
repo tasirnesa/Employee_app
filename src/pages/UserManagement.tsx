@@ -42,7 +42,7 @@ const UserManagement: React.FC = () => {
       console.log('Token:', token);
       if (!token) throw new Error('No authentication token');
       try {
-        const response = await axios.get('http://localhost:3000/api/users', {
+        const response = await axios.get('http://localhost:5000/api/users', {
           headers: { Authorization: `Bearer ${token}` },
         });
         console.log('Fetched users:', response.data);
@@ -58,7 +58,7 @@ const UserManagement: React.FC = () => {
     mutationFn: async (userId: number) => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
-      await axios.delete(`http://localhost:3000/api/users/${userId}`, {
+      await axios.delete(`http://localhost:5000/api/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
     },
@@ -75,7 +75,7 @@ const UserManagement: React.FC = () => {
     mutationFn: async (userId: number) => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
-      await axios.put(`http://localhost:3000/api/users/${userId}/authorize`, {}, {
+      await axios.put(`http://localhost:5000/api/users/${userId}/authorize`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
     },
@@ -111,7 +111,7 @@ const UserManagement: React.FC = () => {
     const token = localStorage.getItem('token');
     if (!token) throw new Error('No authentication token');
     try {
-      await axios.put(`http://localhost:3000/api/users/${selectedUser.id}`, editForm, {
+      await axios.put(`http://localhost:5000/api/users/${selectedUser.id}`, editForm, {
         headers: { Authorization: `Bearer ${token}` },
       });
       queryClient.invalidateQueries({ queryKey: ['users'] });

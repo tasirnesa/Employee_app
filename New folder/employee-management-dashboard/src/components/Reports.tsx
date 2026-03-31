@@ -31,25 +31,21 @@ const Reports: React.FC = () => {
   }
 
   return (
-    <Container sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
+    <>
+      <Typography variant="h6" fontWeight={700} gutterBottom>
         My Reports
       </Typography>
-      <Card>
-        <CardContent>
-          <List>
-            {reports?.map((report) => (
-              <ListItem key={report.evaluationID}>
-                <ListItemText
-                  primary={`Evaluation ID: ${report.evaluationID}`}
-                  secondary={`Score: ${report.score}, Date: ${new Date(report.evaluationDate).toLocaleDateString()}`}
-                />
-              </ListItem>
-            ))}
-          </List>
-        </CardContent>
-      </Card>
-    </Container>
+      <List dense sx={{ maxHeight: 300, overflow: 'auto' }}>
+        {reports?.map((report) => (
+          <ListItem key={report.evaluationID} divider>
+            <ListItemText
+              primary={<Typography variant="subtitle2" fontWeight={700}>Evaluation #{report.evaluationID}</Typography>}
+              secondary={`Score: ${report.score}`}
+            />
+          </ListItem>
+        ))}
+      </List>
+    </>
   );
 };
 

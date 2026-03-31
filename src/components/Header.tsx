@@ -48,7 +48,7 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
     if (!raw) return undefined;
     const isAbsolute = /^https?:\/\//i.test(raw);
     if (isAbsolute) return raw;
-    const base = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000';
+    const base = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000';
     if (raw.startsWith('/')) return `${base}${raw}`;
     return `${base}/uploads/${raw}`;
   }, [user?.profileImageUrl]);

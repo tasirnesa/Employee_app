@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../lib/axios';
 import {
   Container,
   Typography,
@@ -39,14 +39,8 @@ const ViewUsers: React.FC = () => {
   const { data: users, isLoading, error } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      console.log('Token:', token);
-      if (!token) throw new Error('No authentication token');
       try {
-        const response = await axios.get('http://localhost:3000/api/users', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        console.log('Fetched users:', response.data);
+        const response = await api.get('/api/users');
         return response.data as User[];
       } catch (err: any) {
         console.error('Fetch users error:', err.response?.data || err.message);
@@ -59,11 +53,7 @@ const ViewUsers: React.FC = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token');
-      await axios.delete(`http://localhost:3000/api/users/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete(`/api/users/${userId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -76,11 +66,7 @@ const ViewUsers: React.FC = () => {
 
   const authorizeMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token');
-      await axios.put(`http://localhost:3000/api/users/${userId}/authorize`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.put(`/api/users/${userId}/authorize`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -111,12 +97,8 @@ const ViewUsers: React.FC = () => {
 
   const handleEditSubmit = async () => {
     if (!selectedUser) return;
-    const token = localStorage.getItem('token');
-    if (!token) throw new Error('No authentication token');
     try {
-      await axios.put(`http://localhost:3000/api/users/${selectedUser.id}`, editForm, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.put(`/api/users/${selectedUser.id}`, editForm);
       queryClient.invalidateQueries({ queryKey: ['users'] });
       handleEditClose();
     } catch (error: any) {

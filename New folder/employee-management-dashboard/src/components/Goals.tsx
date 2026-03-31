@@ -13,34 +13,27 @@ const Goals: React.FC = () => {
   };
 
   return (
-    <Container sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        My Goals
-      </Typography>
-      <Card>
-        <CardContent>
-          <Typography variant="h6">Set a New Goal</Typography>
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <TextField
-              label="Goal"
-              variant="outlined"
-              value={goal}
-              onChange={(e) => setGoal(e.target.value)}
-              fullWidth
-            />
-            <Button variant="contained" onClick={handleAddGoal}>
-              Add
-            </Button>
-          </Box>
-          <Typography variant="h6">Current Goals</Typography>
-          <ul>
-            {goalsList.map((g, index) => (
-              <li key={index}>{g}</li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
-    </Container>
+    <>
+      <Typography variant="h6" fontWeight={700} gutterBottom>Set a New Goal</Typography>
+      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+        <TextField
+          label="Goal"
+          variant="outlined"
+          value={goal}
+          onChange={(e) => setGoal(e.target.value)}
+          fullWidth
+        />
+        <Button variant="contained" onClick={handleAddGoal}>
+          Add
+        </Button>
+      </Box>
+      <Typography variant="h6" fontWeight={700} gutterBottom>Current Goals</Typography>
+      <Box component="ul" sx={{ pl: 2 }}>
+        {goalsList.map((g, index) => (
+          <li key={index}>{g}</li>
+        ))}
+      </Box>
+    </>
   );
 };
 

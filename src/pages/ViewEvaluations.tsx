@@ -34,7 +34,7 @@ const ViewEvaluations: React.FC = () => {
       console.log('Token:', token);
       if (!token) throw new Error('No authentication token');
       try {
-        const response = await axios.get('http://localhost:3000/api/evaluations', {
+        const response = await axios.get('http://localhost:5000/api/evaluations', {
           headers: { Authorization: `Bearer ${token}` },
         });
         console.log('Fetched evaluations:', JSON.stringify(response.data, null, 2));
@@ -52,7 +52,7 @@ const ViewEvaluations: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
-      const res = await axios.get(`http://localhost:3000/api/evaluations/${evaluationId}/details`, {
+      const res = await axios.get(`http://localhost:5000/api/evaluations/${evaluationId}/details`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setDetails(res.data);

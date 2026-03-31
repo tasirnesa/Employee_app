@@ -74,7 +74,7 @@ const GoalsPage: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token found');
-      const res = await axios.get(`http://localhost:3000/api/key-result-progress/${gid}`, {
+      const res = await axios.get(`http://localhost:5000/api/key-result-progress/${gid}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setDetailsLogs(res.data.logs || []);
@@ -95,7 +95,7 @@ const GoalsPage: React.FC = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('No authentication token found');
-        const response = await axios.get('http://localhost:3000/api/goals', {
+        const response = await axios.get('http://localhost:5000/api/goals', {
           headers: { Authorization: `Bearer ${token}` },
         });
         setGoals(response.data);
@@ -224,7 +224,7 @@ const GoalsPage: React.FC = () => {
     if (!token) throw new Error('No authentication token found');
     const userId = JSON.parse(localStorage.getItem('userProfile') || '{}').id; // Assuming userId is stored
     await axios.post(
-      `http://localhost:3000/api/key-result-progress`,
+      `http://localhost:5000/api/key-result-progress`,
       {
         goalId: progressGoal.gid,
         keyIndex: progressKeyIndex,
@@ -281,7 +281,7 @@ const GoalsPage: React.FC = () => {
         category: editCategory,
       };
       const res = await axios.put(
-        `http://localhost:3000/api/goals/${editGoal.gid}`,
+        `http://localhost:5000/api/goals/${editGoal.gid}`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -300,7 +300,7 @@ const GoalsPage: React.FC = () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token found');
-      await axios.delete(`http://localhost:3000/api/goals/${deleteGoal.gid}`,
+      await axios.delete(`http://localhost:5000/api/goals/${deleteGoal.gid}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setGoals(prev => prev.filter(g => g.gid !== deleteGoal.gid));
@@ -324,7 +324,7 @@ const GoalsPage: React.FC = () => {
       if (!token) throw new Error('No authentication token found');
 
       const response = await axios.post(
-        'http://localhost:3000/api/goals',
+        'http://localhost:5000/api/goals',
         {
           objective: newObjective,
           keyResult: newKeyResults.filter(kr => kr.title.trim()),

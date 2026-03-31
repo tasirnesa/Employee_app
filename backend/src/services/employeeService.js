@@ -31,6 +31,10 @@ const employeeService = {
     if (data.age) data.age = parseInt(data.age);
     if (data.userId) data.userId = parseInt(data.userId);
 
+    // Remove string fields that conflict with relation names
+    delete data.department;
+    delete data.position;
+
     // Handle optional linked user creation
     if (!data.userId && username && password) {
       const userNameNormalized = String(username).trim().toLowerCase();
@@ -82,6 +86,10 @@ const employeeService = {
     if (data.userId !== undefined) data.userId = data.userId != null ? parseInt(data.userId) : null;
     if (data.departmentId !== undefined) data.departmentId = data.departmentId != null ? parseInt(data.departmentId) : null;
     if (data.positionId !== undefined) data.positionId = data.positionId != null ? parseInt(data.positionId) : null;
+
+    // Remove string fields that conflict with relation names
+    delete data.department;
+    delete data.position;
 
     const updated = await employeeRepository.update(id, data);
 

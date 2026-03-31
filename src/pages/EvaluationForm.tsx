@@ -10,7 +10,7 @@ const EvaluationForm: React.FC = () => {
     const fetchEvaluations = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:3000/api/evaluations', {
+        const response = await axios.get('http://localhost:5000/api/evaluations', {
           headers: { Authorization: `Bearer ${token}` },
         });
         setEvaluations(response.data);
