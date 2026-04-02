@@ -131,7 +131,7 @@ class ApiService {
     return response.data;
   }
 
-  async createLeave(leaveData: Partial<Leave>): Promise<Leave> {
+  async createLeave(leaveData: Partial<Leave> | FormData): Promise<Leave> {
     const response = await api.post('/api/leaves', leaveData);
     return response.data;
   }

@@ -6,12 +6,15 @@ const leaveRepository = {
       where,
       include: {
         employee: {
-          select: { id: true, fullName: true, userName: true, departmentId: true }
+          select: { id: true, fullName: true, userName: true, departmentId: true, managerId: true, manager: { select: { fullName: true } } }
         },
         leaveType: {
           select: { id: true, name: true, description: true, maxDays: true, isPaid: true }
         },
         approver: {
+          select: { id: true, fullName: true }
+        },
+        handover: {
           select: { id: true, fullName: true }
         }
       },
@@ -23,9 +26,10 @@ const leaveRepository = {
     return await prisma.leave.findUnique({
       where: { id: parseInt(id) },
       include: {
-        employee: { select: { id: true, fullName: true, userName: true, departmentId: true } },
+        employee: { select: { id: true, fullName: true, userName: true, departmentId: true, managerId: true, manager: { select: { fullName: true } } } },
         leaveType: { select: { id: true, name: true, description: true, maxDays: true, isPaid: true } },
-        approver: { select: { id: true, fullName: true } }
+        approver: { select: { id: true, fullName: true } },
+        handover: { select: { id: true, fullName: true } }
       }
     });
   },

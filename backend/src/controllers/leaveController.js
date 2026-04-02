@@ -28,7 +28,26 @@ const leaveController = {
   }),
 
   createLeave: asyncHandler(async (req, res) => {
-    const leave = await leaveService.createLeaveRequest(req.body);
+    const data = { ...req.body };
+    if (req.file) {
+      data.attachmentUrl = `/uploads/leaves/${req.file.filename}`;
+    }
+    
+    // Enforce self-request for Employees
+    const role = (req.user?.role || '').toLowerCase();
+    if (role === 'employee') {
+      data.employeeId = req.user.id;
+    } else {
+      if (data.employeeId) data.employeeId = parseInt(data.employeeId);
+    }
+    
+    // FormData sends everything as strings, so we need to parse some fields
+    if (typeof data.isHalfDay === 'string') data.isHalfDay = data.isHalfDay === 'true';
+    if (data.leaveTypeId) data.leaveTypeId = parseInt(data.leaveTypeId);
+    if (data.handoverId === 'null' || data.handoverId === '') data.handoverId = null;
+    else if (data.handoverId) data.handoverId = parseInt(data.handoverId);
+
+    const leave = await leaveService.createLeaveRequest(data);
     res.status(201).json(leave);
   }),
 

@@ -53,9 +53,19 @@ const Attendance: React.FC = () => {
   const [loading, setLoading] = useState(true);
   // Track days that have planned schedules applied
   const [daysWithPlannedSchedule, setDaysWithPlannedSchedule] = useState<Set<string>>(new Set());
-  // Track current leave status
-  const [currentLeaveStatus, setCurrentLeaveStatus] = useState<any>(null);
+  const [leaveRecords, setLeaveRecords] = useState<any[]>([]);
   const [isOnLeaveToday, setIsOnLeaveToday] = useState(false);
+  const [currentLeaveStatus, setCurrentLeaveStatus] = useState<any>(null);
+
+  const isDateOffLimit = (dateString: string) => {
+    if (!dateString) return null;
+    const target = new Date(dateString).toISOString().split('T')[0];
+    return leaveRecords.find((leave: any) => {
+      const startDate = new Date(leave.startDate).toISOString().split('T')[0];
+      const endDate = new Date(leave.endDate).toISOString().split('T')[0];
+      return target >= startDate && target <= endDate;
+    });
+  };
 
   // Load attendance records on component mount
   useEffect(() => {
@@ -98,6 +108,7 @@ const Attendance: React.FC = () => {
       try {
         const today = new Date().toISOString().split('T')[0];
         const response = await attendanceApi.getLeaveCalendar(user.id);
+        setLeaveRecords(response);
 
         // Check if any leave includes today
         const leaveToday = response.find((leave: any) => {
@@ -581,6 +592,14 @@ const Attendance: React.FC = () => {
         <DialogContent>
           {currentRecord && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+              {currentRecord.date && isDateOffLimit(currentRecord.date) && !currentRecord.id && (
+                <Alert severity="error" icon={<EventBusyIcon />}>
+                  <Typography variant="body2" fontWeight="bold">
+                    Employee is on {isDateOffLimit(currentRecord.date)?.leaveType?.name} leave on this date.
+                  </Typography>
+                  Attendance cannot be marked for this period.
+                </Alert>
+              )}
               {currentRecord.date && hasPlannedSchedule(currentRecord.date) && !currentRecord.id && (
                 <Alert severity="info">
                   This day already has a planned schedule applied. You can only edit existing records.
@@ -661,7 +680,7 @@ const Attendance: React.FC = () => {
           <Button
             onClick={handleSaveRecord}
             variant="contained"
-            disabled={loading || (currentRecord && !currentRecord.id && currentRecord.date ? hasPlannedSchedule(currentRecord.date) : false)}
+            disabled={loading || (currentRecord && !currentRecord.id && currentRecord.date ? (hasPlannedSchedule(currentRecord.date) || isDateOffLimit(currentRecord.date)) : false)}
           >
             Save
           </Button>

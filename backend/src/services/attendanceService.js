@@ -1,6 +1,18 @@
 const attendanceRepository = require('../repositories/attendanceRepository');
 const leaveRepository = require('../repositories/leaveRepository');
 
+const _checkIfOnLeave = async (employeeId, date) => {
+  const attendanceDate = new Date(date);
+  attendanceDate.setHours(0, 0, 0, 0);
+
+  const overlappingLeaves = await leaveRepository.findOverlapping(employeeId, attendanceDate, attendanceDate);
+  const approvedLeave = overlappingLeaves.find(l => l.status === 'Approved');
+  
+  if (approvedLeave) {
+    throw new Error(`Cannot mark attendance: Employee is on approved ${approvedLeave.leaveType.name}${approvedLeave.isHalfDay ? ` (${approvedLeave.halfDayPeriod})` : ''} on this date.`);
+  }
+};
+
 const attendanceService = {
   getAttendanceForEmployee: async (employeeId) => {
     return await attendanceRepository.findAll({ employeeId: parseInt(employeeId) });
@@ -33,6 +45,9 @@ const attendanceService = {
   checkIn: async (employeeId) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    // Check if employee is on approved leave
+    await _checkIfOnLeave(employeeId, today);
 
     const existing = await attendanceRepository.findLatestRecord(employeeId, today);
     if (existing && existing.checkInTime) {
@@ -75,12 +90,7 @@ const attendanceService = {
     attendanceDate.setHours(0, 0, 0, 0);
 
     // Check if employee is on approved leave
-    const overlappingLeaves = await leaveRepository.findOverlapping(data.employeeId, attendanceDate, attendanceDate);
-    const approvedLeave = overlappingLeaves.find(l => l.status === 'Approved');
-    
-    if (approvedLeave) {
-      throw new Error(`On leave: ${approvedLeave.leaveType.name}`);
-    }
+    await _checkIfOnLeave(data.employeeId, attendanceDate);
 
     return await attendanceRepository.create({
       employeeId: parseInt(data.employeeId),
@@ -95,6 +105,13 @@ const attendanceService = {
   },
 
   updateAttendance: async (id, data) => {
+    const targetId = data.employeeId ? parseInt(data.employeeId) : (await attendanceRepository.findById(id))?.employeeId;
+    const targetDate = data.date ? new Date(data.date) : (await attendanceRepository.findById(id))?.date;
+    
+    if (targetId && targetDate) {
+      await _checkIfOnLeave(targetId, targetDate);
+    }
+
     let hoursWorked = data.hoursWorked;
     if (data.checkInTime && data.checkOutTime) {
       const checkInTime = new Date(data.checkInTime);

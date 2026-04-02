@@ -334,6 +334,11 @@ export interface Leave {
   approvedBy?: number;
   approvedAt?: string;
   comments?: string;
+  handoverId?: number;
+  emergencyContact?: string;
+  isHalfDay?: boolean;
+  halfDayPeriod?: 'Morning' | 'Afternoon';
+  attachmentUrl?: string;
   createdAt: string;
   updatedAt: string;
   employee?: {
@@ -349,6 +354,10 @@ export interface Leave {
     isPaid: boolean;
   };
   approver?: {
+    id: number;
+    fullName: string;
+  };
+  handover?: {
     id: number;
     fullName: string;
   };

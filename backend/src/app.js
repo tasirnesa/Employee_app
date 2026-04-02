@@ -4,8 +4,12 @@ const path = require('path');
 const fs = require('fs');
 const { authenticateToken } = require('./middleware/auth');
 const errorHandler = require('./middleware/errorHandler');
+const reminderService = require('./services/reminderService');
 
 const app = express();
+
+// Initialize periodic tasks
+reminderService.init();
 
 // Middleware
 app.use(cors());

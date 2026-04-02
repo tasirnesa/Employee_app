@@ -51,6 +51,7 @@ model User {
   approvedTimesheets      Timesheet[]          @relation("TimesheetApprover")
   leaves                  Leave[]              @relation("LeaveEmployee")
   approvedLeaves          Leave[]              @relation("LeaveApprover")
+  handoverLeaves          Leave[]              @relation("LeaveHandover")
   sentMessages            Message[]            @relation("SentMessages")
   receivedMessages        Message[]            @relation("ReceivedMessages")
   notifications           Notification[]
@@ -399,11 +400,18 @@ model Leave {
   approvedBy  Int?
   approvedAt  DateTime?
   comments    String?
+  handoverId  Int?
+  emergencyContact String?
+  isHalfDay   Boolean   @default(false)
+  halfDayPeriod String?
+  attachmentUrl String?
+  lastReminderAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   employee    User      @relation("LeaveEmployee", fields: [employeeId], references: [id])
   leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id])
   approver    User?     @relation("LeaveApprover", fields: [approvedBy], references: [id])
+  handover    User?     @relation("LeaveHandover", fields: [handoverId], references: [id])
 
   @@map("Leave")
 }
