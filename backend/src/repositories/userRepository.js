@@ -35,6 +35,21 @@ const userRepository = {
       data,
     });
   },
+
+  findByEmail: async (email) => {
+    return await prisma.user.findUnique({
+      where: { email },
+    });
+  },
+
+  findByResetToken: async (token) => {
+    return await prisma.user.findFirst({
+      where: { 
+        resetToken: token,
+        resetTokenExpiry: { gte: new Date() }
+      },
+    });
+  },
 };
 
 module.exports = userRepository;

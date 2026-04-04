@@ -20,3 +20,8 @@ export const markAsRead = async (messageId: string): Promise<Message> => {
     const response = await api.patch(`/api/messages/${messageId}/read`);
     return response.data;
 };
+
+export const markAllMessagesAsRead = async (userId: number): Promise<any> => {
+    const response = await api.patch(`/api/messages/${userId}/read-all`);
+    return response.data;
+};

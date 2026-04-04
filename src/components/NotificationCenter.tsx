@@ -28,7 +28,6 @@ const NotificationCenter: React.FC = () => {
     const { data: notifications = [] } = useQuery({
         queryKey: ['notifications'],
         queryFn: fetchNotifications,
-        refetchInterval: 30000, // Poll every 30 seconds
     });
 
     const unreadCount = notifications.filter((n) => !n.isRead).length;

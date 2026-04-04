@@ -18,6 +18,7 @@ router.post('/compensations', authenticateToken, authorize(PERMISSIONS.PAYROLL_U
 // --- Payroll Run ---
 router.post('/run', authenticateToken, authorize(PERMISSIONS.PAYROLL_RUN), payrollController.runPayroll);
 router.post('/preview', authenticateToken, authorize(PERMISSIONS.PAYROLL_RUN), payrollController.previewPayroll);
+router.post('/distribute', authenticateToken, authorize(PERMISSIONS.PAYROLL_RUN), payrollController.distributePayslips);
 
 // --- Config: Positions ---
 router.get('/position-config', authenticateToken, authorize(PERMISSIONS.PAYROLL_VIEW), payrollController.getPositionConfigs);

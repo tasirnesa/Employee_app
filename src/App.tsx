@@ -44,6 +44,8 @@ import PositionManagement from './pages/PositionManagement';
 import Projects from './pages/Projects';
 import NewHireWizard from './pages/NewHireWizard';
 import NotificationsPage from './pages/NotificationsPage';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 
 const AppContent: React.FC = () => {
@@ -144,6 +146,8 @@ const AppContent: React.FC = () => {
         <Box sx={{ p: 0, minHeight: isFirstLogin ? '100vh' : 'calc(100vh - 64px)' }}>
           <Routes>
             <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
+            <Route path="/forgot-password" element={!isAuthenticated ? <ForgotPassword /> : <Navigate to="/dashboard" />} />
+            <Route path="/reset-password" element={!isAuthenticated ? <ResetPassword /> : <Navigate to="/dashboard" />} />
             <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/users/create" element={<ProtectedRoute blockEmployee={true}><CreateUser /></ProtectedRoute>} />

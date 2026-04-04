@@ -6,7 +6,7 @@ import ReplyIcon from '@mui/icons-material/Reply';
 import CloseIcon from '@mui/icons-material/Close';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getUsers } from '../api/userApi';
-import { getMessages, sendMessage } from '../api/messageApi';
+import { getMessages, sendMessage, markAllMessagesAsRead } from '../api/messageApi';
 import { useUser } from '../context/UserContext';
 
 // Redundant local type replaced by Message from interfaces.ts
@@ -65,6 +65,18 @@ const RightRail: React.FC = () => {
 			parentSenderId: m.parent?.senderId
 		})) as ChatMsg[];
 	}, [rawMessages, me?.id]);
+
+	// Mark as read when chat opens or new messages arrive
+	useEffect(() => {
+		if (chatOpen && chatWith?.userId && rawMessages.length > 0) {
+			const hasUnread = rawMessages.some((m: any) => m.senderId === chatWith.userId && m.status !== 'read');
+			if (hasUnread) {
+				markAllMessagesAsRead(chatWith.userId).then(() => {
+					queryClient.invalidateQueries({ queryKey: ['chat-threads'] });
+				});
+			}
+		}
+	}, [chatOpen, chatWith?.userId, rawMessages, queryClient]);
 
 	const sendMutation = useMutation({
 		mutationFn: (text: string) => {

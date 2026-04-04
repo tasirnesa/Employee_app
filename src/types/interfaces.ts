@@ -168,12 +168,16 @@ export interface AttendanceSummary {
 }
 
 export interface Payslip {
-  id: string;
-  employeeId: string;
+  id: number;
+  employeeId: number;
   employeeName: string;
   period: string;
   basicSalary: number;
   allowances: number;
+  overtimePay: number;
+  lateDeduction: number;
+  attendanceBonus: number;
+  attendancePenalty: number;
   deductions: number;
   netSalary: number;
   status: 'Generated' | 'Paid' | 'Pending';

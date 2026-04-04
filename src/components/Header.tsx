@@ -25,9 +25,12 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
 import SearchIcon from '@mui/icons-material/Search';
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
+import ForumIcon from '@mui/icons-material/Forum';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useUser } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { getThreads } from '../api/messageApi';
 import NotificationCenter from './NotificationCenter';
 
 interface HeaderProps {
@@ -69,6 +72,16 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
     navigate('/login');
   };
 
+  const { data: threads = [] } = useQuery({
+    queryKey: ['chat-threads'],
+    queryFn: getThreads,
+    enabled: !!user,
+  });
+
+  const totalUnread = React.useMemo(() => {
+    return threads.reduce((sum: number, t: any) => sum + (t.unreadCount || 0), 0);
+  }, [threads]);
+
   return (
     <Box sx={{ mb: 2 }}>
       <AppBar position="static" color="transparent" elevation={0}>
@@ -104,6 +117,13 @@ const Header: React.FC<HeaderProps> = ({ collapsed, onToggle }) => {
             <Tooltip title="Filters">
               <IconButton color="inherit" aria-label="filters">
                 <TuneIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={totalUnread > 0 ? `${totalUnread} Unread Messages` : 'Messages'}>
+              <IconButton color="inherit" onClick={() => navigate('/todo')}>
+                <Badge badgeContent={totalUnread} color="error">
+                  <ForumIcon />
+                </Badge>
               </IconButton>
             </Tooltip>
             <NotificationCenter />

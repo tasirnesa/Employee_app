@@ -48,6 +48,16 @@ const userController = {
   updateMe: asyncHandler(async (req, res) => {
     const user = await userService.updateMe(req.user.id, req.body);
     res.json({ message: 'User updated successfully', user });
+  }),
+
+  forgotPassword: asyncHandler(async (req, res) => {
+    const result = await userService.forgotPassword(req.body.email);
+    res.json(result);
+  }),
+
+  resetPassword: asyncHandler(async (req, res) => {
+    const result = await userService.resetPassword(req.body.token, req.body.newPassword);
+    res.json(result);
   })
 };
 

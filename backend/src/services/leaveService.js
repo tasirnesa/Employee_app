@@ -1,6 +1,7 @@
 const leaveRepository = require('../repositories/leaveRepository');
 const userRepository = require('../repositories/userRepository');
 const prisma = require('../config/prisma');
+const emailService = require('./emailService');
 
 const startOfYear = (d = new Date()) => new Date(d.getFullYear(), 0, 1);
 const endOfYear = (d = new Date()) => new Date(d.getFullYear(), 11, 31, 23, 59, 59, 999);
@@ -122,6 +123,21 @@ const leaveService = {
         console.warn('Notification failed', e.message);
       }
     }
+
+    // --- Email Notification to Manager ---
+    if (employee.manager?.email) {
+      try {
+        await emailService.sendEmail({
+          to: employee.manager.email,
+          subject: 'New Leave Request Notification',
+          text: `${employee.fullName} has requested ${days} days of ${leaveType.name} leave starting from ${new Date(startDate).toLocaleDateString()}.`,
+          html: `<p>${employee.fullName} has requested <strong>${days}</strong> days of <strong>${leaveType.name}</strong> leave.</p><p>Period: ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}</p>`
+        });
+      } catch (e) {
+        console.warn('Email notification to manager failed', e.message);
+      }
+    }
+
     return leave;
   },
 
@@ -202,6 +218,25 @@ const leaveService = {
       });
     } catch (e) {
       console.warn('Notification failed', e.message);
+    }
+
+    // --- Email Notification to Employee ---
+    try {
+      const empWithUser = await prisma.user.findUnique({ 
+        where: { id: updated.employeeId }, 
+        include: { employees: true } 
+      });
+      const targetEmail = empWithUser?.email || (empWithUser?.employees?.[0]?.email);
+      
+      if (targetEmail) {
+        await emailService.sendLeaveStatusEmail(
+          { ...updated.employee, email: targetEmail, fullName: empWithUser.fullName }, 
+          updated, 
+          status
+        );
+      }
+    } catch (e) {
+      console.warn('Leave status email failed', e.message);
     }
 
     const usage = await leaveService.getUsage(updated.employeeId);

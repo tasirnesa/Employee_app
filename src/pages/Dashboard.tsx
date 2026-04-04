@@ -16,6 +16,7 @@ import {
   Divider,
   Button,
   IconButton,
+  Badge,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import type { User, Evaluation, EvaluationCriteria, EvaluationResult, Employee, Goal } from '../types/interfaces';
@@ -169,7 +170,6 @@ const Dashboard: React.FC = () => {
   const { data: threads = [] } = useQuery({
     queryKey: ['chat-threads'],
     queryFn: getThreads,
-    refetchInterval: 10000,
   });
 
   const chatThreads = React.useMemo(() => {
@@ -181,7 +181,8 @@ const Dashboard: React.FC = () => {
         lastText: t.text || '',
         lastAt: t.createdAt,
         avatar: t.otherAvatar || emp?.profileImageUrl,
-        isMe: t.senderId === currentUser?.id
+        isMe: t.senderId === currentUser?.id,
+        unreadCount: t.unreadCount || 0
       };
     });
   }, [threads, employeesForTime, currentUser?.id]);
@@ -285,7 +286,19 @@ const Dashboard: React.FC = () => {
               <Card sx={{ borderRadius: 4, border: '1px solid #eef2ff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                    <Typography variant="h6" fontWeight={800} sx={{ color: '#1e293b' }}>Internal Communications</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Typography variant="h6" fontWeight={800} sx={{ color: '#1e293b' }}>
+                        Internal Communications
+                      </Typography>
+                      {chatThreads.some(t => t.unreadCount > 0) && (
+                        <Chip 
+                          label={`${chatThreads.reduce((sum, t) => sum + (t.unreadCount || 0), 0)} New`}
+                          size="small" 
+                          color="error" 
+                          sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }} 
+                        />
+                      )}
+                    </Box>
                     <Button size="small" onClick={() => navigate('/todo')}>Open Chat</Button>
                   </Box>
                   <List sx={{ maxHeight: 320, overflow: 'auto' }}>
@@ -300,11 +313,19 @@ const Dashboard: React.FC = () => {
                         }}
                       >
                         <ListItemAvatar>
-                          <Avatar src={t.avatar || undefined} sx={{ bgcolor: 'primary.light' }}>{t.withName.charAt(0)}</Avatar>
+                          <Badge 
+                            badgeContent={t.unreadCount} 
+                            color="error" 
+                            overlap="circular"
+                            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                            invisible={!t.unreadCount}
+                          >
+                            <Avatar src={t.avatar || undefined} sx={{ bgcolor: 'primary.light' }}>{t.withName.charAt(0)}</Avatar>
+                          </Badge>
                         </ListItemAvatar>
                         <ListItemText
                           primary={<Typography variant="body2" fontWeight={700} noWrap>{t.withName}</Typography>}
-                          secondary={<Typography variant="caption" color="text.secondary" noWrap>{t.lastText}</Typography>}
+                          secondary={<Typography variant="caption" color={t.unreadCount ? 'primary.main' : 'text.secondary'} fontWeight={t.unreadCount ? 700 : 400} noWrap>{t.lastText}</Typography>}
                         />
                         <Typography variant="caption" color="text.disabled" sx={{ ml: 1 }}>{new Date(t.lastAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography>
                       </ListItem>

@@ -3,6 +3,7 @@ const userRepository = require('../repositories/userRepository');
 const prisma = require('../config/prisma');
 const fs = require('fs');
 const path = require('path');
+const emailService = require('./emailService');
 
 // Config paths (relative to this service file, but pointing to backend root as before)
 const CONFIG_FILE = path.join(__dirname, '..', '..', 'payroll.position.config.json');
@@ -87,6 +88,10 @@ const payrollService = {
         period: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`,
         basicSalary: calc.basicSalary,
         allowances: calc.allowances,
+        overtimePay: calc.overtimePay,
+        lateDeduction: calc.lateDeduction,
+        attendanceBonus: calc.attendanceBonus,
+        attendancePenalty: calc.attendancePenalty,
         deductions: calc.deductions,
         netSalary: calc.netSalary,
         status: 'Generated',
@@ -125,6 +130,43 @@ const payrollService = {
 
     const calc = await payrollService._calculatePayrollDetails(u.id, comp, start, end);
     return { period: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`, calc };
+  },
+
+  distributePayslips: async (period) => {
+    if (!period) throw new Error('Period is required');
+    const payslips = await prisma.payslip.findMany({
+      where: { period },
+      include: { 
+        employee: { 
+          include: { 
+            employees: true 
+          } 
+        } 
+      }
+    });
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const ps of payslips) {
+      const email = ps.employee?.email || ps.employee?.employees?.[0]?.email;
+      if (email) {
+        try {
+          await emailService.sendPayslipEmail({
+            fullName: ps.employee?.fullName,
+            email: email
+          }, ps);
+          successCount++;
+        } catch (e) {
+          console.error(`Failed to send payslip to ${email}:`, e.message);
+          failCount++;
+        }
+      } else {
+        failCount++;
+      }
+    }
+
+    return { total: payslips.length, success: successCount, failed: failCount };
   },
 
   // --- Config Helpers ---
@@ -171,6 +213,9 @@ const payrollService = {
         taxFixed: Number(sCfg.taxFixed || 0),
         insuranceEmployeeFixed: Number(sCfg.insuranceEmployeeFixed || 0),
         otherDeductionsFixed: Number(sCfg.otherDeductionsFixed || 0),
+        latePenaltyRate: Number(sCfg.latePenaltyRate ?? 0.5),
+        perfectAttendanceBonus: Number(sCfg.perfectAttendanceBonus ?? 50),
+        absenteeismThreshold: Number(sCfg.absenteeismThreshold ?? 2),
       };
     }
     if (u.positionId && posCfg[String(u.positionId)]) {
@@ -188,47 +233,81 @@ const payrollService = {
         taxFixed: Number(pCfg.taxFixed || 0),
         insuranceEmployeeFixed: Number(pCfg.insuranceEmployeeFixed || 0),
         otherDeductionsFixed: Number(pCfg.otherDeductionsFixed || 0),
+        latePenaltyRate: Number(pCfg.latePenaltyRate ?? 0.5),
+        perfectAttendanceBonus: Number(pCfg.perfectAttendanceBonus ?? 50),
+        absenteeismThreshold: Number(pCfg.absenteeismThreshold ?? 2),
       };
     }
     return null;
   },
 
   _calculatePayrollDetails: async (userId, comp, start, end) => {
-    const [times, unpaidDays, benefits, perksTotal] = await Promise.all([
+    const [times, unpaidDays, benefits, perksTotal, attendanceSum] = await Promise.all([
       payrollService._aggregateTimesheets(userId, start, end),
       payrollService._aggregateUnpaidLeaveDays(userId, start, end),
       payrollService._aggregateBenefits(userId, start, end),
       payrollService._aggregatePerks(userId, start, end),
+      payrollService._aggregateAttendanceProfile(userId, start, end),
     ]);
 
     const workingDays = payrollService._businessDaysInRange(start, end);
     const basic = Number(comp.basicSalary || 0);
     const hourlyRate = workingDays > 0 ? (basic / (workingDays * 8)) : 0;
+    
+    // 1. Overtime Calculation (Combining Timesheets + Attendance Overtime)
+    const totalOTHours = Number(times.overtime || 0) + Number(attendanceSum.overtimeHours || 0);
     const overtimeRate = hourlyRate * Number(comp.overtimeMultiplier || 1.5);
-    const overtimePay = Number(times.overtime || 0) * overtimeRate;
+    const overtimePay = totalOTHours * overtimeRate;
+
+    // 2. Late Arrival Deduction (Configurable rate, default 0.5h of pay per instance)
+    const latePenaltyRate = Number(comp.latePenaltyRate ?? 0.5);
+    const lateDeduction = Number(attendanceSum.lateCount || 0) * hourlyRate * latePenaltyRate;
+
+    // 3. Perfect Attendance Bonus (Configurable, default $50)
+    let attendanceBonus = 0;
+    const bonusAmount = Number(comp.perfectAttendanceBonus ?? 50);
+    // Perfect Attendance = No unexplained absences, no unpaid leave in the month, and no lateness
+    if (attendanceSum.lateCount === 0 && unpaidDays.total === 0) {
+      attendanceBonus = bonusAmount;
+    }
+
+    // 4. Absenteeism Penalty (If unexplained absences > threshold, penalize by 1 more day of pay)
+    let attendancePenalty = 0;
+    const threshold = Number(comp.absenteeismThreshold ?? 2);
+    if (unpaidDays.unexplainedAbsences > threshold) {
+      attendancePenalty = (basic / workingDays) * 1.0; 
+    }
+
     const unpaidDeduction = (basic / workingDays) * (unpaidDays.total || 0);
 
-    const gross = basic + Number(comp.allowances || 0) + Number(comp.bonus || 0) + overtimePay + Number(perksTotal || 0) - unpaidDeduction;
+    // Gross = Basic + Allowance + Bonus + OT + Perks + AttBonus - Unpaid - Late - AttPenalty
+    const grossEarnings = basic + Number(comp.allowances || 0) + Number(comp.bonus || 0) + overtimePay + Number(perksTotal || 0) + attendanceBonus;
+    
     const pensionEmployee = basic * Number(comp.pensionEmployeePct ?? 0.07);
-    const totalDeductions = pensionEmployee + Number(comp.taxFixed || 0) + Number(comp.insuranceEmployeeFixed || 0) + Number(comp.otherDeductionsFixed || 0) + Number(benefits.employee || 0);
-    const net = gross - totalDeductions;
+    const totalDeductions = pensionEmployee + Number(comp.taxFixed || 0) + Number(comp.insuranceEmployeeFixed || 0) + Number(comp.otherDeductionsFixed || 0) + Number(benefits.employee || 0) + lateDeduction + unpaidDeduction + attendancePenalty;
+    
+    const netSalary = grossEarnings - totalDeductions;
 
     return {
       basicSalary: basic,
       allowances: Number(comp.allowances || 0),
       bonus: Number(comp.bonus || 0),
       overtimePay,
+      lateDeduction,
+      attendanceBonus,
+      attendancePenalty,
       unpaidDeduction,
       perks: Number(perksTotal || 0),
-      grossEarnings: gross,
+      grossEarnings,
       deductions: totalDeductions,
-      netSalary: net,
+      netSalary,
       breakdown: {
         pensionEmployee,
         tax: Number(comp.taxFixed || 0),
         insuranceEmp: Number(comp.insuranceEmployeeFixed || 0),
-        overtimeHours: Number(times.overtime || 0),
+        overtimeHours: totalOTHours,
         workingDays,
+        lateCount: attendanceSum.lateCount,
         unpaidLeaveDays: unpaidDays.unpaidLeaveDays,
         unexplainedAbsences: unpaidDays.unexplainedAbsences,
         totalUnpaidDays: unpaidDays.total,
@@ -251,13 +330,26 @@ const payrollService = {
 
   _aggregateTimesheets: async (userId, start, end) => {
     const rows = await prisma.timesheet.findMany({
-      where: { employeeId: userId, date: { gte: start, lte: end } },
+      where: { employeeId: userId, date: { gte: start, lte: end }, status: 'Approved' },
       select: { hoursWorked: true, overtimeHours: true },
     });
     return rows.reduce((acc, r) => ({
       hours: acc.hours + (r.hoursWorked || 0),
       overtime: acc.overtime + (r.overtimeHours || 0),
     }), { hours: 0, overtime: 0 });
+  },
+
+  _aggregateAttendanceProfile: async (userId, start, end) => {
+    const attendance = await prisma.attendance.findMany({
+      where: { employeeId: userId, date: { gte: start, lte: end } }
+    });
+
+    return {
+      lateCount: attendance.filter(a => a.status === 'late').length,
+      overtimeHours: attendance
+        .filter(a => a.timeType && a.timeType.startsWith('overtime'))
+        .reduce((sum, a) => sum + (a.hoursWorked || 0), 0),
+    };
   },
 
   _aggregateUnpaidLeaveDays: async (userId, start, end) => {

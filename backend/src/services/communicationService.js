@@ -1,4 +1,5 @@
 const communicationRepository = require('../repositories/communicationRepository');
+const socketService = require('./socketService');
 
 const communicationService = {
   // --- Message logic ---
@@ -15,7 +16,7 @@ const communicationService = {
     if (!receiverId || (!text && !image)) {
       throw new Error('Receiver and content are required');
     }
-    return await communicationRepository.createMessage({
+    const message = await communicationRepository.createMessage({
       senderId: parseInt(senderId),
       receiverId: parseInt(receiverId),
       text: text || null,
@@ -23,10 +24,34 @@ const communicationService = {
       parentId: parentId || null,
       status: 'sent'
     });
+
+    // Real-time message delivery
+    socketService.sendToUser(receiverId, 'newMessage', message);
+    
+    return message;
   },
 
   markMessageRead: async (messageId) => {
-    return await communicationRepository.updateMessage(messageId, { status: 'read' });
+    const message = await communicationRepository.updateMessage(parseInt(messageId), { status: 'read' });
+    // Notify sender that message was read
+    socketService.sendToUser(message.senderId, 'messageRead', { messageId: message.id, receiverId: message.receiverId });
+    return message;
+  },
+
+  markAllMessagesAsRead: async (myId, otherUserId) => {
+    const result = await communicationRepository.updateManyMessages(
+      { 
+        receiverId: parseInt(myId), 
+        senderId: parseInt(otherUserId), 
+        status: { not: 'read' } 
+      },
+      { status: 'read' }
+    );
+
+    // Notify all sessions of the current user that messages from this partner are read
+    socketService.sendToUser(myId, 'messagesRead', { otherUserId: parseInt(otherUserId) });
+    
+    return result;
   },
 
   // --- Notification logic ---
@@ -50,9 +75,14 @@ const communicationService = {
   },
 
   notify: async (userId, title, message, type = 'INFO', link = null) => {
-    return await communicationRepository.createNotification({
+    const notification = await communicationRepository.createNotification({
       userId, title, message, type, link
     });
+
+    // Real-time notification delivery
+    socketService.sendToUser(userId, 'notification', notification);
+
+    return notification;
   }
 };
 

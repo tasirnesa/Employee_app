@@ -2,6 +2,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const userRepository = require('../repositories/userRepository');
 const prisma = require('../config/prisma');
+const crypto = require('crypto');
+const emailService = require('./emailService');
 const { isTrueLike, isFalseLike, passwordsDifferByAtLeast4Chars } = require('../utils/helpers');
 
 const SECRET_KEY = process.env.JWT_SECRET || 'a-very-secure-secret-key-2025';
@@ -120,6 +122,42 @@ const userService = {
       updateData.password = await bcrypt.hash(password, 10);
     }
     return await userRepository.update(userId, updateData);
+  },
+
+  forgotPassword: async (email) => {
+    if (!email) throw new Error('Email is required');
+    const user = await userRepository.findByEmail(email);
+    if (!user) {
+      // For security, don't reveal if user exists, but we'll return generic success.
+      // However, for internal dev, throwing is faster for debugging.
+      return { message: 'If an account exists with that email, a reset link will be sent.' };
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiry = new Date(Date.now() + 3600000); // 1 hour
+
+    await userRepository.update(user.id, {
+      resetToken: token,
+      resetTokenExpiry: expiry
+    });
+
+    await emailService.sendPasswordResetEmail(user, token);
+    return { message: 'Reset link sent to your email.' };
+  },
+
+  resetPassword: async (token, newPassword) => {
+    if (!token || !newPassword) throw new Error('Token and new password are required');
+    
+    const user = await userRepository.findByResetToken(token);
+    if (!user) throw new Error('Invalid or expired reset token');
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    return await userRepository.update(user.id, {
+      password: hashed,
+      resetToken: null,
+      resetTokenExpiry: null,
+      isFirstLogin: 'false'
+    });
   }
 };
 

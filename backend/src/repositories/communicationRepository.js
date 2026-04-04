@@ -13,6 +13,14 @@ const communicationRepository = {
           END AS "otherId"
         FROM "Message"
         WHERE "senderId" = ${myId} OR "receiverId" = ${myId}
+      ),
+      unread_counts AS (
+        SELECT 
+          CASE WHEN "senderId" = ${myId} THEN "receiverId" ELSE "senderId" END as "partnerId",
+          COUNT(*) as "count"
+        FROM "Message"
+        WHERE "receiverId" = ${myId} AND "status" != 'read'
+        GROUP BY "partnerId"
       )
       SELECT DISTINCT ON ("otherId")
         cp."id", 
@@ -24,10 +32,12 @@ const communicationRepository = {
         cp."otherId",
         cp."parentId",
         u."FullName" as "otherName",
-        e."profileImageUrl" as "otherAvatar"
+        e."profileImageUrl" as "otherAvatar",
+        COALESCE(uc."count", 0)::int as "unreadCount"
       FROM conversation_partners cp
       JOIN "User" u ON u."Id" = cp."otherId"
       LEFT JOIN "Employee" e ON e."userId" = cp."otherId"
+      LEFT JOIN unread_counts uc ON uc."partnerId" = cp."otherId"
       ORDER BY "otherId", cp."createdAt" DESC
     `;
   },
@@ -57,6 +67,10 @@ const communicationRepository = {
       where: { id },
       data
     });
+  },
+
+  updateManyMessages: async (where, data) => {
+    return await prisma.message.updateMany({ where, data });
   },
 
   // --- Notifications ---

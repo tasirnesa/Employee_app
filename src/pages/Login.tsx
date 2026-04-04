@@ -104,6 +104,16 @@ const Login: React.FC = () => {
         <Button variant="contained" onClick={handleLogin} size="large">
           Login
         </Button>
+        <Box sx={{ mt: 1, textAlign: 'center' }}>
+          <Button 
+            variant="text" 
+            size="small" 
+            onClick={() => navigate('/forgot-password')}
+            sx={{ textTransform: 'none' }}
+          >
+            Forgot Password?
+          </Button>
+        </Box>
       </Box>
     </Container>
   );

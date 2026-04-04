@@ -98,6 +98,11 @@ const payrollController = {
     const map = payrollService.loadScaleAssignments();
     res.json({ userId: parseInt(req.params.userId), scaleKey: map[String(req.params.userId)] || null });
   }),
+
+  distributePayslips: asyncHandler(async (req, res) => {
+    const result = await payrollService.distributePayslips(req.body.period);
+    res.json(result);
+  }),
 };
 
 module.exports = payrollController;

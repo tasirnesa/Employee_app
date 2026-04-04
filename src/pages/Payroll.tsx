@@ -29,6 +29,7 @@ import {
   FormControl,
   InputLabel,
   Select,
+  Tooltip,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -36,6 +37,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import ReceiptIcon from '@mui/icons-material/Receipt';
+import EmailIcon from '@mui/icons-material/Email';
+import SendIcon from '@mui/icons-material/Send';
 
 const Payroll: React.FC = () => {
   const navigate = useNavigate();
@@ -53,6 +56,10 @@ const Payroll: React.FC = () => {
     period: '',
     basicSalary: '',
     allowances: '',
+    overtimePay: '0',
+    lateDeduction: '0',
+    attendanceBonus: '0',
+    attendancePenalty: '0',
     deductions: '',
     netSalary: ''
   });
@@ -78,6 +85,10 @@ const Payroll: React.FC = () => {
     taxFixed: '0',
     insuranceEmployeeFixed: '0',
     otherDeductionsFixed: '0',
+    latePenaltyRate: '0.5',
+    perfectAttendanceBonus: '50',
+    absenteeismThreshold: '2',
+
   });
   const [runPeriod, setRunPeriod] = useState<string>(''); // YYYY-MM
   // Scale defaults configuration (admin)
@@ -92,6 +103,9 @@ const Payroll: React.FC = () => {
     taxFixed: '0',
     insuranceEmployeeFixed: '0',
     otherDeductionsFixed: '0',
+    latePenaltyRate: '0.5',
+    perfectAttendanceBonus: '50',
+    absenteeismThreshold: '2',
   });
 
   // Check user role for access control
@@ -175,6 +189,9 @@ const Payroll: React.FC = () => {
         taxFixed: String(cfg.taxFixed ?? '0'),
         insuranceEmployeeFixed: String(cfg.insuranceEmployeeFixed ?? '0'),
         otherDeductionsFixed: String(cfg.otherDeductionsFixed ?? '0'),
+        latePenaltyRate: String(cfg.latePenaltyRate ?? '0.5'),
+        perfectAttendanceBonus: String(cfg.perfectAttendanceBonus ?? '50'),
+        absenteeismThreshold: String(cfg.absenteeismThreshold ?? '2'),
       });
       return cfg;
     },
@@ -196,6 +213,9 @@ const Payroll: React.FC = () => {
         taxFixed: Number(scaleConfig.taxFixed || 0),
         insuranceEmployeeFixed: Number(scaleConfig.insuranceEmployeeFixed || 0),
         otherDeductionsFixed: Number(scaleConfig.otherDeductionsFixed || 0),
+        latePenaltyRate: Number(scaleConfig.latePenaltyRate || 0.5),
+        perfectAttendanceBonus: Number(scaleConfig.perfectAttendanceBonus || 50),
+        absenteeismThreshold: Number(scaleConfig.absenteeismThreshold || 2),
       } as any;
       const res = await api.put(`/api/payroll/scale-config/${scaleKeyEditing}`, payload, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
       return res.data;
@@ -225,6 +245,9 @@ const Payroll: React.FC = () => {
         taxFixed: String(cfg.taxFixed ?? '0'),
         insuranceEmployeeFixed: String(cfg.insuranceEmployeeFixed ?? '0'),
         otherDeductionsFixed: String(cfg.otherDeductionsFixed ?? '0'),
+        latePenaltyRate: String(cfg.latePenaltyRate ?? '0.5'),
+        perfectAttendanceBonus: String(cfg.perfectAttendanceBonus ?? '50'),
+        absenteeismThreshold: String(cfg.absenteeismThreshold ?? '2'),
       });
       return cfg;
     },
@@ -245,6 +268,9 @@ const Payroll: React.FC = () => {
         taxFixed: Number(positionConfig.taxFixed || 0),
         insuranceEmployeeFixed: Number(positionConfig.insuranceEmployeeFixed || 0),
         otherDeductionsFixed: Number(positionConfig.otherDeductionsFixed || 0),
+        latePenaltyRate: Number(positionConfig.latePenaltyRate || 0.5),
+        perfectAttendanceBonus: Number(positionConfig.perfectAttendanceBonus || 50),
+        absenteeismThreshold: Number(positionConfig.absenteeismThreshold || 2),
       } as any;
       const res = await api.put(`/api/payroll/position-config/${selectedPositionId}`, payload, { headers: { Authorization: `Bearer ${token}` } });
       return res.data;
@@ -287,6 +313,10 @@ const Payroll: React.FC = () => {
         period: '',
         basicSalary: '',
         allowances: '',
+        overtimePay: '0',
+        lateDeduction: '0',
+        attendanceBonus: '0',
+        attendancePenalty: '0',
         deductions: '',
         netSalary: ''
       });
@@ -328,6 +358,22 @@ const Payroll: React.FC = () => {
     },
   });
 
+  const distributePayslips = useMutation({
+    mutationFn: async () => {
+      const token = localStorage.getItem('token');
+      const response = await api.post('/api/payroll/distribute', { period: runPeriod }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    },
+    onSuccess: (data: any) => {
+      alert(`Successfully queued ${data.count} payslips for email distribution.`);
+    },
+    onError: (err: any) => {
+      alert(`Error distributing payslips: ${err.response?.data?.message || err.message}`);
+    }
+  });
+
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -340,11 +386,17 @@ const Payroll: React.FC = () => {
   const handlePayslipFormChange = (field: string, value: string) => {
     setPayslipForm(prev => {
       const updated = { ...prev, [field]: value };
-      if (field === 'basicSalary' || field === 'allowances' || field === 'deductions') {
+      if (field === 'basicSalary' || field === 'allowances' || field === 'deductions' || field === 'overtimePay' || field === 'lateDeduction' || field === 'attendanceBonus' || field === 'attendancePenalty') {
         const basicSalary = parseFloat(updated.basicSalary) || 0;
         const allowances = parseFloat(updated.allowances) || 0;
+        const overtimePay = parseFloat(updated.overtimePay) || 0;
+        const attendanceBonus = parseFloat(updated.attendanceBonus) || 0;
+        const lateDeduction = parseFloat(updated.lateDeduction) || 0;
+        const attendancePenalty = parseFloat(updated.attendancePenalty) || 0;
         const deductions = parseFloat(updated.deductions) || 0;
-        updated.netSalary = (basicSalary + allowances - deductions).toString();
+        
+        // Net = (Basic + Allowances + OT + Bonus) - (Deductions + Late + Penalty)
+        updated.netSalary = (basicSalary + allowances + overtimePay + attendanceBonus - deductions - lateDeduction - attendancePenalty).toString();
       }
       return updated;
     });
@@ -364,6 +416,10 @@ const Payroll: React.FC = () => {
       period: payslipForm.period,
       basicSalary: parseFloat(payslipForm.basicSalary),
       allowances: parseFloat(payslipForm.allowances),
+      overtimePay: parseFloat(payslipForm.overtimePay),
+      lateDeduction: parseFloat(payslipForm.lateDeduction),
+      attendanceBonus: parseFloat(payslipForm.attendanceBonus),
+      attendancePenalty: parseFloat(payslipForm.attendancePenalty),
       deductions: parseFloat(payslipForm.deductions),
       netSalary: parseFloat(payslipForm.netSalary),
       status: 'Generated'
@@ -470,6 +526,9 @@ const Payroll: React.FC = () => {
               <TextField label="Tax (fixed)" type="number" value={positionConfig.taxFixed} onChange={(e) => setPositionConfig({ ...positionConfig, taxFixed: e.target.value })} />
               <TextField label="Insurance (employee)" type="number" value={positionConfig.insuranceEmployeeFixed} onChange={(e) => setPositionConfig({ ...positionConfig, insuranceEmployeeFixed: e.target.value })} />
               <TextField label="Other Deductions" type="number" value={positionConfig.otherDeductionsFixed} onChange={(e) => setPositionConfig({ ...positionConfig, otherDeductionsFixed: e.target.value })} />
+              <TextField label="Late Penalty (h)" type="number" inputProps={{ step: "0.1" }} value={positionConfig.latePenaltyRate} onChange={(e) => setPositionConfig({ ...positionConfig, latePenaltyRate: e.target.value })} helperText="Hours of pay deducted per late" />
+              <TextField label="Perfect Att. Bonus" type="number" value={positionConfig.perfectAttendanceBonus} onChange={(e) => setPositionConfig({ ...positionConfig, perfectAttendanceBonus: e.target.value })} />
+              <TextField label="Absent Threshold" type="number" value={positionConfig.absenteeismThreshold} onChange={(e) => setPositionConfig({ ...positionConfig, absenteeismThreshold: e.target.value })} helperText="Days of absence before extra penalty" />
             </Box>
             <Box sx={{ mt: 2 }}>
               <Button variant="contained" onClick={() => { if (!selectedPositionId) { alert('Select a position first'); return; } savePosCfg.mutate(); }}>Save Defaults</Button>
@@ -503,6 +562,9 @@ const Payroll: React.FC = () => {
               <TextField label="Tax (fixed)" type="number" value={scaleConfig.taxFixed} onChange={(e) => setScaleConfig({ ...scaleConfig, taxFixed: e.target.value })} />
               <TextField label="Insurance (employee)" type="number" value={scaleConfig.insuranceEmployeeFixed} onChange={(e) => setScaleConfig({ ...scaleConfig, insuranceEmployeeFixed: e.target.value })} />
               <TextField label="Other Deductions" type="number" value={scaleConfig.otherDeductionsFixed} onChange={(e) => setScaleConfig({ ...scaleConfig, otherDeductionsFixed: e.target.value })} />
+              <TextField label="Late Penalty (h)" type="number" inputProps={{ step: "0.1" }} value={scaleConfig.latePenaltyRate} onChange={(e) => setScaleConfig({ ...scaleConfig, latePenaltyRate: e.target.value })} />
+              <TextField label="Perfect Att. Bonus" type="number" value={scaleConfig.perfectAttendanceBonus} onChange={(e) => setScaleConfig({ ...scaleConfig, perfectAttendanceBonus: e.target.value })} />
+              <TextField label="Absent Threshold" type="number" value={scaleConfig.absenteeismThreshold} onChange={(e) => setScaleConfig({ ...scaleConfig, absenteeismThreshold: e.target.value })} />
             </Box>
             <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
               <Button variant="contained" onClick={() => { if (!scaleKeyEditing) { alert('Enter a scale key'); return; } saveScaleCfg.mutate(); }}>Save Scale</Button>
@@ -519,7 +581,29 @@ const Payroll: React.FC = () => {
             <Typography variant="h6" gutterBottom>Run Payroll</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
               <TextField label="Period" type="month" InputLabelProps={{ shrink: true }} value={runPeriod} onChange={(e) => setRunPeriod(e.target.value)} />
-              <Button variant="contained" onClick={() => runPayroll.mutate()} disabled={runPayroll.isPending}> {runPayroll.isPending ? 'Running...' : 'Run'} </Button>
+              <Button 
+                variant="contained" 
+                onClick={() => runPayroll.mutate()} 
+                disabled={runPayroll.isPending || !runPeriod}
+                startIcon={<AttachMoneyIcon />}
+              > 
+                {runPayroll.isPending ? 'Running...' : 'Run Payroll'} 
+              </Button>
+              <Tooltip title="Send payslips to all employees for this period via email">
+                <Button 
+                  variant="outlined" 
+                  color="secondary"
+                  onClick={() => {
+                    if (window.confirm(`Are you sure you want to email all payslips for ${runPeriod}?`)) {
+                      distributePayslips.mutate();
+                    }
+                  }}
+                  disabled={distributePayslips.isPending || !runPeriod}
+                  startIcon={<EmailIcon />}
+                > 
+                  {distributePayslips.isPending ? 'Sending...' : 'Email All Payslips'} 
+                </Button>
+              </Tooltip>
             </Box>
           </CardContent>
         </Card>
@@ -534,9 +618,9 @@ const Payroll: React.FC = () => {
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Employee</TableCell>
-                <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Period</TableCell>
-                <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Basic Salary</TableCell>
-                <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Allowances</TableCell>
+                <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Basic</TableCell>
+                <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Overtime</TableCell>
+                <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Bonus</TableCell>
                 <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Deductions</TableCell>
                 <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Net Salary</TableCell>
                 <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Status</TableCell>
@@ -552,10 +636,23 @@ const Payroll: React.FC = () => {
                       <Typography variant="caption" color="text.secondary">{payslip.employee?.userName || `ID: ${payslip.employeeId}`}</Typography>
                     </Box>
                   </TableCell>
-                  <TableCell>{payslip.period}</TableCell>
-                  <TableCell>{formatCurrency(payslip.basicSalary)}</TableCell>
-                  <TableCell>{formatCurrency(payslip.allowances)}</TableCell>
-                  <TableCell>{formatCurrency(payslip.deductions)}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{payslip.period}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body2">{formatCurrency(payslip.basicSalary)}</Typography>
+                      <Typography variant="caption" color="text.secondary">+{formatCurrency(payslip.allowances)} allow.</Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell color="success.main">{formatCurrency(payslip.overtimePay)}</TableCell>
+                  <TableCell color="success.main">{formatCurrency(payslip.attendanceBonus)}</TableCell>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body2" color="error.main">-{formatCurrency(Number(payslip.deductions) + Number(payslip.lateDeduction) + Number(payslip.attendancePenalty))}</Typography>
+                      <Typography variant="caption" color="text.secondary">Incl. {formatCurrency(payslip.lateDeduction)} late</Typography>
+                    </Box>
+                  </TableCell>
                   <TableCell><Typography variant="subtitle2" fontWeight={600} color="primary">{formatCurrency(payslip.netSalary)}</Typography></TableCell>
                   <TableCell><Chip label={payslip.status} size="small" color={getStatusColor(payslip.status) as any} /></TableCell>
                   <TableCell>{!isEmployee && (<IconButton onClick={handleMenuClick}><MoreVertIcon /></IconButton>)}</TableCell>
@@ -635,10 +732,22 @@ const Payroll: React.FC = () => {
               <TextField fullWidth label="Allowances" type="number" variant="outlined" value={payslipForm.allowances} onChange={(e) => handlePayslipFormChange('allowances', e.target.value)} />
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
-              <TextField fullWidth label="Deductions" type="number" variant="outlined" value={payslipForm.deductions} onChange={(e) => handlePayslipFormChange('deductions', e.target.value)} />
+              <TextField fullWidth label="Overtime Pay" type="number" variant="outlined" value={payslipForm.overtimePay} onChange={(e) => handlePayslipFormChange('overtimePay', e.target.value)} />
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
-              <TextField fullWidth label="Net Salary" type="number" variant="outlined" disabled value={payslipForm.netSalary} />
+              <TextField fullWidth label="Attendance Bonus" type="number" variant="outlined" value={payslipForm.attendanceBonus} onChange={(e) => handlePayslipFormChange('attendanceBonus', e.target.value)} />
+            </Box>
+            <Box sx={{ flex: '1 1 200px', minWidth: '200px' }}>
+              <TextField fullWidth label="Standard Deductions" type="number" variant="outlined" value={payslipForm.deductions} onChange={(e) => handlePayslipFormChange('deductions', e.target.value)} />
+            </Box>
+            <Box sx={{ flex: '1 1 200px', minWidth: '200px' }}>
+              <TextField fullWidth label="Late Deductions" type="number" variant="outlined" value={payslipForm.lateDeduction} onChange={(e) => handlePayslipFormChange('lateDeduction', e.target.value)} />
+            </Box>
+            <Box sx={{ flex: '1 1 200px', minWidth: '200px' }}>
+              <TextField fullWidth label="Att. Penalty" type="number" variant="outlined" value={payslipForm.attendancePenalty} onChange={(e) => handlePayslipFormChange('attendancePenalty', e.target.value)} />
+            </Box>
+            <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
+              <TextField fullWidth label="Net Salary (Calc)" type="number" variant="outlined" disabled value={payslipForm.netSalary} />
             </Box>
           </Box>
         </DialogContent>

@@ -20,6 +20,11 @@ const messageController = {
   markRead: asyncHandler(async (req, res) => {
     const message = await communicationService.markMessageRead(req.params.messageId);
     res.json(message);
+  }),
+
+  markAllRead: asyncHandler(async (req, res) => {
+    const result = await communicationService.markAllMessagesAsRead(req.user.id, req.params.userId);
+    res.json(result);
   })
 };
 
