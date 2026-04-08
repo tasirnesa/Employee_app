@@ -11,12 +11,21 @@ const employeeRepository = {
   findById: async (id) => {
     return await prisma.employee.findUnique({
       where: { id: parseInt(id) },
+      include: { department: true }
     });
   },
 
   findByEmail: async (email) => {
     return await prisma.employee.findUnique({
       where: { email },
+      include: { department: true }
+    });
+  },
+
+  findByUserId: async (userId) => {
+    return await prisma.employee.findFirst({
+      where: { userId: parseInt(userId) },
+      include: { department: true }
     });
   },
 

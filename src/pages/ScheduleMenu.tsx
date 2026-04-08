@@ -43,7 +43,7 @@ const ScheduleMenu = () => {
 
     try {
       const response = await api.post(
-        '/api/evaluation-sessions',
+        '/api/sessions',
         { title, startDate, endDate, department },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -72,7 +72,7 @@ const ScheduleMenu = () => {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token available');
-      const response = await api.get('/api/evaluation-sessions/stats', {
+      const response = await api.get('/api/sessions/stats', {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;
@@ -85,7 +85,7 @@ const ScheduleMenu = () => {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token available');
-      const response = await api.get('/api/evaluation-sessions', {
+      const response = await api.get('/api/sessions', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const raw = response.data as any[];
@@ -427,7 +427,7 @@ const ScheduleMenu = () => {
                 }
                 const today = new Date().toISOString().split('T')[0];
                 await api.put(
-                  `/api/evaluation-sessions/${activateSessionId}/status`,
+                  `/api/sessions/${activateSessionId}/status`,
                   { status: 'on', startDate: today, endDate: activateEndDate },
                   { headers: { Authorization: `Bearer ${token}` } }
                 );

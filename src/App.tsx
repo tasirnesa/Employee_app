@@ -46,6 +46,7 @@ import NewHireWizard from './pages/NewHireWizard';
 import NotificationsPage from './pages/NotificationsPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import DocumentManagement from './pages/DocumentManagement';
 
 
 const AppContent: React.FC = () => {
@@ -178,6 +179,7 @@ const AppContent: React.FC = () => {
             <Route path="/departments" element={<ProtectedRoute blockEmployee={true}><DepartmentManagement /></ProtectedRoute>} />
             <Route path="/positions" element={<ProtectedRoute blockEmployee={true}><PositionManagement /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+            <Route path="/document-management" element={<ProtectedRoute><DocumentManagement /></ProtectedRoute>} />
             <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
           </Routes>
         </Box>

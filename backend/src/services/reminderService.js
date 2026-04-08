@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const documentService = require('./documentService');
 
 const REMINDER_THRESHOLD_HOURS = 48; // First reminder after 48h
 const REPEAT_THRESHOLD_HOURS = 24;   // Repeat every 24h if still pending
@@ -71,10 +72,54 @@ const checkOverdueLeaves = async () => {
   }
 };
 
-const init = () => {
-  // Run once on startup after 10 seconds, then every 1 hour
-  setTimeout(checkOverdueLeaves, 10000);
-  setInterval(checkOverdueLeaves, 60 * 60 * 1000); 
+const checkExpiringDocuments = async () => {
+  console.log('--- Starting Document Expiry Check ---');
+  try {
+    const now = new Date();
+    const expiringDocs = await documentService.checkExpiringDocuments();
+    
+    console.log(`Found ${expiringDocs.length} documents expiring soon.`);
+
+    for (const doc of expiringDocs) {
+      if (!doc.userId) continue;
+
+      // Check if we already sent a reminder today to avoid spamming
+      const lastReminder = doc.lastReminderAt ? new Date(doc.lastReminderAt) : null;
+      const oneDayAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+      
+      if (lastReminder && lastReminder > oneDayAgo) continue;
+
+      // Create System Notification
+      await prisma.notification.create({
+        data: {
+          userId: doc.userId,
+          title: 'Document Expiring Soon',
+          message: `The document "${doc.title}" is set to expire on ${new Date(doc.expiryDate).toLocaleDateString()}. Please take action to renew it.`,
+          type: 'WARNING',
+          link: '/document-management'
+        }
+      });
+
+      // Update lastReminderAt
+      await prisma.document.update({
+        where: { id: doc.id },
+        data: { lastReminderAt: now }
+      });
+
+      console.log(`Sent expiry reminder to User ID ${doc.userId} for Document ID ${doc.id}`);
+    }
+  } catch (error) {
+    console.error('Error in document expiry reminder task:', error);
+  }
 };
 
-module.exports = { init, checkOverdueLeaves };
+const init = () => {
+  // Run once on startup after 10-20 seconds, then every 1 hour
+  setTimeout(checkOverdueLeaves, 10000);
+  setTimeout(checkExpiringDocuments, 20000);
+  
+  setInterval(checkOverdueLeaves, 60 * 60 * 1000);
+  setInterval(checkExpiringDocuments, 60 * 60 * 1000);
+};
+
+module.exports = { init, checkOverdueLeaves, checkExpiringDocuments };

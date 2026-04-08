@@ -162,7 +162,7 @@ const Dashboard: React.FC = () => {
   const { data: sessionsList } = useQuery({
     queryKey: ['sessions-dashboard'],
     queryFn: async () => {
-      const res = await api.get('/api/evaluation-sessions');
+      const res = await api.get('/api/sessions');
       return res.data;
     },
   });

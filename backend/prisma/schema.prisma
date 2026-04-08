@@ -58,6 +58,8 @@ model User {
   sentMessages            Message[]            @relation("SentMessages")
   receivedMessages        Message[]            @relation("ReceivedMessages")
   notifications           Notification[]
+  documents               Document[]
+  verifiedDocuments       Document[]           @relation("DocumentVerifier")
 
   @@index([managerId])
 }
@@ -211,6 +213,7 @@ model Employee {
   user            User?     @relation(fields: [userId], references: [id])
   offboarding     Offboarding[]
   onboarding      Onboarding?
+  documents       Document[]
 
   @@map("Employee")
 }
@@ -543,4 +546,41 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id])
 
   @@map("Notification")
+}
+
+model DocumentCategory {
+  id          Int        @id @default(autoincrement())
+  name        String     @unique
+  description String?
+  documents   Document[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("DocumentCategory")
+}
+
+model Document {
+  id               Int              @id @default(autoincrement())
+  userId           Int?             // Owner (User)
+  employeeId       Int?             // Linked Employee record
+  title            String
+  description      String?
+  fileUrl          String
+  fileType         String?          // pdf, docx, png, etc.
+  categoryId       Int
+  status           String           @default("Active") // Active, Expired, Archived
+  expiryDate       DateTime?
+  remindDaysBefore Int              @default(30)
+  lastReminderAt   DateTime?
+  verifiedAt       DateTime?
+  verifiedBy       Int?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  category         DocumentCategory @relation(fields: [categoryId], references: [id])
+  user             User?            @relation(fields: [userId], references: [id])
+  employee         Employee?        @relation(fields: [employeeId], references: [id])
+  verifier         User?            @relation("DocumentVerifier", fields: [verifiedBy], references: [id])
+
+  @@map("Document")
 }

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Formik, Form, Field, type FieldProps } from 'formik';
 import * as Yup from 'yup';
-import axios from 'axios';
+import api from '../lib/axios';
 import {
   Container,
   Typography,
@@ -60,7 +60,7 @@ const CreateEvaluation: React.FC = () => {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
-      const response = await axios.get('http://localhost:5000/api/criteria', {
+      const response = await api.get('/api/criteria', {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log('Fetched criteria:', response.data);
@@ -76,7 +76,7 @@ const CreateEvaluation: React.FC = () => {
       if (!evaluateeUserIdForGoals) return [] as Goal[];
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
-      const res = await axios.get('http://localhost:5000/api/goals', {
+      const res = await api.get('/api/goals', {
         params: { userId: evaluateeUserIdForGoals },
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -91,10 +91,10 @@ const CreateEvaluation: React.FC = () => {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
-      const response = await axios.get('http://localhost:5000/api/evaluation-sessions', {
+      const response = await api.get('/api/sessions', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      return response.data as Array<{ sessionID: number; title: string; startDate: string; endDate: string; department?: string }>;
+      return response.data as Array<{ sessionID: number; title: string; startDate: string; endDate: string; department?: string; type: string }>;
     },
   });
 
@@ -102,7 +102,7 @@ const CreateEvaluation: React.FC = () => {
     mutationFn: async (evaluationData: { evaluation: Partial<Evaluation>; results: Partial<EvaluationResult>[] }) => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token');
-      const response = await axios.post('http://localhost:5000/api/evaluations', evaluationData, {
+      const response = await api.post('/api/evaluations', evaluationData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;
@@ -114,8 +114,8 @@ const CreateEvaluation: React.FC = () => {
           const token = localStorage.getItem('token');
           const evaluateeUserId = pendingEvaluateeUserIdRef.current;
           if (token && evaluateeUserId) {
-            await axios.post(
-              'http://localhost:5000/api/performance/recalculate',
+            await api.post(
+              '/api/performance/recalculate',
               { userId: evaluateeUserId },
               { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -262,11 +262,33 @@ const CreateEvaluation: React.FC = () => {
                 <InputLabel id="session-label">Session</InputLabel>
                 <Field as={Select} name="sessionID" labelId="session-label" label="Session" sx={{ bgcolor: 'background.paper' }}>
                   <MenuItem value={0} disabled>Select Session</MenuItem>
-                  {(sessions || []).map((s) => (
-                    <MenuItem key={s.sessionID} value={s.sessionID}>
-                      {s.title}{s.department ? ` - ${s.department}` : ''}
-                    </MenuItem>
-                  ))}
+                  {(() => {
+                    const evaluatorEmployee = employees?.find(e => e.userId === currentUserId);
+                    const evaluatorDept = (evaluatorEmployee?.department || '').trim().toLowerCase();
+                    const now = new Date();
+                    
+                    return (sessions || [])
+                      .filter(s => {
+                        // Status check
+                        const isOn = String(s.type || '').toLowerCase() === 'on';
+                        if (!isOn) return false;
+
+                        // Date range check
+                        const start = new Date(s.startDate);
+                        const end = new Date(s.endDate);
+                        if (now < start || now > end) return false;
+
+                        // Department check
+                        if (!s.department) return true;
+                        if (!evaluatorDept) return true;
+                        return (s.department || '').trim().toLowerCase() === evaluatorDept;
+                      })
+                      .map((s) => (
+                        <MenuItem key={s.sessionID} value={s.sessionID}>
+                          {s.title}{s.department ? ` - ${s.department}` : ''}
+                        </MenuItem>
+                      ));
+                  })()}
                 </Field>
                 {touched.sessionID && errors.sessionID && (
                   <Typography color="error" variant="caption">{errors.sessionID}</Typography>

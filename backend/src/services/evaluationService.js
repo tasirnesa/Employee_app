@@ -103,7 +103,7 @@ const evaluationService = {
 
     if (sessionExists.department) {
       const evaluateeEmployee = await employeeRepository.findByUserId(evaluateeID);
-      const evaluateeDept = evaluateeEmployee?.department || null;
+      const evaluateeDept = evaluateeEmployee?.department?.name || null;
       if (!evaluateeDept || evaluateeDept.trim().toLowerCase() !== sessionExists.department.trim().toLowerCase()) {
         throw new Error('Evaluatee not in the session department');
       }

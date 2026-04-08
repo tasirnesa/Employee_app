@@ -46,6 +46,9 @@ const notificationRoutes = require('./routes/notifications');
 const messageRoutes = require('./routes/messages');
 const onboardingRoutes = require('./routes/onboarding');
 const offboardingRoutes = require('./routes/offboarding');
+const documentRoutes = require('./routes/documents');
+const performanceRoutes = require('./routes/performance');
+const dashboardRoutes = require('./routes/dashboard');
 
 // Public Routes
 app.use('/api/auth', authRoutes);
@@ -74,6 +77,9 @@ app.use('/api/notifications', authenticateToken, notificationRoutes);
 app.use('/api/messages', authenticateToken, messageRoutes);
 app.use('/api/onboarding', authenticateToken, onboardingRoutes);
 app.use('/api/offboarding', authenticateToken, offboardingRoutes);
+app.use('/api/documents', authenticateToken, documentRoutes);
+app.use('/api/performance', authenticateToken, performanceRoutes);
+app.use('/api/dashboard', authenticateToken, dashboardRoutes);
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'UP', timestamp: new Date() }));
