@@ -107,35 +107,52 @@ const leaveService = {
       attachmentUrl: leaveData.attachmentUrl || null
     });
 
-    // Notify manager
-    if (employee.managerId) {
+    // --- Notifications ---
+    // 1. Notify Manager
+    const employeeWithManager = await userRepository.findById(employeeId, true);
+    if (employeeWithManager?.managerId) {
       try {
         await prisma.notification.create({
           data: {
-            userId: employee.managerId,
+            userId: employeeWithManager.managerId,
             title: 'New Leave Request',
-            message: `${employee.fullName} has requested ${days} days of ${leaveType.name} leave.`,
+            message: `${employeeWithManager.fullName} has requested ${days} days of ${leaveType.name} leave.`,
             type: 'INFO',
             link: '/leave-management'
           }
         });
+
+        if (employeeWithManager.manager?.email) {
+            await emailService.sendEmail({
+                to: employeeWithManager.manager.email,
+                subject: 'New Leave Request Notification',
+                text: `${employeeWithManager.fullName} has requested ${days} days of ${leaveType.name} leave starting from ${new Date(startDate).toLocaleDateString()}.`,
+                html: `<p>${employeeWithManager.fullName} has requested <strong>${days}</strong> days of <strong>${leaveType.name}</strong> leave.</p><p>Period: ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}</p>`
+            });
+        }
       } catch (e) {
-        console.warn('Notification failed', e.message);
+        console.warn('Manager notification failed', e.message);
       }
     }
 
-    // --- Email Notification to Manager ---
-    if (employee.manager?.email) {
-      try {
-        await emailService.sendEmail({
-          to: employee.manager.email,
-          subject: 'New Leave Request Notification',
-          text: `${employee.fullName} has requested ${days} days of ${leaveType.name} leave starting from ${new Date(startDate).toLocaleDateString()}.`,
-          html: `<p>${employee.fullName} has requested <strong>${days}</strong> days of <strong>${leaveType.name}</strong> leave.</p><p>Period: ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}</p>`
-        });
-      } catch (e) {
-        console.warn('Email notification to manager failed', e.message);
-      }
+    // 2. Notify Handover Person
+    if (leaveData.handoverId) {
+        try {
+            const handoverUser = await userRepository.findById(leaveData.handoverId);
+            if (handoverUser) {
+                await prisma.notification.create({
+                    data: {
+                        userId: handoverUser.id,
+                        title: 'Leave Handover Assigned',
+                        message: `You have been assigned as a handover person for ${employeeWithManager.fullName}'s leave (${leaveType.name}) from ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}.`,
+                        type: 'INFO',
+                        link: '/leave-management'
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn('Handover notification failed', e.message);
+        }
     }
 
     return leave;
@@ -206,6 +223,48 @@ const leaveService = {
       comments: comments || (status === 'Rejected' ? 'Rejected by manager' : undefined)
     });
 
+    // --- Create Attendance Records for Approved Leave ---
+    if (status === 'Approved') {
+        try {
+            const start = new Date(updated.startDate);
+            const end = new Date(updated.endDate);
+            const cur = new Date(start);
+
+            while (cur <= end) {
+                // Only mark business days (Mon-Fri)
+                const dayOfWeek = cur.getDay();
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                    const recordDate = new Date(cur);
+                    recordDate.setHours(0, 0, 0, 0);
+
+                    const existing = await prisma.attendance.findFirst({
+                        where: { employeeId: updated.employeeId, date: recordDate }
+                    });
+
+                    if (existing) {
+                        await prisma.attendance.update({
+                            where: { id: existing.id },
+                            data: { status: 'on-leave', notes: `Automatic: Approved ${updated.leaveType.name}` }
+                        });
+                    } else {
+                        await prisma.attendance.create({
+                            data: {
+                                employeeId: updated.employeeId,
+                                date: recordDate,
+                                status: 'on-leave',
+                                notes: `Automatic: Approved ${updated.leaveType.name}`
+                            }
+                        });
+                    }
+                }
+                cur.setDate(cur.getDate() + 1);
+            }
+        } catch (e) {
+            console.warn('Attendance generation failed', e.message);
+        }
+    }
+
+    // --- Notifications ---
     try {
       await prisma.notification.create({
         data: {
@@ -216,12 +275,8 @@ const leaveService = {
           link: '/leave-management'
         }
       });
-    } catch (e) {
-      console.warn('Notification failed', e.message);
-    }
 
-    // --- Email Notification to Employee ---
-    try {
+      // Email Notification
       const empWithUser = await prisma.user.findUnique({ 
         where: { id: updated.employeeId }, 
         include: { employees: true } 
@@ -230,13 +285,13 @@ const leaveService = {
       
       if (targetEmail) {
         await emailService.sendLeaveStatusEmail(
-          { ...updated.employee, email: targetEmail, fullName: empWithUser.fullName }, 
+          { id: updated.employeeId, fullName: empWithUser.fullName, email: targetEmail }, 
           updated, 
           status
         );
       }
     } catch (e) {
-      console.warn('Leave status email failed', e.message);
+      console.warn('Notification processing failed', e.message);
     }
 
     const usage = await leaveService.getUsage(updated.employeeId);

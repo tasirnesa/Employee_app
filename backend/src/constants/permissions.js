@@ -25,7 +25,11 @@ const PERMISSIONS = {
   // Offboarding
   OFFBOARDING_INITIATE: 'offboarding:initiate',
   OFFBOARDING_VIEW: 'offboarding:view',
-  OFFBOARDING_COMPLETE: 'offboarding:complete'
+  OFFBOARDING_COMPLETE: 'offboarding:complete',
+
+  // Onboarding
+  ONBOARDING_VIEW: 'onboarding:view',
+  ONBOARDING_MANAGE: 'onboarding:manage'
 };
 
 const ROLE_PERMISSIONS = {
@@ -34,7 +38,8 @@ const ROLE_PERMISSIONS = {
     PERMISSIONS.EMPLOYEE_VIEW,
     PERMISSIONS.EMPLOYEE_UPDATE,
     PERMISSIONS.PAYROLL_VIEW,
-    PERMISSIONS.OFFBOARDING_VIEW
+    PERMISSIONS.OFFBOARDING_VIEW,
+    PERMISSIONS.ONBOARDING_VIEW
   ],
   [ROLES.EMPLOYEE]: [
     PERMISSIONS.EMPLOYEE_VIEW

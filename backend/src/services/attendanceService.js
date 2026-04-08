@@ -36,6 +36,7 @@ const attendanceService = {
       totalDays: records.length,
       presentDays: records.filter(r => r.status === 'present').length,
       absentDays: records.filter(r => r.status === 'absent').length,
+      onLeaveDays: records.filter(r => r.status === 'on-leave').length,
       lateDays: records.filter(r => r.status === 'late').length,
       halfDays: records.filter(r => r.status === 'half-day').length,
       totalHours: records.reduce((sum, r) => sum + (r.hoursWorked || 0), 0),

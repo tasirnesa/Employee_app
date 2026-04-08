@@ -10,7 +10,7 @@ const onboardingService = {
     const email = employeeData.email?.trim();
 
     return await prisma.$transaction(async (tx) => {
-      // 1. Check uniqueness inside transaction for absolute safety
+      // 1. Check uniqueness
       const existingUser = await tx.user.findUnique({ where: { userName } });
       if (existingUser) throw new Error(`Username "${userName}" already exists.`);
 
@@ -65,7 +65,31 @@ const onboardingService = {
         }
       });
 
-      // 5. Create Initial Goals
+      // 5. Create Initial Onboarding Record
+      const onboarding = await tx.onboarding.create({
+        data: {
+          employeeId: employee.id,
+          status: 'InProgress',
+          startDate: new Date(),
+          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+          tasks: {
+            create: [
+              { title: 'Welcome Meeting', description: 'Schedule a discovery meeting with the team.' },
+              { title: 'IT Setup', description: 'Ensure laptop and software access are ready.' },
+              { title: 'Benefits Briefing', description: 'Review health insurance and other benefits.' },
+              { title: 'Office Tour', description: 'Show the physical or virtual workspace.' }
+            ]
+          },
+          documents: {
+            create: [
+              { title: 'Signed Contract', description: 'Official employment contract.' },
+              { title: 'ID Document', description: 'Passport or ID card copy.' }
+            ]
+          }
+        }
+      });
+
+      // 6. Create Initial Goals
       let createdGoals = [];
       if (goals && Array.isArray(goals) && goals.length > 0) {
         for (const goal of goals) {
@@ -84,18 +108,18 @@ const onboardingService = {
         }
       }
 
-      // 6. Create welcome notification
+      // 7. Create welcome notification
       await tx.notification.create({
         data: {
           userId: user.id,
           title: 'Welcome to the Team!',
-          message: `Hello ${user.fullName}, welcome aboard!`,
+          message: `Hello ${user.fullName}, welcome aboard! Your onboarding process has started.`,
           type: 'SUCCESS',
           link: '/dashboard'
         }
       });
 
-      // 7. Update Candidate
+      // 8. Update Candidate
       if (candidateId) {
         await tx.candidate.update({
           where: { id: parseInt(candidateId) },
@@ -103,7 +127,118 @@ const onboardingService = {
         });
       }
 
-      return { user, employee, goals: createdGoals };
+      return { user, employee, onboarding, goals: createdGoals };
+    });
+  },
+
+  getOnboardingByEmployeeId: async (employeeId) => {
+    return await prisma.onboarding.findUnique({
+      where: { employeeId: parseInt(employeeId) },
+      include: {
+        tasks: true,
+        documents: true,
+        trainings: true,
+        employee: {
+          include: {
+            department: true,
+            position: true
+          }
+        }
+      }
+    });
+  },
+
+  updateOnboarding: async (id, data) => {
+    const processedData = { ...data };
+    if (data.dueDate) processedData.dueDate = new Date(data.dueDate);
+    if (data.completedAt) processedData.completedAt = new Date(data.completedAt);
+    return await prisma.onboarding.update({
+      where: { id: parseInt(id) },
+      data: processedData
+    });
+  },
+
+  // Task Management
+  createTask: async (onboardingId, data) => {
+    const processedData = { ...data };
+    if (data.dueDate) processedData.dueDate = new Date(data.dueDate);
+    return await prisma.onboardingTask.create({
+      data: {
+        ...processedData,
+        onboardingId: parseInt(onboardingId)
+      }
+    });
+  },
+
+  updateTask: async (taskId, data) => {
+    const processedData = { ...data };
+    if (data.dueDate) processedData.dueDate = new Date(data.dueDate);
+    if (data.completedAt) processedData.completedAt = new Date(data.completedAt);
+    
+    if (data.status === 'Completed' && !data.completedAt) {
+      processedData.completedAt = new Date();
+    }
+    return await prisma.onboardingTask.update({
+      where: { id: parseInt(taskId) },
+      data: processedData
+    });
+  },
+
+  deleteTask: async (taskId) => {
+    return await prisma.onboardingTask.delete({
+      where: { id: parseInt(taskId) }
+    });
+  },
+
+  // Document Management
+  createDocument: async (onboardingId, data) => {
+    return await prisma.onboardingDocument.create({
+      data: {
+        ...data,
+        onboardingId: parseInt(onboardingId)
+      }
+    });
+  },
+
+  updateDocument: async (docId, data) => {
+    return await prisma.onboardingDocument.update({
+      where: { id: parseInt(docId) },
+      data
+    });
+  },
+
+  deleteDocument: async (docId) => {
+    return await prisma.onboardingDocument.delete({
+      where: { id: parseInt(docId) }
+    });
+  },
+
+  // Training Management
+  assignTraining: async (onboardingId, data) => {
+    return await prisma.onboardingTraining.create({
+      data: {
+        ...data,
+        onboardingId: parseInt(onboardingId)
+      }
+    });
+  },
+
+  updateTrainingStatus: async (trainingId, data) => {
+    const processedData = { ...data };
+    if (data.completedAt) processedData.completedAt = new Date(data.completedAt);
+    
+    if (data.status === 'Completed' && !data.completedAt) {
+      processedData.completedAt = new Date();
+    }
+    return await prisma.onboardingTraining.update({
+      where: { id: parseInt(trainingId) },
+      data: processedData
+    });
+  },
+
+  deleteTraining: async (trainingId) => {
+    return await prisma.onboardingTraining.delete({
+      where: { id: parseInt(trainingId) }
     });
   }
 };

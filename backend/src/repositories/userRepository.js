@@ -5,9 +5,10 @@ const userRepository = {
     return await prisma.user.findMany();
   },
 
-  findById: async (id) => {
+  findById: async (id, includeManager = false) => {
     return await prisma.user.findUnique({
       where: { id: parseInt(id) },
+      include: includeManager ? { manager: true } : undefined,
     });
   },
 
