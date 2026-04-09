@@ -1,4 +1,9 @@
 const http = require('http');
+const dns = require('dns');
+
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 const app = require('./app');
 const socketService = require('./services/socketService');
 

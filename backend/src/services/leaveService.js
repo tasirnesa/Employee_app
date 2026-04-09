@@ -266,29 +266,32 @@ const leaveService = {
 
     // --- Notifications ---
     try {
-      await prisma.notification.create({
-        data: {
-          userId: updated.employeeId,
-          title: `Leave ${status}`,
-          message: `Your leave request has been ${status.toLowerCase()} by ${approver.fullName}.`,
-          type: status === 'Approved' ? 'SUCCESS' : 'WARNING',
-          link: '/leave-management'
-        }
+      const emp = await prisma.employee.findUnique({
+        where: { id: updated.employeeId },
+        include: { user: true }
       });
 
-      // Email Notification
-      const empWithUser = await prisma.user.findUnique({ 
-        where: { id: updated.employeeId }, 
-        include: { employees: true } 
-      });
-      const targetEmail = empWithUser?.email || (empWithUser?.employees?.[0]?.email);
-      
-      if (targetEmail) {
-        await emailService.sendLeaveStatusEmail(
-          { id: updated.employeeId, fullName: empWithUser.fullName, email: targetEmail }, 
-          updated, 
-          status
-        );
+      if (emp && emp.userId) {
+        await prisma.notification.create({
+          data: {
+            userId: emp.userId,
+            title: `Leave ${status}`,
+            message: `Your leave request has been ${status.toLowerCase()} by ${approver.fullName}.`,
+            type: status === 'Approved' ? 'SUCCESS' : 'WARNING',
+            link: '/leave-management'
+          }
+        });
+
+        const targetEmail = emp.email || emp.user?.email;
+        if (targetEmail) {
+          await emailService.sendLeaveStatusEmail(
+            { id: emp.userId, fullName: `${emp.firstName} ${emp.lastName}`, email: targetEmail }, 
+            updated, 
+            status
+          );
+        }
+      } else {
+        console.warn(`[Leave Service] Skip notification: No user linked to employee ID ${updated.employeeId}`);
       }
     } catch (e) {
       console.warn('Notification processing failed', e.message);

@@ -1,3 +1,4 @@
+const dns = require('dns');
 const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 
@@ -6,10 +7,15 @@ const logger = require('../utils/logger');
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
   port: process.env.EMAIL_PORT || 2525,
+  family: 4, // Force IPv4 to prevent ENETUNREACH errors on IPv6-only environments or misconfigured networks
   auth: {
     user: process.env.EMAIL_USER || '',
     pass: process.env.EMAIL_PASS || '',
   },
+  // Extra layer of protection: force the DNS lookup to use IPv4
+  lookup: (hostname, options, callback) => {
+    return dns.lookup(hostname, { family: 4 }, callback);
+  }
 });
 
 const emailService = {
@@ -18,6 +24,7 @@ const emailService = {
    */
   sendEmail: async ({ to, subject, text, html, attachments }) => {
     try {
+      logger.info(`Sending email to: ${to} | Subject: ${subject}`);
       const info = await transporter.sendMail({
         from: `"Employee Evaluation System" <${process.env.EMAIL_FROM || 'noreply@ees.com'}>`,
         to,
@@ -26,7 +33,7 @@ const emailService = {
         html,
         attachments
       });
-      logger.info(`Email sent: ${info.messageId}`);
+      logger.info(`Email successfully sent: ${info.messageId} to ${to}`);
       return info;
     } catch (error) {
       logger.error('Error sending email:', error);

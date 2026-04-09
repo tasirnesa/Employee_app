@@ -173,18 +173,20 @@ const Dashboard: React.FC = () => {
   });
 
   const chatThreads = React.useMemo(() => {
-    return threads.map((t: any) => {
-      const emp = (employeesForTime || []).find((x: any) => x.userId === t.otherId);
-      return {
-        withId: t.otherId,
-        withName: t.otherName || (emp ? `${emp.firstName} ${emp.lastName}` : `User ${t.otherId}`),
-        lastText: t.text || '',
-        lastAt: t.createdAt,
-        avatar: t.otherAvatar || emp?.profileImageUrl,
-        isMe: t.senderId === currentUser?.id,
-        unreadCount: t.unreadCount || 0
-      };
-    });
+    return threads
+      .map((t: any) => {
+        const emp = (employeesForTime || []).find((x: any) => x.userId === t.otherId);
+        return {
+          withId: t.otherId,
+          withName: t.otherName || (emp ? `${emp.firstName} ${emp.lastName}` : `User ${t.otherId}`),
+          lastText: t.text || '',
+          lastAt: t.createdAt,
+          avatar: t.otherAvatar || emp?.profileImageUrl,
+          isMe: t.senderId === currentUser?.id,
+          unreadCount: t.unreadCount || 0
+        };
+      })
+      .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
   }, [threads, employeesForTime, currentUser?.id]);
 
   // Aggregate stats for the Top Stat Bar
@@ -204,17 +206,17 @@ const Dashboard: React.FC = () => {
             Enterprise HR Dashboard
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Welcome back, {currentUser?.fullName}. Here's what's happening today.
+            Welcome back, Obboo/Addee {currentUser?.fullName}. Here's what's happening today.
           </Typography>
         </Box>
 
         <HrStats stats={statsSummary} />
 
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 3 }}>
-          
+
           {/* Main Action Hub - 8 columns */}
           <Box sx={{ gridColumn: { xs: 'span 12', lg: 'span 8' }, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            
+
             {/* Action Center - Refined */}
             <Card sx={{ borderRadius: 4, height: '100%', border: '1px solid #eef2ff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
               <CardContent sx={{ p: 3 }}>
@@ -291,11 +293,11 @@ const Dashboard: React.FC = () => {
                         Internal Communications
                       </Typography>
                       {chatThreads.some(t => t.unreadCount > 0) && (
-                        <Chip 
+                        <Chip
                           label={`${chatThreads.reduce((sum, t) => sum + (t.unreadCount || 0), 0)} New`}
-                          size="small" 
-                          color="error" 
-                          sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }} 
+                          size="small"
+                          color="error"
+                          sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }}
                         />
                       )}
                     </Box>
@@ -313,9 +315,9 @@ const Dashboard: React.FC = () => {
                         }}
                       >
                         <ListItemAvatar>
-                          <Badge 
-                            badgeContent={t.unreadCount} 
-                            color="error" 
+                          <Badge
+                            badgeContent={t.unreadCount}
+                            color="error"
                             overlap="circular"
                             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                             invisible={!t.unreadCount}
@@ -349,9 +351,9 @@ const Dashboard: React.FC = () => {
                           <Typography variant="caption" fontWeight={800} display="block" color="primary">{new Date(s.startDate).toLocaleString('en-US', { month: 'short' }).toUpperCase()}</Typography>
                           <Typography variant="h6" fontWeight={800} display="block" sx={{ lineHeight: 1 }}>{new Date(s.startDate).getDate()}</Typography>
                         </Box>
-                        <ListItemText 
-                          primary={<Typography variant="body2" fontWeight={700}>{s.title}</Typography>} 
-                          secondary={`${new Date(s.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • ${s.type || 'Meeting'}`} 
+                        <ListItemText
+                          primary={<Typography variant="body2" fontWeight={700}>{s.title}</Typography>}
+                          secondary={`${new Date(s.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • ${s.type || 'Meeting'}`}
                         />
                       </ListItem>
                     ))}
@@ -364,13 +366,13 @@ const Dashboard: React.FC = () => {
 
           {/* Side Info Bar - 4 columns */}
           <Box sx={{ gridColumn: { xs: 'span 12', lg: 'span 4' }, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            
+
             {/* Time Off donut card */}
             <Card sx={{ borderRadius: 4, bgcolor: 'background.paper', border: '1px solid #eef2ff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
               <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                   <Typography variant="h6" fontWeight={800}>Leave Balance</Typography>
-                  <IconButton size="small" onClick={() => navigate('/leave-management')}><InfoIcon fontSize="small"/></IconButton>
+                  <IconButton size="small" onClick={() => navigate('/leave-management')}><InfoIcon fontSize="small" /></IconButton>
                 </Box>
                 <Box sx={{ position: 'relative', height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
                   <svg viewBox="0 0 36 36" style={{ width: '140px', height: '140px' }}>

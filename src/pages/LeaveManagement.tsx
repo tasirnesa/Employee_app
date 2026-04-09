@@ -35,6 +35,8 @@ import {
   InputLabel,
   Tabs,
   Tab,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -133,12 +135,21 @@ const LeaveManagement: React.FC = () => {
     });
   };
 
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'info' | 'error' | 'warning' }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
+  const handleCloseSnackbar = () => setSnackbar(prev => ({ ...prev, open: false }));
+
   // Mutations
   const createLeaveMutation = useMutation({
     mutationFn: (payload: any) => apiService.createLeave(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
       setLeaveDialogOpen(false);
+      setSnackbar({ open: true, message: 'Leave request submitted successfully!', severity: 'success' });
       setLeaveForm({
         employeeId: '',
         leaveTypeId: '',
@@ -155,7 +166,7 @@ const LeaveManagement: React.FC = () => {
     },
     onError: (error: any) => {
       console.error('Error creating leave:', error);
-      alert('Error creating leave: ' + (error?.response?.data?.error || error.message));
+      setSnackbar({ open: true, message: 'Error creating leave: ' + (error?.response?.data?.error || error.message), severity: 'error' });
     }
   });
 
@@ -164,10 +175,11 @@ const LeaveManagement: React.FC = () => {
       apiService.approveLeave(id, comments),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
+      setSnackbar({ open: true, message: 'Leave request approved successfully!', severity: 'success' });
     },
     onError: (error: any) => {
       console.error('Error approving leave:', error);
-      alert('Error approving leave: ' + (error?.response?.data?.error || error.message));
+      setSnackbar({ open: true, message: 'Error approving leave: ' + (error?.response?.data?.error || error.message), severity: 'error' });
     }
   });
 
@@ -176,10 +188,11 @@ const LeaveManagement: React.FC = () => {
       apiService.rejectLeave(id, comments),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leaves'] });
+      setSnackbar({ open: true, message: 'Leave request rejected successfully!', severity: 'info' });
     },
     onError: (error: any) => {
       console.error('Error rejecting leave:', error);
-      alert('Error rejecting leave: ' + (error?.response?.data?.error || error.message));
+      setSnackbar({ open: true, message: 'Error rejecting leave: ' + (error?.response?.data?.error || error.message), severity: 'error' });
     }
   });
 
@@ -733,6 +746,17 @@ const LeaveManagement: React.FC = () => {
         open={leaveTypeDialogOpen}
         onClose={() => setLeaveTypeDialogOpen(false)}
       />
+
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={6000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

@@ -1,14 +1,38 @@
 const prisma = require('../config/prisma');
 
+const SAFE_USER_SELECT = {
+  id: true,
+  fullName: true,
+  userName: true,
+  gender: true,
+  age: true,
+  status: true,
+  role: true,
+  locked: true,
+  isFirstLogin: true,
+  activeStatus: true,
+  email: true,
+  createdDate: true,
+  createdBy: true,
+  departmentId: true,
+  positionId: true,
+  managerId: true,
+};
+
 const userRepository = {
   findAll: async () => {
-    return await prisma.user.findMany();
+    return await prisma.user.findMany({
+      select: SAFE_USER_SELECT
+    });
   },
 
   findById: async (id, includeManager = false) => {
     return await prisma.user.findUnique({
       where: { id: parseInt(id) },
-      include: includeManager ? { manager: true } : undefined,
+      select: {
+        ...SAFE_USER_SELECT,
+        manager: includeManager ? { select: SAFE_USER_SELECT } : false,
+      }
     });
   },
 

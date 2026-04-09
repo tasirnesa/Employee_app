@@ -27,7 +27,7 @@ const dashboardController = {
           type: 'LEAVE',
           title: `Leave Request: ${l.employee ? l.employee.fullName : 'Employee'}`,
           subtitle: `${l.leaveType ? l.leaveType.name : 'Unknown'} (${l.days} days)`,
-          link: '/leaves'
+          link: '/leave-management'
         }));
       } else {
         const leaves = await prisma.leave.findMany({
@@ -41,7 +41,7 @@ const dashboardController = {
           type: 'LEAVE',
           title: 'Your Leave Request',
           subtitle: `Status: Pending - ${l.leaveType ? l.leaveType.name : 'Unknown'}`,
-          link: '/leaves'
+          link: '/leave-management'
         }));
       }
     } catch (error) {
@@ -63,7 +63,7 @@ const dashboardController = {
         type: 'EVALUATION',
         title: s.title,
         subtitle: `Ends ${new Date(s.endDate).toLocaleDateString()}`,
-        link: '/evaluations'
+        link: '/evaluations/view'
       }));
     } catch (error) {
       console.error('[Dashboard API] Error fetching sessions:', error.message);
