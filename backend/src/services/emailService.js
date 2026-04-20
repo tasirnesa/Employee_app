@@ -5,18 +5,27 @@ const logger = require('../utils/logger');
 // Initialize transporter
 // These values should ideally come from environment variables
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
-  port: process.env.EMAIL_PORT || 2525,
-  family: 4, // Force IPv4 to prevent ENETUNREACH errors on IPv6-only environments or misconfigured networks
+  host: 'smtp.gmail.com',
+  port: 25, // Fallback test in case 587/465 are blocked
+  secure: false,
+  family: 4,
+  logger: true,
+  debug: true,
   auth: {
-    user: process.env.EMAIL_USER || '',
-    pass: process.env.EMAIL_PASS || '',
+    user: (process.env.EMAIL_USER || '').trim(),
+    pass: (process.env.EMAIL_PASS || '').replace(/\s+/g, ''),
   },
-  // Extra layer of protection: force the DNS lookup to use IPv4
-  lookup: (hostname, options, callback) => {
-    return dns.lookup(hostname, { family: 4 }, callback);
+  tls: {
+    // This helps if the corporate proxy is intercepting the certificate
+    rejectUnauthorized: false
   }
 });
+
+// Diagnostic check (Safe logging)
+const userHint = (process.env.EMAIL_USER || '');
+const passRaw = (process.env.EMAIL_PASS || '').replace(/\s+/g, '');
+const passHint = passRaw.length > 0 ? `${passRaw[0]}...${passRaw[passRaw.length-1]} (${passRaw.length} chars)` : 'empty';
+console.info(`[emailService] Transporter initialized for: ${userHint} | Password: ${passHint}`);
 
 const emailService = {
   /**

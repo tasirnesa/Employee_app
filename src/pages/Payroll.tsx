@@ -131,7 +131,7 @@ const Payroll: React.FC = () => {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       const response = await api.get('/api/payroll/compensations', {
-        headers: { Authorization: { } as any },
+        headers: { Authorization: `Bearer ${token}` },
       });
       return response.data;
     },

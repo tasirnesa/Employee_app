@@ -126,10 +126,29 @@ const userService = {
 
   forgotPassword: async (email) => {
     if (!email) throw new Error('Email is required');
-    const user = await userRepository.findByEmail(email);
+    
+    // 1. Try finding in User table first
+    let user = await userRepository.findByEmail(email);
+    
+    // 2. Fallback: Search in Employee table
+    if (!user) {
+      const emp = await prisma.employee.findUnique({
+        where: { email },
+        include: { user: true }
+      });
+      
+      if (emp && emp.userId) {
+        user = await userRepository.findById(emp.userId);
+        if (user) {
+          // Attach the provided email so the mailer knows where to send it
+          user.email = email;
+        }
+      }
+    }
+
     if (!user) {
       // For security, don't reveal if user exists, but we'll return generic success.
-      // However, for internal dev, throwing is faster for debugging.
+      console.warn(`[userService] Password reset requested for non-existent email: ${email}`);
       return { message: 'If an account exists with that email, a reset link will be sent.' };
     }
 
@@ -141,8 +160,16 @@ const userService = {
       resetTokenExpiry: expiry
     });
 
-    await emailService.sendPasswordResetEmail(user, token);
-    return { message: 'Reset link sent to your email.' };
+    // Ensure the user object has the correct email to send to
+    try {
+      await emailService.sendPasswordResetEmail(user, token);
+    } catch (e) {
+      console.error(`[userService] Failed to send password reset email to ${email}:`, e.message);
+      // We still return success to the user for security (don't confirm if email exists)
+      // and to prevent 500 errors on the frontend.
+    }
+    
+    return { message: 'If an account exists with that email, a reset link will be sent.' };
   },
 
   resetPassword: async (token, newPassword) => {

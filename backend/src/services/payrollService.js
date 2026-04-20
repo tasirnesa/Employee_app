@@ -252,51 +252,65 @@ const payrollService = {
 
     const workingDays = payrollService._businessDaysInRange(start, end);
     const basic = Number(comp.basicSalary || 0);
-    const hourlyRate = workingDays > 0 ? (basic / (workingDays * 8)) : 0;
     
-    // 1. Overtime Calculation (Combining Timesheets + Attendance Overtime)
+    // --- User Formula Implementation ---
+    
+    // 1. Daily & Hourly Rate
+    const dailyRate = workingDays > 0 ? (basic / workingDays) : 0;
+    const hourlyRate = dailyRate / 8; // Assuming 8 working hours per day as per standard
+    
+    // 2. Overtime Calculation
     const totalOTHours = Number(times.overtime || 0) + Number(attendanceSum.overtimeHours || 0);
     const overtimeRate = hourlyRate * Number(comp.overtimeMultiplier || 1.5);
     const overtimePay = totalOTHours * overtimeRate;
 
-    // 2. Late Arrival Deduction (Configurable rate, default 0.5h of pay per instance)
-    const latePenaltyRate = Number(comp.latePenaltyRate ?? 0.5);
-    const lateDeduction = Number(attendanceSum.lateCount || 0) * hourlyRate * latePenaltyRate;
+    // 3. Late Arrival Deduction Logic (Policy-Based: 3 late arrivals = 0.5 day deduction)
+    const lateCount = Number(attendanceSum.lateCount || 0);
+    const latePenaltyDays = Math.floor(lateCount / 3) * 0.5;
+    const lateDeduction = latePenaltyDays * dailyRate;
 
-    // 3. Perfect Attendance Bonus (Configurable, default $50)
+    // 4. Leave Without Pay (LWP)
+    const unpaidDeduction = (unpaidDays.unpaidLeaveDays || 0) * dailyRate;
+
+    // 5. Absence Deduction
+    const absenceDeduction = (unpaidDays.unexplainedAbsences || 0) * dailyRate;
+
+    // 6. Bonus / Penalty (Attendance-Based)
     let attendanceBonus = 0;
     const bonusAmount = Number(comp.perfectAttendanceBonus ?? 50);
-    // Perfect Attendance = No unexplained absences, no unpaid leave in the month, and no lateness
-    if (attendanceSum.lateCount === 0 && unpaidDays.total === 0) {
+    // Perfect Attendance = No absences, no unpaid leave, and no lateness
+    if (lateCount === 0 && unpaidDays.total === 0) {
       attendanceBonus = bonusAmount;
     }
 
-    // 4. Absenteeism Penalty (If unexplained absences > threshold, penalize by 1 more day of pay)
     let attendancePenalty = 0;
     const threshold = Number(comp.absenteeismThreshold ?? 2);
     if (unpaidDays.unexplainedAbsences > threshold) {
-      attendancePenalty = (basic / workingDays) * 1.0; 
+      attendancePenalty = dailyRate * 1.0; // Penalty of 1 extra day for high absenteeism
     }
 
-    const unpaidDeduction = (basic / workingDays) * (unpaidDays.total || 0);
-
-    // Gross = Basic + Allowance + Bonus + OT + Perks + AttBonus - Unpaid - Late - AttPenalty
+    // --- Final Totals ---
     const grossEarnings = basic + Number(comp.allowances || 0) + Number(comp.bonus || 0) + overtimePay + Number(perksTotal || 0) + attendanceBonus;
     
     const pensionEmployee = basic * Number(comp.pensionEmployeePct ?? 0.07);
-    const totalDeductions = pensionEmployee + Number(comp.taxFixed || 0) + Number(comp.insuranceEmployeeFixed || 0) + Number(comp.otherDeductionsFixed || 0) + Number(benefits.employee || 0) + lateDeduction + unpaidDeduction + attendancePenalty;
+    const deductions = lateDeduction + unpaidDeduction + absenceDeduction + attendancePenalty;
+    const standardDeductions = pensionEmployee + Number(comp.taxFixed || 0) + Number(comp.insuranceEmployeeFixed || 0) + Number(comp.otherDeductionsFixed || 0) + Number(benefits.employee || 0);
     
+    const totalDeductions = standardDeductions + deductions;
     const netSalary = grossEarnings - totalDeductions;
 
     return {
       basicSalary: basic,
+      dailyRate,
+      hourlyRate,
       allowances: Number(comp.allowances || 0),
       bonus: Number(comp.bonus || 0),
       overtimePay,
       lateDeduction,
+      unpaidDeduction,
+      absenceDeduction,
       attendanceBonus,
       attendancePenalty,
-      unpaidDeduction,
       perks: Number(perksTotal || 0),
       grossEarnings,
       deductions: totalDeductions,
@@ -307,7 +321,8 @@ const payrollService = {
         insuranceEmp: Number(comp.insuranceEmployeeFixed || 0),
         overtimeHours: totalOTHours,
         workingDays,
-        lateCount: attendanceSum.lateCount,
+        lateCount,
+        latePenaltyDays,
         unpaidLeaveDays: unpaidDays.unpaidLeaveDays,
         unexplainedAbsences: unpaidDays.unexplainedAbsences,
         totalUnpaidDays: unpaidDays.total,
