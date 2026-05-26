@@ -334,7 +334,6 @@ const Payroll: React.FC = () => {
   const createCompensationMutation = useMutation({
     mutationFn: async (compensationData: any) => {
       const token = localStorage.getItem('token');
-      console.log('Creating compensation with data:', compensationData);
       const response = await api.post('/api/payroll/compensations', compensationData, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -351,11 +350,77 @@ const Payroll: React.FC = () => {
         bonus: '',
         effectiveDate: ''
       });
+      setSelectedCompensation(null);
     },
     onError: (error: any) => {
-      console.error('Error creating compensation:', error);
       alert('Error creating compensation: ' + (error.response?.data?.error || error.message));
     },
+  });
+
+  // Update mutations
+  const updatePayslipMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const token = localStorage.getItem('token');
+      const response = await api.put(`/api/payroll/payslips/${selectedPayslip?.id}`, data, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payslips'] });
+      setPayslipDialogOpen(false);
+      setSelectedPayslip(null);
+      alert('Payslip updated successfully');
+    },
+    onError: (e: any) => alert(e.response?.data?.error || e.message),
+  });
+
+  const updateCompensationMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const token = localStorage.getItem('token');
+      const response = await api.put(`/api/payroll/compensations/${selectedCompensation?.id}`, data, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['compensations'] });
+      setCompensationDialogOpen(false);
+      setSelectedCompensation(null);
+      alert('Compensation updated successfully');
+    },
+    onError: (e: any) => alert(e.response?.data?.error || e.message),
+  });
+
+  // Delete mutations
+  const deletePayslipMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const token = localStorage.getItem('token');
+      await api.delete(`/api/payroll/payslips/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payslips'] });
+      handleMenuClose();
+      alert('Payslip deleted successfully');
+    },
+    onError: (e: any) => alert(e.response?.data?.error || e.message),
+  });
+
+  const deleteCompensationMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const token = localStorage.getItem('token');
+      await api.delete(`/api/payroll/compensations/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['compensations'] });
+      handleMenuClose();
+      alert('Compensation deleted successfully');
+    },
+    onError: (e: any) => alert(e.response?.data?.error || e.message),
   });
 
   const distributePayslips = useMutation({
@@ -374,12 +439,61 @@ const Payroll: React.FC = () => {
     }
   });
 
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, item: any, type: 'payslip' | 'compensation') => {
     setAnchorEl(event.currentTarget);
+    if (type === 'payslip') {
+      setSelectedPayslip(item);
+      setSelectedCompensation(null);
+    } else {
+      setSelectedCompensation(item);
+      setSelectedPayslip(item); // Using same anchor but tracking separately
+    }
   };
 
   const handleMenuClose = () => {
     setAnchorEl(null);
+    // Don't clear selected items here, wait for dialog open or actual action
+  };
+
+  const handleEdit = () => {
+    if (selectedPayslip && activeTab === 'payslips') {
+      setPayslipForm({
+        employeeId: String(selectedPayslip.employeeId),
+        period: selectedPayslip.period,
+        basicSalary: String(selectedPayslip.basicSalary),
+        allowances: String(selectedPayslip.allowances),
+        overtimePay: String(selectedPayslip.overtimePay || 0),
+        lateDeduction: String(selectedPayslip.lateDeduction || 0),
+        attendanceBonus: String(selectedPayslip.attendanceBonus || 0),
+        attendancePenalty: String(selectedPayslip.attendancePenalty || 0),
+        deductions: String(selectedPayslip.deductions),
+        netSalary: String(selectedPayslip.netSalary)
+      });
+      setPayslipDialogOpen(true);
+    } else if (selectedCompensation && activeTab === 'compensation') {
+      setCompensationForm({
+        employeeId: String(selectedCompensation.employeeId),
+        position: selectedCompensation.position,
+        basicSalary: String(selectedCompensation.basicSalary),
+        allowances: String(selectedCompensation.allowances),
+        bonus: String(selectedCompensation.bonus),
+        effectiveDate: new Date(selectedCompensation.effectiveDate).toISOString().split('T')[0]
+      });
+      setCompensationDialogOpen(true);
+    }
+    handleMenuClose();
+  };
+
+  const handleDelete = () => {
+    if (activeTab === 'payslips' && selectedPayslip) {
+      if (window.confirm('Are you sure you want to delete this payslip?')) {
+        deletePayslipMutation.mutate(selectedPayslip.id);
+      }
+    } else if (activeTab === 'compensation' && selectedCompensation) {
+      if (window.confirm('Are you sure you want to delete this compensation record?')) {
+        deleteCompensationMutation.mutate(Number(selectedCompensation.id));
+      }
+    }
   };
 
   // Form handlers
@@ -424,7 +538,11 @@ const Payroll: React.FC = () => {
       netSalary: parseFloat(payslipForm.netSalary),
       status: 'Generated'
     };
-    createPayslipMutation.mutate(payslipData);
+    if (selectedPayslip) {
+      updatePayslipMutation.mutate(payslipData);
+    } else {
+      createPayslipMutation.mutate(payslipData);
+    }
   };
 
   const handleCompensationSubmit = () => {
@@ -442,7 +560,11 @@ const Payroll: React.FC = () => {
       effectiveDate: new Date(compensationForm.effectiveDate),
       status: 'Active'
     };
-    createCompensationMutation.mutate(compensationData);
+    if (selectedCompensation) {
+      updateCompensationMutation.mutate(compensationData);
+    } else {
+      createCompensationMutation.mutate(compensationData);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -655,7 +777,7 @@ const Payroll: React.FC = () => {
                   </TableCell>
                   <TableCell><Typography variant="subtitle2" fontWeight={600} color="primary">{formatCurrency(payslip.netSalary)}</Typography></TableCell>
                   <TableCell><Chip label={payslip.status} size="small" color={getStatusColor(payslip.status) as any} /></TableCell>
-                  <TableCell>{!isEmployee && (<IconButton onClick={handleMenuClick}><MoreVertIcon /></IconButton>)}</TableCell>
+                  <TableCell>{!isEmployee && (<IconButton onClick={(e) => handleMenuClick(e, payslip, 'payslip')}><MoreVertIcon /></IconButton>)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -696,7 +818,7 @@ const Payroll: React.FC = () => {
                   <TableCell><Typography variant="subtitle2" fontWeight={600} color="primary">{formatCurrency(comp.totalCompensation)}</Typography></TableCell>
                   <TableCell>{new Date(comp.effectiveDate).toLocaleDateString()}</TableCell>
                   <TableCell><Chip label={comp.status} size="small" color={getStatusColor(comp.status) as any} /></TableCell>
-                  <TableCell>{!isEmployee && (<IconButton onClick={handleMenuClick}><MoreVertIcon /></IconButton>)}</TableCell>
+                  <TableCell>{!isEmployee && (<IconButton onClick={(e) => handleMenuClick(e, comp, 'compensation')}><MoreVertIcon /></IconButton>)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -706,14 +828,34 @@ const Payroll: React.FC = () => {
 
       {/* Action Menu */}
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-        <MenuItem onClick={handleMenuClose}><EditIcon sx={{ mr: 1 }} />Edit</MenuItem>
+        <MenuItem onClick={handleEdit}><EditIcon sx={{ mr: 1 }} />Edit</MenuItem>
         <MenuItem onClick={handleMenuClose}><ReceiptIcon sx={{ mr: 1 }} />View Details</MenuItem>
-        <MenuItem onClick={handleMenuClose} sx={{ color: 'error.main' }}><DeleteIcon sx={{ mr: 1 }} />Delete</MenuItem>
+        <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}><DeleteIcon sx={{ mr: 1 }} />Delete</MenuItem>
       </Menu>
 
       {/* Generate Payslip Dialog */}
-      <Dialog open={payslipDialogOpen} onClose={() => setPayslipDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Generate Payslip</DialogTitle>
+      <Dialog 
+        open={payslipDialogOpen} 
+        onClose={() => {
+          setPayslipDialogOpen(false);
+          setSelectedPayslip(null);
+          setPayslipForm({
+            employeeId: '',
+            period: '',
+            basicSalary: '',
+            allowances: '',
+            overtimePay: '0',
+            lateDeduction: '0',
+            attendanceBonus: '0',
+            attendancePenalty: '0',
+            deductions: '',
+            netSalary: ''
+          });
+        }} 
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle>{selectedPayslip ? 'Edit Payslip' : 'Generate Payslip'}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
@@ -753,13 +895,31 @@ const Payroll: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setPayslipDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handlePayslipSubmit} disabled={createPayslipMutation.isPending}>{createPayslipMutation.isPending ? 'Generating...' : 'Generate Payslip'}</Button>
+          <Button variant="contained" onClick={handlePayslipSubmit} disabled={createPayslipMutation.isPending || updatePayslipMutation.isPending}>
+            {selectedPayslip ? (updatePayslipMutation.isPending ? 'Updating...' : 'Update Payslip') : (createPayslipMutation.isPending ? 'Generating...' : 'Generate Payslip')}
+          </Button>
         </DialogActions>
       </Dialog>
 
       {/* Update Compensation Dialog */}
-      <Dialog open={compensationDialogOpen} onClose={() => setCompensationDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Update Compensation</DialogTitle>
+      <Dialog 
+        open={compensationDialogOpen} 
+        onClose={() => {
+          setCompensationDialogOpen(false);
+          setSelectedCompensation(null);
+          setCompensationForm({
+            employeeId: '',
+            position: '',
+            basicSalary: '',
+            allowances: '',
+            bonus: '',
+            effectiveDate: ''
+          });
+        }} 
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle>{selectedCompensation ? 'Edit Compensation' : 'Update Compensation'}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
@@ -787,7 +947,9 @@ const Payroll: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCompensationDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleCompensationSubmit} disabled={createCompensationMutation.isPending}>{createCompensationMutation.isPending ? 'Updating...' : 'Update Compensation'}</Button>
+          <Button variant="contained" onClick={handleCompensationSubmit} disabled={createCompensationMutation.isPending || updateCompensationMutation.isPending}>
+            {selectedCompensation ? (updateCompensationMutation.isPending ? 'Updating...' : 'Update Compensation') : (createCompensationMutation.isPending ? 'Updating...' : 'Update Compensation')}
+          </Button>
         </DialogActions>
       </Dialog>
     </Container>

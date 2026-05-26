@@ -9,11 +9,15 @@ const { PERMISSIONS } = require('../constants/permissions');
 router.get('/payslips', authenticateToken, authorize(PERMISSIONS.PAYROLL_VIEW), payrollController.getPayslips);
 router.get('/payslips/employee/:employeeId', authenticateToken, authorize(PERMISSIONS.PAYROLL_VIEW), payrollController.getEmployeePayslips);
 router.post('/payslips', authenticateToken, authorize(PERMISSIONS.PAYROLL_RUN), payrollController.createPayslip);
+router.put('/payslips/:id', authenticateToken, authorize(PERMISSIONS.PAYROLL_RUN), payrollController.updatePayslip);
+router.delete('/payslips/:id', authenticateToken, authorize(PERMISSIONS.PAYROLL_RUN), payrollController.deletePayslip);
 
 // --- Compensations ---
 router.get('/compensations', authenticateToken, authorize(PERMISSIONS.PAYROLL_VIEW), payrollController.getCompensations);
 router.get('/compensations/employee/:employeeId', authenticateToken, authorize(PERMISSIONS.PAYROLL_VIEW), payrollController.getEmployeeCompensations);
 router.post('/compensations', authenticateToken, authorize(PERMISSIONS.PAYROLL_UPDATE), payrollController.createCompensation);
+router.put('/compensations/:id', authenticateToken, authorize(PERMISSIONS.PAYROLL_UPDATE), payrollController.updateCompensation);
+router.delete('/compensations/:id', authenticateToken, authorize(PERMISSIONS.PAYROLL_UPDATE), payrollController.deleteCompensation);
 
 // --- Payroll Run ---
 router.post('/run', authenticateToken, authorize(PERMISSIONS.PAYROLL_RUN), payrollController.runPayroll);

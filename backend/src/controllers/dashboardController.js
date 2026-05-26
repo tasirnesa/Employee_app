@@ -97,6 +97,55 @@ const dashboardController = {
     }
 
     res.json(results);
+  }),
+
+  getStats: asyncHandler(async (req, res) => {
+    const stats = {
+      totalEmployees: 0,
+      activeEvaluations: 0,
+      pendingLeaves: 0,
+      monthlyPayroll: '$0.00'
+    };
+
+    try {
+      // 1. Total Employees (Active)
+      stats.totalEmployees = await prisma.user.count({
+        where: { activeStatus: 'active' }
+      });
+
+      // 2. Active Evaluation Sessions
+      stats.activeEvaluations = await prisma.evaluationSession.count({
+        where: {
+          startDate: { lte: new Date() },
+          endDate: { gte: new Date() }
+        }
+      });
+
+      // 3. Pending Leaves
+      stats.pendingLeaves = await prisma.leave.count({
+        where: { status: 'Pending' }
+      });
+
+      // 4. Monthly Payroll (Sum of active compensations)
+      const compensations = await prisma.compensation.findMany({
+        where: { status: 'Active' },
+        select: { basicSalary: true, allowances: true }
+      });
+
+      const totalAmount = compensations.reduce((sum, c) => {
+        return sum + Number(c.basicSalary) + Number(c.allowances);
+      }, 0);
+
+      stats.monthlyPayroll = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      }).format(totalAmount);
+
+    } catch (error) {
+      console.error('[Dashboard API] Error fetching stats:', error.message);
+    }
+
+    res.json(stats);
   })
 };
 

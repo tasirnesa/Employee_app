@@ -13,7 +13,7 @@ const offboardingService = {
   },
 
   initiateOffboarding: async (data) => {
-    const { employeeId, ...offboardingData } = data;
+    const { employeeId, plannedLastDate, ...offboardingData } = data;
     const employee = await employeeRepository.findById(employeeId);
     if (!employee) throw new Error('Employee not found');
 
@@ -29,14 +29,28 @@ const offboardingService = {
       { title: 'Exit Interview', description: 'Conduct and document the exit interview.' }
     ];
 
-    return await offboardingRepository.create(
-      { ...offboardingData, employeeId: parseInt(employeeId), status: 'InProgress' },
-      defaultTasks
-    );
+    const finalData = {
+      ...offboardingData,
+      employeeId: parseInt(employeeId),
+      status: 'InProgress'
+    };
+
+    if (plannedLastDate) {
+      finalData.plannedLastDate = new Date(plannedLastDate);
+    }
+
+    return await offboardingRepository.create(finalData, defaultTasks);
   },
 
   updateOffboarding: async (id, data) => {
-    return await offboardingRepository.update(id, data);
+    const updateData = { ...data };
+    if (updateData.plannedLastDate) {
+      updateData.plannedLastDate = new Date(updateData.plannedLastDate);
+    }
+    if (updateData.actualLastDate) {
+      updateData.actualLastDate = new Date(updateData.actualLastDate);
+    }
+    return await offboardingRepository.update(id, updateData);
   },
 
   completeTask: async (taskId, userId) => {

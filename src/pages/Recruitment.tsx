@@ -115,12 +115,73 @@ const Recruitment: React.FC = () => {
     },
   });
 
+  const updateCandidateMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const token = localStorage.getItem('token');
+      const response = await api.put(`/api/recruitment/candidates/${selectedCandidate?.id}`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['candidates'] });
+      setCandidateDialogOpen(false);
+      setSelectedCandidate(null);
+      alert('Candidate updated successfully');
+    },
+    onError: (error: any) => alert('Error updating candidate: ' + (error.response?.data?.error || error.message)),
+  });
+
+  const deleteCandidateMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const token = localStorage.getItem('token');
+      await api.delete(`/api/recruitment/candidates/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['candidates'] });
+      handleMenuClose();
+      alert('Candidate removed successfully');
+    },
+    onError: (error: any) => alert('Error removing candidate: ' + (error.response?.data?.error || error.message)),
+  });
+
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
   const handleMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleEdit = () => {
+    if (selectedCandidate) {
+      setCandidateForm({
+        firstName: selectedCandidate.firstName,
+        lastName: selectedCandidate.lastName,
+        email: selectedCandidate.email,
+        phone: selectedCandidate.phone || '',
+        position: selectedCandidate.position,
+        experience: String(selectedCandidate.experience),
+        education: selectedCandidate.education || '',
+        skills: selectedCandidate.skills.join(', '),
+        appliedDate: new Date(selectedCandidate.appliedDate).toISOString().split('T')[0],
+        status: selectedCandidate.status,
+        notes: selectedCandidate.notes || ''
+      });
+      setCandidateDialogOpen(true);
+    }
+    handleMenuClose();
+  };
+
+  const handleDelete = () => {
+    if (selectedCandidate) {
+      if (window.confirm(`Are you sure you want to remove candidate ${selectedCandidate.firstName} ${selectedCandidate.lastName}?`)) {
+        deleteCandidateMutation.mutate(selectedCandidate.id);
+      }
+    }
+    handleMenuClose();
   };
 
   // Form handler
@@ -161,9 +222,12 @@ const Recruitment: React.FC = () => {
     };
 
     console.log('Sending candidate data:', candidateData);
-
-    // Create candidate using mutation
-    createCandidateMutation.mutate(candidateData);
+    
+    if (selectedCandidate) {
+      updateCandidateMutation.mutate(candidateData);
+    } else {
+      createCandidateMutation.mutate(candidateData);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -441,7 +505,7 @@ const Recruitment: React.FC = () => {
             Hire Candidate
           </MenuItem>
         )}
-        <MenuItem onClick={handleMenuClose}>
+        <MenuItem onClick={handleEdit}>
           <EditIcon sx={{ mr: 1 }} />
           Edit Candidate
         </MenuItem>
@@ -453,15 +517,18 @@ const Recruitment: React.FC = () => {
           <WorkIcon sx={{ mr: 1 }} />
           Schedule Interview
         </MenuItem>
-        <MenuItem onClick={handleMenuClose} sx={{ color: 'error.main' }}>
+        <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
           <DeleteIcon sx={{ mr: 1 }} />
           Remove Candidate
         </MenuItem>
       </Menu>
 
       {/* Add Candidate Dialog */}
-      <Dialog open={candidateDialogOpen} onClose={() => setCandidateDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Add New Candidate</DialogTitle>
+      <Dialog open={candidateDialogOpen} onClose={() => {
+        setCandidateDialogOpen(false);
+        setSelectedCandidate(null);
+      }} maxWidth="md" fullWidth>
+        <DialogTitle>{selectedCandidate ? 'Edit Candidate' : 'Add New Candidate'}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
@@ -586,9 +653,11 @@ const Recruitment: React.FC = () => {
           <Button
             variant="contained"
             onClick={handleCandidateSubmit}
-            disabled={createCandidateMutation.isPending}
+            disabled={createCandidateMutation.isPending || updateCandidateMutation.isPending}
           >
-            {createCandidateMutation.isPending ? 'Adding...' : 'Add Candidate'}
+            {createCandidateMutation.isPending || updateCandidateMutation.isPending 
+              ? 'Saving...' 
+              : (selectedCandidate ? 'Update Candidate' : 'Add Candidate')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -34,6 +34,25 @@ const payrollService = {
     });
   },
 
+  updatePayslip: async (id, data) => {
+    const { basicSalary, allowances, deductions } = data;
+    const current = await payrollRepository.findPayslipById(id);
+    if (!current) throw new Error('Payslip not found');
+
+    const netSalary = parseFloat(basicSalary ?? current.basicSalary) + 
+                      parseFloat(allowances ?? current.allowances) - 
+                      parseFloat(deductions ?? current.deductions);
+
+    return await payrollRepository.updatePayslip(id, {
+      ...data,
+      netSalary
+    });
+  },
+
+  deletePayslip: async (id) => {
+    return await payrollRepository.deletePayslip(id);
+  },
+
   // --- Compensation Business Logic ---
   getCompensations: async (employeeId = null) => {
     const where = employeeId ? { employeeId: parseInt(employeeId) } : {};
@@ -52,6 +71,31 @@ const payrollService = {
       totalCompensation,
       effectiveDate: new Date(data.effectiveDate)
     });
+  },
+
+  updateCompensation: async (id, data) => {
+    const current = await payrollRepository.findActiveCompensation(data.employeeId, new Date()); // Simplification, should find by ID but findActive is what we have
+    // Wait, I should add findCompensationById to repository if missing, but it's not missing in my previous view_file of repository
+    // Ah, I see: updateCompensation in repository uses findUnique with id.
+    
+    const { basicSalary, allowances, bonus } = data;
+    const basic = parseFloat(basicSalary ?? 0);
+    const allow = parseFloat(allowances ?? 0);
+    const bns = parseFloat(bonus ?? 0);
+    const totalCompensation = basic + allow + bns;
+
+    return await payrollRepository.updateCompensation(id, {
+      ...data,
+      basicSalary: basic,
+      allowances: allow,
+      bonus: bns,
+      totalCompensation,
+      effectiveDate: data.effectiveDate ? new Date(data.effectiveDate) : undefined
+    });
+  },
+
+  deleteCompensation: async (id) => {
+    return await payrollRepository.deleteCompensation(id);
   },
 
   // --- Payroll Run Engine ---

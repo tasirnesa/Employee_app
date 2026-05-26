@@ -18,6 +18,16 @@ const payrollController = {
     res.status(201).json(payslip);
   }),
 
+  updatePayslip: asyncHandler(async (req, res) => {
+    const payslip = await payrollService.updatePayslip(req.params.id, req.body);
+    res.json(payslip);
+  }),
+
+  deletePayslip: asyncHandler(async (req, res) => {
+    await payrollService.deletePayslip(req.params.id);
+    res.status(204).end();
+  }),
+
   // --- Compensations ---
   getCompensations: asyncHandler(async (req, res) => {
     const comps = await payrollService.getCompensations();
@@ -32,6 +42,16 @@ const payrollController = {
   createCompensation: asyncHandler(async (req, res) => {
     const comp = await payrollService.createCompensation(req.body);
     res.status(201).json(comp);
+  }),
+
+  updateCompensation: asyncHandler(async (req, res) => {
+    const comp = await payrollService.updateCompensation(req.params.id, req.body);
+    res.json(comp);
+  }),
+
+  deleteCompensation: asyncHandler(async (req, res) => {
+    await payrollService.deleteCompensation(req.params.id);
+    res.status(204).end();
   }),
 
   // --- Payroll Run ---

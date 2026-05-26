@@ -106,6 +106,14 @@ const Dashboard: React.FC = () => {
     },
   });
 
+  const { data: dashboardStats } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: async () => {
+      const response = await api.get('/api/dashboard/stats');
+      return response.data;
+    },
+  });
+
   const employeeCacheKey = currentUser?.id ? `meEmployee_${currentUser.id}` : undefined;
   const cachedMe = (() => {
     if (!employeeCacheKey) return null;
@@ -189,13 +197,11 @@ const Dashboard: React.FC = () => {
       .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
   }, [threads, employeesForTime, currentUser?.id]);
 
-  // Aggregate stats for the Top Stat Bar
-  const activeSessionsCount = actions?.activeSessions?.length || 0;
   const statsSummary = {
-    totalEmployees: users?.length || 0,
-    activeEvaluations: (evaluations as any)?.filter((e: any) => e.status === 'In-Progress')?.length || activeSessionsCount || 0,
-    pendingLeaves: actions?.pendingLeaves?.length || 0,
-    monthlyPayroll: '$42,500.00', // Mocking for now
+    totalEmployees: dashboardStats?.totalEmployees || 0,
+    activeEvaluations: dashboardStats?.activeEvaluations || 0,
+    pendingLeaves: dashboardStats?.pendingLeaves || 0,
+    monthlyPayroll: dashboardStats?.monthlyPayroll || '$0.00',
   };
 
   return (

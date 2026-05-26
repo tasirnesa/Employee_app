@@ -37,6 +37,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import EventIcon from '@mui/icons-material/Event';
 import BadgeIcon from '@mui/icons-material/Badge';
 import ChecklistIcon from '@mui/icons-material/Checklist';
+import DescriptionIcon from '@mui/icons-material/Description';
 // removed toggle icons in favor of text label "EES"
 
 interface SidebarProps {
@@ -164,6 +165,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
   const [openTaskProject, setOpenTaskProject] = useState<boolean>(false);
   const [openEvaluation, setOpenEvaluation] = useState<boolean>(true);
   const [openSettings, setOpenSettings] = useState<boolean>(false);
+  const [openDocuments, setOpenDocuments] = useState<boolean>(false);
+  const [openOffboarding, setOpenOffboarding] = useState<boolean>(false);
 
 
   const handleToggle = () => {
@@ -286,6 +289,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
                   <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/onboarding/wizard'); recordRecent('New Hire Wizard', '/onboarding/wizard'); }} selected={location.pathname === '/onboarding/wizard'}>
                     <ListItemText primary="New Hire Wizard" sx={{ fontWeight: 600, color: 'primary.main' }} />
                   </ListItemButton>
+                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/offboarding'); recordRecent('Offboarding', '/offboarding'); }} selected={location.pathname === '/offboarding'}>
+                    <ListItemText primary="Offboarding" sx={{ color: 'error.main' }} />
+                  </ListItemButton>
                 </>
               )}
             </List>
@@ -392,6 +398,24 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
             <List component="div" disablePadding>
               <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/benefits'); recordRecent('Benefits', '/benefits'); }} selected={location.pathname === '/benefits'}>
                 <ListItemText primary="Benefits & Perks" />
+              </ListItemButton>
+            </List>
+          </Collapse>
+
+          {/* Documents */}
+          <ListItem disablePadding>
+            <ListItemButton onClick={() => setOpenDocuments(!openDocuments)} sx={{ justifyContent: 'flex-start' }}>
+              <ListItemIcon sx={{ minWidth: 56, justifyContent: 'center' }}>
+                <DescriptionIcon />
+              </ListItemIcon>
+              <ListItemText primary="Documents" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
+              {!collapsed && (openDocuments ? <ExpandLess /> : <ExpandMore />)}
+            </ListItemButton>
+          </ListItem>
+          <Collapse in={openDocuments} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/document-management'); recordRecent('Documents', '/document-management'); }} selected={location.pathname === '/document-management'}>
+                <ListItemText primary="Document Management" />
               </ListItemButton>
             </List>
           </Collapse>

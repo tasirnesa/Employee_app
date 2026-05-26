@@ -71,7 +71,8 @@ const criteriaService = {
   },
 
   authorizeCriteria: async (id, userId, userRole) => {
-    if (userRole && userRole !== 'admin' && userRole !== 'manager') {
+    const role = String(userRole || '').toLowerCase();
+    if (role !== 'admin' && role !== 'manager') {
       throw new Error('Insufficient permissions to authorize criteria');
     }
     return await criteriaRepository.update(id, {

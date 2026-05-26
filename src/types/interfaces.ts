@@ -186,8 +186,8 @@ export interface Payslip {
 }
 
 export interface Compensation {
-  id: string;
-  employeeId: string;
+  id: number;
+  employeeId: number;
   employeeName: string;
   position: string;
   basicSalary: number;
@@ -199,8 +199,8 @@ export interface Compensation {
 }
 
 export interface Benefit {
-  id: string;
-  employeeId: string;
+  id: number;
+  employeeId: number;
   employeeName: string;
   benefitType: 'Health Insurance' | 'Dental' | 'Vision' | 'Life Insurance' | 'Retirement' | 'Gym Membership' | 'Education' | 'Transportation' | 'Meal Allowance';
   provider: string;
@@ -215,8 +215,8 @@ export interface Benefit {
 }
 
 export interface Perk {
-  id: string;
-  employeeId: string;
+  id: number;
+  employeeId: number;
   employeeName: string;
   perkType: 'Flexible Hours' | 'Remote Work' | 'Professional Development' | 'Wellness Program' | 'Company Events' | 'Free Meals' | 'Parking' | 'Childcare';
   description: string;
@@ -228,7 +228,7 @@ export interface Perk {
 }
 
 export interface Candidate {
-  id: string;
+  id: number;
   firstName: string;
   lastName: string;
   email: string;

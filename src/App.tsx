@@ -47,6 +47,7 @@ import NotificationsPage from './pages/NotificationsPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import DocumentManagement from './pages/DocumentManagement';
+import Offboarding from './pages/Offboarding';
 
 
 const AppContent: React.FC = () => {
@@ -180,6 +181,7 @@ const AppContent: React.FC = () => {
             <Route path="/positions" element={<ProtectedRoute blockEmployee={true}><PositionManagement /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/document-management" element={<ProtectedRoute><DocumentManagement /></ProtectedRoute>} />
+            <Route path="/offboarding" element={<ProtectedRoute blockEmployee={true}><Offboarding /></ProtectedRoute>} />
             <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
           </Routes>
         </Box>
