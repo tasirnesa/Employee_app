@@ -4,6 +4,7 @@ const prisma = require('../config/prisma');
 const fs = require('fs');
 const path = require('path');
 const emailService = require('./emailService');
+const communicationService = require('./communicationService');
 
 // Config paths (relative to this service file, but pointing to backend root as before)
 const CONFIG_FILE = path.join(__dirname, '..', '..', 'payroll.position.config.json');
@@ -149,6 +150,37 @@ const payrollService = {
       results.push({ userId: u.id, payslip, calc });
     }
 
+    // Notify Admins about payroll run completion
+    try {
+      const admins = await userRepository.findManyByRole('Admin');
+      for (const admin of admins) {
+        await communicationService.notify(
+          admin.id,
+          'Payroll Run Completed',
+          `Payroll run for ${periodLabel || 'current month'} has been processed for ${results.length} employees.`,
+          'SUCCESS',
+          '/payroll'
+        );
+      }
+    } catch (e) {
+      console.warn('Failed to notify admins of payroll run completion', e.message);
+    }
+
+    // Notify Employees about their payroll being processed
+    for (const res of results) {
+      try {
+        await communicationService.notify(
+          res.userId,
+          'Payroll Processed',
+          `Your payroll for ${periodLabel || 'the current period'} has been processed and a payslip has been generated.`,
+          'INFO',
+          '/payroll'
+        );
+      } catch (e) {
+        console.warn(`Failed to notify employee ${res.userId} of payroll processing`, e.message);
+      }
+    }
+
     return { 
       period: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`, 
       count: results.length, 
@@ -207,6 +239,39 @@ const payrollService = {
         }
       } else {
         failCount++;
+      }
+    }
+
+    // Notify Admins about distribution completion
+    try {
+      const admins = await userRepository.findManyByRole('Admin');
+      for (const admin of admins) {
+        await communicationService.notify(
+          admin.id,
+          'Payslip Distribution Complete',
+          `Successfully distributed ${successCount} payslips for period ${period}. ${failCount} failed.`,
+          failCount > 0 ? 'WARNING' : 'SUCCESS',
+          '/payroll'
+        );
+      }
+    } catch (e) {
+      console.warn('Failed to notify admins of distribution completion', e.message);
+    }
+
+    // Notify Employees about their new payslip
+    for (const ps of payslips) {
+      if (ps.employeeId) {
+        try {
+          await communicationService.notify(
+            ps.employeeId,
+            'New Payslip Available',
+            `Your payslip for ${period} has been generated and is ready for viewing.`,
+            'INFO',
+            '/payroll'
+          );
+        } catch (e) {
+          console.warn(`Failed to notify employee ${ps.employeeId} of new payslip`, e.message);
+        }
       }
     }
 

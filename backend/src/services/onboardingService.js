@@ -1,6 +1,10 @@
 const prisma = require('../config/prisma');
 const bcrypt = require('bcrypt');
 const userRepository = require('../repositories/userRepository');
+const communicationService = require('./communicationService');
+const emailService = require('./emailService');
+const path = require('path');
+const fs = require('fs');
 
 const onboardingService = {
   completeWizard: async (data, creatorId) => {
@@ -74,16 +78,22 @@ const onboardingService = {
           dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
           tasks: {
             create: [
-              { title: 'Welcome Meeting', description: 'Schedule a discovery meeting with the team.' },
-              { title: 'IT Setup', description: 'Ensure laptop and software access are ready.' },
-              { title: 'Benefits Briefing', description: 'Review health insurance and other benefits.' },
-              { title: 'Office Tour', description: 'Show the physical or virtual workspace.' }
+              { title: 'Welcome Meeting', description: 'Schedule a discovery meeting with the team manager.' },
+              { title: 'IT Equipment Setup', description: 'Provision laptop, monitor, and necessary hardware.' },
+              { title: 'System Access', description: 'Provide access to Slack, Jira, GitHub, and internal portals.' },
+              { title: 'HR Briefing', description: 'Review company policies, handbook, and culture.' },
+              { title: 'Benefits Enrollment', description: 'Review and sign up for health insurance and 401k.' },
+              { title: 'Office Tour & Security', description: 'Get ID badge and tour the facility.' },
+              { title: 'Training Plan', description: 'Review the initial 30-day training roadmap.' }
             ]
           },
           documents: {
             create: [
               { title: 'Signed Contract', description: 'Official employment contract.' },
-              { title: 'ID Document', description: 'Passport or ID card copy.' }
+              { title: 'ID Document', description: 'Passport or National ID card copy.' },
+              { title: 'Academic Certificates', description: 'Highest degree or professional certificates.' },
+              { title: 'NDA & IP Agreement', description: 'Signed non-disclosure and intellectual property agreement.' },
+              { title: 'Tax Forms', description: 'W-4 or local tax registration forms.' }
             ]
           }
         }
@@ -108,16 +118,6 @@ const onboardingService = {
         }
       }
 
-      // 7. Create welcome notification
-      await tx.notification.create({
-        data: {
-          userId: user.id,
-          title: 'Welcome to the Team!',
-          message: `Hello ${user.fullName}, welcome aboard! Your onboarding process has started.`,
-          type: 'SUCCESS',
-          link: '/dashboard'
-        }
-      });
 
       // 8. Update Candidate
       if (candidateId) {
@@ -127,8 +127,56 @@ const onboardingService = {
         });
       }
 
+      // 9. Auto-initialize Probation Period (90 days default)
+      const probationEndDate = new Date();
+      probationEndDate.setDate(probationEndDate.getDate() + 90);
+      
+      await tx.probationPeriod.create({
+        data: {
+          onboardingId: onboarding.id,
+          startDate: new Date(),
+          endDate: probationEndDate,
+          status: 'Active',
+          goals: []
+        }
+      });
+
+      // 10. Auto-initialize Verifications (Identity, Background, etc.)
+      const verificationTypes = [
+        { type: 'Identity', notes: 'Verify National ID or Passport' },
+        { type: 'Background', notes: 'Educational and experience verification' },
+        { type: 'Criminal', notes: 'Police clearance certificate' },
+        { type: 'Medical', notes: 'Health fitness certificate' },
+        { type: 'Reference', notes: 'Contact previous employers' }
+      ];
+
+      await tx.onboardingVerification.createMany({
+        data: verificationTypes.map(v => ({ ...v, onboardingId: onboarding.id, status: 'Pending' }))
+      });
+
       return { user, employee, onboarding, goals: createdGoals };
     });
+
+    // Notify Employee AFTER transaction succeeds
+    try {
+      await communicationService.notify(
+        result.user.id,
+        'Welcome to the Team!',
+        `Hello ${result.user.fullName}, welcome aboard! Your onboarding process has started.`,
+        'SUCCESS',
+        '/dashboard'
+      );
+      
+      const fullEmployee = await prisma.employee.findUnique({
+        where: { id: result.employee.id },
+        include: { department: true, position: true }
+      });
+      await emailService.sendWelcomeEmail(fullEmployee);
+    } catch (e) {
+      console.warn('Welcome notification/email failed', e.message);
+    }
+
+    return result;
   },
 
   getOnboardingByEmployeeId: async (employeeId) => {
@@ -141,11 +189,81 @@ const onboardingService = {
         employee: {
           include: {
             department: true,
-            position: true
+            position: true,
+            assets: true
           }
-        }
+        },
+        probation: true,
+        verifications: { orderBy: { type: 'asc' } }
       }
     });
+  },
+
+  getAllOnboardings: async (filters = {}) => {
+    const { status, departmentId } = filters;
+    const where = {};
+    if (status) where.status = status;
+    if (departmentId) where.departmentId = parseInt(departmentId);
+
+    return await prisma.onboarding.findMany({
+      where,
+      include: {
+        employee: {
+          include: {
+            department: true,
+            position: true
+          }
+        },
+        tasks: {
+          select: { status: true }
+        },
+        documents: {
+          select: { status: true }
+        },
+        trainings: {
+          select: { status: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  },
+
+  generateContract: async (employeeId) => {
+    const employee = await prisma.employee.findUnique({
+      where: { id: parseInt(employeeId) },
+      include: { department: true, position: true }
+    });
+
+    if (!employee) throw new Error('Employee not found');
+
+    const fileName = `contract-${employee.id}-${Date.now()}.pdf`;
+    const filePath = path.join(__dirname, '..', '..', 'uploads', fileName);
+    
+    // Simulate PDF content
+    const content = `EMPLOYMENT CONTRACT\n\nEmployee: ${employee.firstName} ${employee.lastName}\nPosition: ${employee.position?.name}\nDepartment: ${employee.department?.name}\nDate: ${new Date().toLocaleDateString()}`;
+    fs.writeFileSync(filePath, content);
+
+    const onboarding = await prisma.onboarding.findUnique({
+      where: { employeeId: employee.id },
+      include: { documents: true }
+    });
+
+    if (!onboarding) throw new Error('Onboarding record not found');
+
+    const contractDoc = onboarding.documents.find(d => d.title === 'Signed Contract');
+
+    if (contractDoc) {
+      await prisma.onboardingDocument.update({
+        where: { id: contractDoc.id },
+        data: {
+          fileUrl: `/uploads/${fileName}`,
+          status: 'Uploaded',
+          uploadedAt: new Date()
+        }
+      });
+    }
+
+    return { message: 'Contract generated successfully', fileUrl: `/uploads/${fileName}` };
   },
 
   updateOnboarding: async (id, data) => {

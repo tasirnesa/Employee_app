@@ -2,6 +2,7 @@ const leaveRepository = require('../repositories/leaveRepository');
 const userRepository = require('../repositories/userRepository');
 const prisma = require('../config/prisma');
 const emailService = require('./emailService');
+const communicationService = require('./communicationService');
 
 const startOfYear = (d = new Date()) => new Date(d.getFullYear(), 0, 1);
 const endOfYear = (d = new Date()) => new Date(d.getFullYear(), 11, 31, 23, 59, 59, 999);
@@ -112,15 +113,13 @@ const leaveService = {
     const employeeWithManager = await userRepository.findById(employeeId, true);
     if (employeeWithManager?.managerId) {
       try {
-        await prisma.notification.create({
-          data: {
-            userId: employeeWithManager.managerId,
-            title: 'New Leave Request',
-            message: `${employeeWithManager.fullName} has requested ${days} days of ${leaveType.name} leave.`,
-            type: 'INFO',
-            link: '/leave-management'
-          }
-        });
+        await communicationService.notify(
+          employeeWithManager.managerId,
+          'New Leave Request',
+          `${employeeWithManager.fullName} has requested ${days} days of ${leaveType.name} leave.`,
+          'INFO',
+          '/leave-management'
+        );
 
         if (employeeWithManager.manager?.email) {
             await emailService.sendEmail({
@@ -140,15 +139,13 @@ const leaveService = {
         try {
             const handoverUser = await userRepository.findById(leaveData.handoverId);
             if (handoverUser) {
-                await prisma.notification.create({
-                    data: {
-                        userId: handoverUser.id,
-                        title: 'Leave Handover Assigned',
-                        message: `You have been assigned as a handover person for ${employeeWithManager.fullName}'s leave (${leaveType.name}) from ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}.`,
-                        type: 'INFO',
-                        link: '/leave-management'
-                    }
-                });
+                await communicationService.notify(
+                    handoverUser.id,
+                    'Leave Handover Assigned',
+                    `You have been assigned as a handover person for ${employeeWithManager.fullName}'s leave (${leaveType.name}) from ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}.`,
+                    'INFO',
+                    '/leave-management'
+                );
             }
         } catch (e) {
             console.warn('Handover notification failed', e.message);
@@ -272,15 +269,13 @@ const leaveService = {
       });
 
       if (emp && emp.userId) {
-        await prisma.notification.create({
-          data: {
-            userId: emp.userId,
-            title: `Leave ${status}`,
-            message: `Your leave request has been ${status.toLowerCase()} by ${approver.fullName}.`,
-            type: status === 'Approved' ? 'SUCCESS' : 'WARNING',
-            link: '/leave-management'
-          }
-        });
+        await communicationService.notify(
+          emp.userId,
+          `Leave ${status}`,
+          `Your leave request has been ${status.toLowerCase()} by ${approver.fullName}.`,
+          status === 'Approved' ? 'SUCCESS' : 'WARNING',
+          '/leave-management'
+        );
 
         const targetEmail = emp.email || emp.user?.email;
         if (targetEmail) {

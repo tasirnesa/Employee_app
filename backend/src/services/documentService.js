@@ -1,5 +1,6 @@
 const documentRepository = require('../repositories/documentRepository');
 const prisma = require('../config/prisma');
+const communicationService = require('./communicationService');
 
 const getAllCategories = async () => {
   return await documentRepository.findAllCategories();
@@ -48,11 +49,28 @@ const deleteDocument = async (id) => {
 };
 
 const verifyDocument = async (id, verifiedById) => {
-  return await documentRepository.updateDocument(id, {
+  const doc = await documentRepository.updateDocument(id, {
     verifiedBy: verifiedById,
     verifiedAt: new Date(),
     status: 'Active'
   });
+
+  // Notify Owner
+  if (doc.userId) {
+    try {
+      await communicationService.notify(
+        doc.userId,
+        'Document Verified',
+        `Your document "${doc.title}" has been verified.`,
+        'SUCCESS',
+        '/document-management'
+      );
+    } catch (e) {
+      console.warn('Document verification notification failed', e.message);
+    }
+  }
+
+  return doc;
 };
 
 /**

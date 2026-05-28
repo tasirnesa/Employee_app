@@ -275,6 +275,11 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
               <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/employees/view'); recordRecent('View Employees', '/employees/view'); }} selected={location.pathname.startsWith('/employees/view')}>
                 <ListItemText primary="View Employees" />
               </ListItemButton>
+              {isEmployee && (
+                <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/onboarding/me'); recordRecent('My Onboarding', '/onboarding/me'); }} selected={location.pathname === '/onboarding/me'}>
+                  <ListItemText primary="My Onboarding" sx={{ fontWeight: 600, color: 'primary.main' }} />
+                </ListItemButton>
+              )}
               {!isEmployee && (
                 <>
                   <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/employees/create'); recordRecent('Create Employee', '/employees/create'); }} selected={location.pathname === '/employees/create'}>
@@ -288,6 +293,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
                   </ListItemButton>
                   <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/onboarding/wizard'); recordRecent('New Hire Wizard', '/onboarding/wizard'); }} selected={location.pathname === '/onboarding/wizard'}>
                     <ListItemText primary="New Hire Wizard" sx={{ fontWeight: 600, color: 'primary.main' }} />
+                  </ListItemButton>
+                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/onboarding'); recordRecent('Onboarding', '/onboarding'); }} selected={location.pathname === '/onboarding'}>
+                    <ListItemText primary="Onboarding Management" sx={{ fontWeight: 600, color: 'success.main' }} />
                   </ListItemButton>
                   <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/offboarding'); recordRecent('Offboarding', '/offboarding'); }} selected={location.pathname === '/offboarding'}>
                     <ListItemText primary="Offboarding" sx={{ color: 'error.main' }} />

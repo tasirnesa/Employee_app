@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const documentService = require('./documentService');
+const communicationService = require('./communicationService');
 
 const REMINDER_THRESHOLD_HOURS = 48; // First reminder after 48h
 const REPEAT_THRESHOLD_HOURS = 24;   // Repeat every 24h if still pending
@@ -46,15 +47,14 @@ const checkOverdueLeaves = async () => {
 
       if (approverId) {
         // Create System Notification
-        await prisma.notification.create({
-          data: {
-            userId: approverId,
-            title: 'Action Required: Overdue Leave Request',
-            message: `REMINDER: ${leave.employee.fullName} is still waiting for approval on their ${leave.leaveType.name} request (Submitted on ${leave.createdAt.toLocaleDateString()}).`,
-            type: 'WARNING',
-            link: '/leave-management'
-          }
-        });
+        // Create System Notification
+        await communicationService.notify(
+          approverId,
+          'Action Required: Overdue Leave Request',
+          `REMINDER: ${leave.employee.fullName} is still waiting for approval on their ${leave.leaveType.name} request (Submitted on ${leave.createdAt.toLocaleDateString()}).`,
+          'WARNING',
+          '/leave-management'
+        );
 
         // Update lastReminderAt to prevent spamming
         await prisma.leave.update({
@@ -90,15 +90,14 @@ const checkExpiringDocuments = async () => {
       if (lastReminder && lastReminder > oneDayAgo) continue;
 
       // Create System Notification
-      await prisma.notification.create({
-        data: {
-          userId: doc.userId,
-          title: 'Document Expiring Soon',
-          message: `The document "${doc.title}" is set to expire on ${new Date(doc.expiryDate).toLocaleDateString()}. Please take action to renew it.`,
-          type: 'WARNING',
-          link: '/document-management'
-        }
-      });
+      // Create System Notification
+      await communicationService.notify(
+        doc.userId,
+        'Document Expiring Soon',
+        `The document "${doc.title}" is set to expire on ${new Date(doc.expiryDate).toLocaleDateString()}. Please take action to renew it.`,
+        'WARNING',
+        '/document-management'
+      );
 
       // Update lastReminderAt
       await prisma.document.update({

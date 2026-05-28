@@ -48,6 +48,8 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import DocumentManagement from './pages/DocumentManagement';
 import Offboarding from './pages/Offboarding';
+import Onboarding from './pages/Onboarding';
+import SelfServiceOnboarding from './pages/SelfServiceOnboarding';
 
 
 const AppContent: React.FC = () => {
@@ -126,6 +128,7 @@ const AppContent: React.FC = () => {
 
   // Check if user is on first login and needs to change password
   const isFirstLogin = currentUser && String(currentUser.isFirstLogin).toLowerCase() === 'true';
+  const isEmployee = currentUser?.role === 'Employee';
   const showSidebarAndHeader = isAuthenticated && !isFirstLogin;
 
   console.log('App render - currentUser:', currentUser);
@@ -181,6 +184,8 @@ const AppContent: React.FC = () => {
             <Route path="/positions" element={<ProtectedRoute blockEmployee={true}><PositionManagement /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/document-management" element={<ProtectedRoute><DocumentManagement /></ProtectedRoute>} />
+            <Route path="/onboarding" element={!isEmployee ? <ProtectedRoute blockEmployee={true}><Onboarding /></ProtectedRoute> : <Navigate to="/dashboard" />} />
+            <Route path="/onboarding/me" element={<ProtectedRoute><SelfServiceOnboarding /></ProtectedRoute>} />
             <Route path="/offboarding" element={<ProtectedRoute blockEmployee={true}><Offboarding /></ProtectedRoute>} />
             <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
           </Routes>

@@ -1,4 +1,6 @@
 const benefitRepository = require('../repositories/benefitRepository');
+const communicationService = require('./communicationService');
+const employeeRepository = require('../repositories/employeeRepository');
 
 const benefitService = {
   // --- Benefits logic ---
@@ -10,7 +12,7 @@ const benefitService = {
   },
 
   createBenefit: async (data) => {
-    return await benefitRepository.createBenefit({
+    const benefit = await benefitRepository.createBenefit({
       ...data,
       employeeId: parseInt(data.employeeId),
       monthlyCost: parseFloat(data.monthlyCost),
@@ -20,6 +22,21 @@ const benefitService = {
       expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
       status: data.status || 'Active'
     });
+
+    // Notify Employee
+    try {
+      await communicationService.notify(
+        data.employeeId,
+        'New Benefit Assigned',
+        `You have been assigned a new benefit: ${data.benefitName || data.type || 'Benefits Package'}.`,
+        'SUCCESS',
+        '/benefits'
+      );
+    } catch (e) {
+      console.warn('Failed to notify employee of new benefit', e.message);
+    }
+
+    return benefit;
   },
 
   updateBenefit: async (id, data) => {
@@ -46,7 +63,7 @@ const benefitService = {
   },
 
   createPerk: async (data) => {
-    return await benefitRepository.createPerk({
+    const perk = await benefitRepository.createPerk({
       ...data,
       employeeId: parseInt(data.employeeId),
       value: parseFloat(data.value) || 0,
@@ -54,6 +71,21 @@ const benefitService = {
       endDate: data.endDate ? new Date(data.endDate) : null,
       status: data.status || 'Active'
     });
+
+    // Notify Employee
+    try {
+      await communicationService.notify(
+        data.employeeId,
+        'New Perk Assigned',
+        `You have been assigned a new perk: ${data.perkName || data.type || 'Company Perk'}.`,
+        'SUCCESS',
+        '/benefits'
+      );
+    } catch (e) {
+      console.warn('Failed to notify employee of new perk', e.message);
+    }
+
+    return perk;
   },
 
   updatePerk: async (id, data) => {

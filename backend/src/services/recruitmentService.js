@@ -1,4 +1,6 @@
 const recruitmentRepository = require('../repositories/recruitmentRepository');
+const communicationService = require('./communicationService');
+const userRepository = require('../repositories/userRepository');
 
 const recruitmentService = {
   getCandidates: async (filters = {}) => {
@@ -38,7 +40,25 @@ const recruitmentService = {
       appliedDate: data.appliedDate ? new Date(data.appliedDate) : new Date(),
       interviewDate: data.interviewDate ? new Date(data.interviewDate) : null
     };
-    return await recruitmentRepository.createCandidate(processedData);
+    const candidate = await recruitmentRepository.createCandidate(processedData);
+
+    // Notify Admins about new candidate
+    try {
+      const admins = await userRepository.findManyByRole('Admin');
+      for (const admin of admins) {
+        await communicationService.notify(
+          admin.id,
+          'New Candidate Application',
+          `${candidate.firstName} ${candidate.lastName} applied for ${candidate.position}.`,
+          'INFO',
+          '/recruitment'
+        );
+      }
+    } catch (e) {
+      console.warn('Failed to notify admins of new candidate', e.message);
+    }
+
+    return candidate;
   },
 
   updateCandidate: async (id, data) => {
@@ -61,7 +81,25 @@ const recruitmentService = {
     const data = { status };
     if (interviewDate !== undefined) data.interviewDate = interviewDate ? new Date(interviewDate) : null;
     if (notes !== undefined) data.notes = notes;
-    return await recruitmentRepository.updateCandidate(id, data);
+    const updatedCandidate = await recruitmentRepository.updateCandidate(id, data);
+
+    // Notify about status change
+    try {
+      const admins = await userRepository.findManyByRole('Admin');
+      for (const admin of admins) {
+        await communicationService.notify(
+          admin.id,
+          'Candidate Status Updated',
+          `${updatedCandidate.firstName} ${updatedCandidate.lastName}'s status changed to ${status}.`,
+          status === 'Hired' ? 'SUCCESS' : status === 'Rejected' ? 'WARNING' : 'INFO',
+          '/recruitment'
+        );
+      }
+    } catch (e) {
+      console.warn('Failed to notify admins of candidate status update', e.message);
+    }
+
+    return updatedCandidate;
   },
 
   deleteCandidate: async (id) => {

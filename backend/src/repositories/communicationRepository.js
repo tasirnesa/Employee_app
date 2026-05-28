@@ -97,6 +97,10 @@ const communicationRepository = {
     return await prisma.notification.delete({ where: { id: parseInt(id) } });
   },
 
+  deleteManyNotifications: async (where) => {
+    return await prisma.notification.deleteMany({ where });
+  },
+
   createNotification: async (data) => {
     return await prisma.notification.create({ data });
   }

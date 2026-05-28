@@ -134,6 +134,33 @@ const emailService = {
       text: `Your payslip for ${payslip.period} is ready. Net Salary: $${payslip.netSalary}`,
       html
     });
+  },
+
+  /**
+   * Send Welcome Onboarding Email
+   */
+  sendWelcomeEmail: async (employee) => {
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+        <h2 style="color: #0288d1;">Welcome to the Team, ${employee.firstName}!</h2>
+        <p>Hello ${employee.firstName} ${employee.lastName},</p>
+        <p>We are thrilled to have you join us at ${process.env.COMPANY_NAME || 'our company'} as a <strong>${employee.position?.name || 'Team Member'}</strong> in the <strong>${employee.department?.name || 'Department'}</strong>.</p>
+        <p>Your onboarding process has started. You can track your orientation, complete tasks, and upload documents through our portal.</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" style="background-color: #0288d1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Get Started</a>
+        </div>
+        <p>If you have any questions, please reach out to the HR department.</p>
+        <p>Welcome aboard!</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="font-size: 12px; color: #777;">Employee Evaluation System &copy; 2026</p>
+      </div>
+    `;
+    return await emailService.sendEmail({
+      to: employee.email,
+      subject: `Welcome to the Team, ${employee.firstName}!`,
+      text: `Welcome to the team! We are excited to have you join us as a ${employee.position?.name}. Visit our portal to get started: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`,
+      html
+    });
   }
 };
 

@@ -9,7 +9,7 @@ const authorize = require('../middleware/authorize');
 const { PERMISSIONS } = require('../constants/permissions');
 
 // Configure multer storage
-const uploadsDir = path.join(__dirname, '../../uploads');
+const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -25,8 +25,17 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+// List All Onboarding Processes
+router.get('/', authenticateToken, authorize(PERMISSIONS.ONBOARDING_VIEW), onboardingController.getAllOnboardings);
+
 // Hiring Wizard
 router.post('/wizard', authenticateToken, authorize(PERMISSIONS.EMPLOYEE_CREATE), onboardingController.completeWizard);
+
+// My Onboarding (for currently logged-in employee)
+router.get('/me', authenticateToken, onboardingController.getMyOnboarding);
+
+// Generate Contract
+router.post('/:employeeId/generate-contract', authenticateToken, authorize(PERMISSIONS.ONBOARDING_UPDATE), onboardingController.generateContract);
 
 // Onboarding Dashboard/Detail
 router.get('/:employeeId', authenticateToken, authorize(PERMISSIONS.ONBOARDING_VIEW), onboardingController.getOnboarding);

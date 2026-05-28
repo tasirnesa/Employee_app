@@ -27,6 +27,15 @@ const DocumentManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
 
+  // Form State
+  const [uploadData, setUploadData] = useState({
+    title: '',
+    categoryId: '',
+    expiryDate: '',
+    remindDaysBefore: 30
+  });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   // Queries
   const { data: documents = [], isLoading: docsLoading } = useQuery({
     queryKey: ['documents'],
@@ -40,10 +49,12 @@ const DocumentManagement: React.FC = () => {
 
   // Mutations
   const uploadMutation = useMutation({
-    mutationFn: uploadDocument,
+    mutationFn: (formData: FormData) => uploadDocument(formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
+      queryClient.invalidateQueries({ queryKey: ['document-categories'] });
       setIsUploadOpen(false);
+      resetForm();
     }
   });
 
@@ -51,6 +62,32 @@ const DocumentManagement: React.FC = () => {
     mutationFn: deleteDocument,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['documents'] })
   });
+
+  const resetForm = () => {
+    setUploadData({
+      title: '',
+      categoryId: '',
+      expiryDate: '',
+      remindDaysBefore: 30
+    });
+    setSelectedFile(null);
+  };
+
+  const handleUpload = () => {
+    if (!uploadData.title || !uploadData.categoryId || !selectedFile) {
+      alert('Please fill in all required fields and select a file.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('title', uploadData.title);
+    formData.append('categoryId', uploadData.categoryId);
+    formData.append('expiryDate', uploadData.expiryDate);
+    formData.append('remindDaysBefore', uploadData.remindDaysBefore.toString());
+    formData.append('file', selectedFile);
+
+    uploadMutation.mutate(formData);
+  };
 
   // Filtering
   const filteredDocs = useMemo(() => {
@@ -206,7 +243,7 @@ const DocumentManagement: React.FC = () => {
                       <TableCell>{getStatusChip(doc)}</TableCell>
                       <TableCell align="right">
                         <Tooltip title="View File">
-                          <IconButton size="small" component="a" href={doc.fileUrl} target="_blank">
+                          <IconButton size="small" component="a" href={doc.fileUrl.startsWith('/') ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${doc.fileUrl}` : doc.fileUrl} target="_blank">
                             <Visibility fontSize="small" />
                           </IconButton>
                         </Tooltip>
@@ -240,33 +277,68 @@ const DocumentManagement: React.FC = () => {
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid size={{ xs: 12 }}>
-              <TextField fullWidth label="Document Title" required />
+              <TextField 
+                fullWidth 
+                label="Document Title" 
+                required 
+                value={uploadData.title}
+                onChange={(e) => setUploadData({ ...uploadData, title: e.target.value })}
+              />
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <FormControl fullWidth>
+              <FormControl fullWidth required>
                 <InputLabel>Category</InputLabel>
-                <Select label="Category" required>
+                <Select 
+                  label="Category" 
+                  value={uploadData.categoryId}
+                  onChange={(e) => setUploadData({ ...uploadData, categoryId: e.target.value as string })}
+                >
                   {categories.map((c: DocumentCategory) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
                 </Select>
               </FormControl>
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <TextField fullWidth label="Expiry Date" type="date" InputLabelProps={{ shrink: true }} />
+              <TextField 
+                fullWidth 
+                label="Expiry Date" 
+                type="date" 
+                InputLabelProps={{ shrink: true }}
+                value={uploadData.expiryDate}
+                onChange={(e) => setUploadData({ ...uploadData, expiryDate: e.target.value })}
+              />
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <TextField fullWidth label="Remind Before (Days)" type="number" defaultValue={30} />
+              <TextField 
+                fullWidth 
+                label="Remind Before (Days)" 
+                type="number" 
+                value={uploadData.remindDaysBefore}
+                onChange={(e) => setUploadData({ ...uploadData, remindDaysBefore: parseInt(e.target.value) })}
+              />
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <Button variant="outlined" component="label" fullWidth startIcon={<CloudUpload />}>
-                Select File
-                <input type="file" hidden />
+              <Button 
+                variant="outlined" 
+                component="label" 
+                fullWidth 
+                startIcon={<CloudUpload />}
+                color={selectedFile ? 'success' : 'primary'}
+              >
+                {selectedFile ? selectedFile.name : 'Select File'}
+                <input type="file" hidden onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} />
               </Button>
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
           <Button onClick={() => setIsUploadOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setIsUploadOpen(false)}>Upload</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleUpload} 
+            disabled={uploadMutation.isPending}
+          >
+            {uploadMutation.isPending ? <CircularProgress size={24} /> : 'Upload'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Container>

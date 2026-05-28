@@ -214,6 +214,15 @@ model Employee {
   offboarding     Offboarding[]
   onboarding      Onboarding?
   documents       Document[]
+  address         String?
+  city            String?
+  country         String?
+  emergencyName   String?
+  emergencyPhone  String?
+  bankName        String?
+  bankAccount     String?
+  tinNumber       String?
+  assets          EmployeeAsset[]
 
   @@map("Employee")
 }
@@ -225,10 +234,12 @@ model Onboarding {
   startDate       DateTime           @default(now())
   dueDate         DateTime?
   completedAt     DateTime?
-  employee        Employee           @relation(fields: [employeeId], references: [id])
+  employee        Employee           @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   tasks           OnboardingTask[]
   documents       OnboardingDocument[]
   trainings       OnboardingTraining[]
+  probation       ProbationPeriod?
+  verifications   OnboardingVerification[]
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
@@ -275,6 +286,50 @@ model OnboardingTraining {
   onboarding    Onboarding  @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
 
   @@map("OnboardingTraining")
+}
+
+model EmployeeAsset {
+  id            Int         @id @default(autoincrement())
+  employeeId    Int
+  assetType     String      // Laptop, Mobile, ID Card, etc.
+  brand         String?
+  serialNumber  String?     @unique
+  status        String      @default("Assigned") // Assigned, Returned, Lost, Damaged
+  assignedDate  DateTime    @default(now())
+  returnedDate  DateTime?
+  notes         String?
+  employee      Employee    @relation(fields: [employeeId], references: [id])
+
+  @@map("EmployeeAsset")
+}
+
+model OnboardingVerification {
+  id            Int         @id @default(autoincrement())
+  onboardingId  Int
+  type          String      // Identity, Background, Criminal, Medical, Reference
+  status        String      @default("Pending") // Pending, InProgress, Verified, Failed
+  result        String?     // Summary of finding
+  verifiedAt    DateTime?
+  verifiedBy    Int?
+  notes         String?
+  onboarding    Onboarding  @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+
+  @@map("OnboardingVerification")
+}
+
+model ProbationPeriod {
+  id            Int         @id @default(autoincrement())
+  onboardingId  Int         @unique
+  startDate     DateTime    @default(now())
+  endDate       DateTime
+  status        String      @default("Active") // Active, Passed, Failed, Extended
+  goals         Json?       @default("[]")
+  evaluation    String?
+  feedback      String?
+  notifiedAt    DateTime?   // For automated 30/60/90 reminders
+  onboarding    Onboarding  @relation(fields: [onboardingId], references: [id])
+
+  @@map("ProbationPeriod")
 }
 
 model Attendance {

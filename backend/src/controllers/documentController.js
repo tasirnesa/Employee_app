@@ -47,9 +47,19 @@ const getDocuments = async (req, res) => {
 
 const uploadDocument = async (req, res) => {
   try {
+    const fileData = req.file ? {
+      fileUrl: `/uploads/${req.file.filename}`,
+      fileType: req.file.mimetype.split('/')[1] || 'binary'
+    } : {};
+
     const document = await documentService.uploadDocument({
       ...req.body,
-      userId: req.user?.id || req.body.userId // Prefer authenticated user ID
+      ...fileData,
+      userId: req.user?.id || (req.body.userId ? parseInt(req.body.userId) : null),
+      categoryId: req.body.categoryId ? parseInt(req.body.categoryId) : null,
+      employeeId: req.body.employeeId ? parseInt(req.body.employeeId) : null,
+      expiryDate: req.body.expiryDate ? new Date(req.body.expiryDate) : null,
+      remindDaysBefore: req.body.remindDaysBefore ? parseInt(req.body.remindDaysBefore) : 30
     });
     res.status(201).json(document);
   } catch (error) {

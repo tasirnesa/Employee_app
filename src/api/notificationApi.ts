@@ -29,3 +29,7 @@ export const markAllAsRead = async (): Promise<{ message: string }> => {
 export const deleteNotification = async (id: number): Promise<void> => {
     await api.delete(`/api/notifications/${id}`);
 };
+
+export const clearAllNotifications = async (): Promise<void> => {
+    await api.delete('/api/notifications');
+};

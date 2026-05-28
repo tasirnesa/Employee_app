@@ -1,5 +1,7 @@
 const attendanceRepository = require('../repositories/attendanceRepository');
 const leaveRepository = require('../repositories/leaveRepository');
+const communicationService = require('./communicationService');
+const employeeRepository = require('../repositories/employeeRepository');
 
 const _checkIfOnLeave = async (employeeId, date) => {
   const attendanceDate = new Date(date);
@@ -93,7 +95,7 @@ const attendanceService = {
     // Check if employee is on approved leave
     await _checkIfOnLeave(data.employeeId, attendanceDate);
 
-    return await attendanceRepository.create({
+    const record = await attendanceRepository.create({
       employeeId: parseInt(data.employeeId),
       date: new Date(data.date),
       checkInTime: data.checkInTime ? new Date(`${data.date}T${data.checkInTime}:00`) : null,
@@ -103,6 +105,23 @@ const attendanceService = {
       timeType: data.timeType,
       notes: data.notes,
     });
+
+    // Notify Employee of manual attendance entry
+    try {
+      if (data.status === 'absent' || data.status === 'late' || data.status === 'half-day' || data.status === 'on-leave') {
+        await communicationService.notify(
+          data.employeeId,
+          'New Attendance Record',
+          `A manual attendance record for ${new Date(data.date).toLocaleDateString()} has been created and marked as ${data.status.toUpperCase()}.`,
+          (data.status === 'absent' || data.status === 'late') ? 'WARNING' : 'INFO',
+          '/attendance'
+        );
+      }
+    } catch (e) {
+      console.warn('Failed to notify employee of manual attendance pulse', e.message);
+    }
+
+    return record;
   },
 
   updateAttendance: async (id, data) => {
@@ -121,7 +140,7 @@ const attendanceService = {
       hoursWorked = parseFloat(hoursWorked.toFixed(2));
     }
 
-    return await attendanceRepository.update(id, {
+    const updatedRecord = await attendanceRepository.update(id, {
       employeeId: data.employeeId ? parseInt(data.employeeId) : undefined,
       date: data.date ? new Date(data.date) : undefined,
       checkInTime: data.checkInTime ? new Date(data.checkInTime) : undefined,
@@ -131,6 +150,23 @@ const attendanceService = {
       timeType: data.timeType,
       notes: data.notes,
     });
+
+    // Notify Employee of attendance update
+    try {
+      if (data.status === 'absent' || data.status === 'late' || data.status === 'half-day' || data.status === 'on-leave') {
+        await communicationService.notify(
+          targetId,
+          'Attendance Status Updated',
+          `Your attendance for ${new Date(targetDate).toLocaleDateString()} has been marked as ${data.status.toUpperCase()}.`,
+          (data.status === 'absent' || data.status === 'late') ? 'WARNING' : 'INFO',
+          '/attendance'
+        );
+      }
+    } catch (e) {
+      console.warn('Failed to notify employee of attendance update', e.message);
+    }
+
+    return updatedRecord;
   },
 
   deleteAttendance: async (id) => {

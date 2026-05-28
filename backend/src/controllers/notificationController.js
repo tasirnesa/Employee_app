@@ -20,6 +20,11 @@ const notificationController = {
   deleteNotification: asyncHandler(async (req, res) => {
     await communicationService.deleteNotification(req.params.id);
     res.status(204).send();
+  }),
+
+  deleteAll: asyncHandler(async (req, res) => {
+    await communicationService.deleteAllNotifications(req.user.id);
+    res.status(204).send();
   })
 };
 

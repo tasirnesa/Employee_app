@@ -9,7 +9,7 @@ const authorize = require('../middleware/authorize');
 const { PERMISSIONS } = require('../constants/permissions');
 
 // Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '..', 'uploads');
+const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }

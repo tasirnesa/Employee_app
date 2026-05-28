@@ -75,6 +75,13 @@ const userRepository = {
       },
     });
   },
+
+  findManyByRole: async (role) => {
+    return await prisma.user.findMany({
+      where: { role: { equals: role, mode: 'insensitive' } },
+      select: SAFE_USER_SELECT
+    });
+  },
 };
 
 module.exports = userRepository;

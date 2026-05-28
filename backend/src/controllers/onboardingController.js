@@ -1,4 +1,5 @@
 const onboardingService = require('../services/onboardingService');
+const prisma = require('../config/prisma');
 const asyncHandler = require('../utils/asyncHandler');
 
 const onboardingController = {
@@ -7,8 +8,32 @@ const onboardingController = {
     res.status(201).json(result);
   }),
 
+  getAllOnboardings: asyncHandler(async (req, res) => {
+    const filters = {
+      status: req.query.status,
+      departmentId: req.query.departmentId
+    };
+    const result = await onboardingService.getAllOnboardings(filters);
+    res.json(result);
+  }),
+
   getOnboarding: asyncHandler(async (req, res) => {
     const result = await onboardingService.getOnboardingByEmployeeId(req.params.employeeId);
+    if (!result) return res.status(404).json({ message: 'Onboarding record not found' });
+    res.json(result);
+  }),
+
+  getMyOnboarding: asyncHandler(async (req, res) => {
+    // Find the employee record associated with this user
+    const employee = await prisma.employee.findFirst({
+      where: { userId: req.user.id }
+    });
+    
+    if (!employee) {
+      return res.status(404).json({ message: 'No employee record found for this user' });
+    }
+
+    const result = await onboardingService.getOnboardingByEmployeeId(employee.id);
     if (!result) return res.status(404).json({ message: 'Onboarding record not found' });
     res.json(result);
   }),
@@ -22,6 +47,11 @@ const onboardingController = {
   createTask: asyncHandler(async (req, res) => {
     const result = await onboardingService.createTask(req.params.id, req.body);
     res.status(201).json(result);
+  }),
+
+  generateContract: asyncHandler(async (req, res) => {
+    const result = await onboardingService.generateContract(req.params.employeeId);
+    res.json(result);
   }),
 
   updateTask: asyncHandler(async (req, res) => {

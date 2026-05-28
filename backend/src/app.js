@@ -49,6 +49,9 @@ const offboardingRoutes = require('./routes/offboarding');
 const documentRoutes = require('./routes/documents');
 const performanceRoutes = require('./routes/performance');
 const dashboardRoutes = require('./routes/dashboard');
+const assetRoutes = require('./routes/assets');
+const verificationRoutes = require('./routes/verification');
+const probationRoutes = require('./routes/probation');
 
 // Public Routes
 app.use('/api/auth', authRoutes);
@@ -59,8 +62,11 @@ app.use('/api/employees', authenticateToken, employeeRoutes);
 app.use('/api/departments', authenticateToken, departmentRoutes);
 app.use('/api/positions', authenticateToken, positionRoutes);
 app.use('/api/criteria', authenticateToken, criteriaRoutes);
-app.use('/api/recruitment', authenticateToken, recruitmentRoutes);
-app.use('/api/evaluations', authenticateToken, evaluationRoutes);
+app.use('/api/recruitment', recruitmentRoutes);
+app.use('/api/benefits', benefitRoutes);
+app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/assets', assetRoutes);
+app.use('/api/verification', verificationRoutes);
 app.use('/api/sessions', authenticateToken, sessionRoutes);
 app.use('/api/results', authenticateToken, evaluationRoutes); // Redirected to evaluation routes
 app.use('/api/goals', authenticateToken, goalRoutes);
@@ -80,6 +86,8 @@ app.use('/api/offboarding', authenticateToken, offboardingRoutes);
 app.use('/api/documents', authenticateToken, documentRoutes);
 app.use('/api/performance', authenticateToken, performanceRoutes);
 app.use('/api/dashboard', authenticateToken, dashboardRoutes);
+app.use('/api/assets', authenticateToken, assetRoutes);
+app.use('/api/probation', authenticateToken, probationRoutes);
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'UP', timestamp: new Date() }));

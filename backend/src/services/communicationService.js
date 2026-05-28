@@ -74,6 +74,10 @@ const communicationService = {
     return await communicationRepository.deleteNotification(id);
   },
 
+  deleteAllNotifications: async (userId) => {
+    return await communicationRepository.deleteManyNotifications({ userId });
+  },
+
   notify: async (userId, title, message, type = 'INFO', link = null) => {
     const notification = await communicationRepository.createNotification({
       userId, title, message, type, link

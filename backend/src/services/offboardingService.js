@@ -1,5 +1,8 @@
 const offboardingRepository = require('../repositories/offboardingRepository');
 const employeeRepository = require('../repositories/employeeRepository');
+const communicationService = require('./communicationService');
+const userRepository = require('../repositories/userRepository');
+const prisma = require('../config/prisma');
 
 const offboardingService = {
   getOffboardingList: async (where) => {
@@ -39,7 +42,37 @@ const offboardingService = {
       finalData.plannedLastDate = new Date(plannedLastDate);
     }
 
-    return await offboardingRepository.create(finalData, defaultTasks);
+    const record = await offboardingRepository.create(finalData, defaultTasks);
+
+    // Notify relevant parties
+    try {
+      // 1. Notify the Employee
+      if (employee.userId) {
+        await communicationService.notify(
+          employee.userId,
+          'Offboarding Initiated',
+          'A separation process has been initiated for you. Please check your tasks and documentation.',
+          'WARNING',
+          '/offboarding'
+        );
+      }
+      
+      // 2. Notify Admins
+      const admins = await userRepository.findManyByRole('Admin');
+      for (const admin of admins) {
+        await communicationService.notify(
+          admin.id,
+          'Offboarding Process Started',
+          `Offboarding initiated for ${employee.firstName} ${employee.lastName}.`,
+          'INFO',
+          '/offboarding'
+        );
+      }
+    } catch (e) {
+      console.warn('Failed to notify parties of offboarding initiation', e.message);
+    }
+
+    return record;
   },
 
   updateOffboarding: async (id, data) => {
@@ -73,9 +106,24 @@ const offboardingService = {
       throw new Error(`Cannot finalize: ${pendingTasks.length} tasks still pending`);
     }
 
-    // Mark as completed and deactivate employee
     await offboardingRepository.update(id, { status: 'Completed', actualLastDate: new Date() });
     await employeeRepository.update(offboarding.employeeId, { isActive: false });
+
+    // Notify Admins of completion
+    try {
+      const admins = await userRepository.findManyByRole('Admin');
+      for (const admin of admins) {
+        await communicationService.notify(
+          admin.id,
+          'Offboarding Completed',
+          `Offboarding finalized and employee record deactivated for ${offboarding.employee.firstName} ${offboarding.employee.lastName}.`,
+          'SUCCESS',
+          '/offboarding'
+        );
+      }
+    } catch (e) {
+      console.warn('Failed to notify admins of offboarding completion', e.message);
+    }
 
     return { message: 'Offboarding finalized and employee deactivated' };
   }

@@ -28,41 +28,43 @@ export interface Document {
 }
 
 export const getCategories = async () => {
-  const response = await api.get<DocumentCategory[]>('/documents/categories');
+  const response = await api.get<DocumentCategory[]>('/api/documents/categories');
   return response.data;
 };
 
 export const createCategory = async (data: Partial<DocumentCategory>) => {
-  const response = await api.post<DocumentCategory>('/documents/categories', data);
+  const response = await api.post<DocumentCategory>('/api/documents/categories', data);
   return response.data;
 };
 
 export const deleteCategory = async (id: number) => {
-  await api.delete(`/documents/categories/${id}`);
+  await api.delete(`/api/documents/categories/${id}`);
 };
 
 export const getDocuments = async (params?: any) => {
-  const response = await api.get<Document[]>('/documents', { params });
+  const response = await api.get<Document[]>('/api/documents', { params });
   return response.data;
 };
 
-export const uploadDocument = async (data: any) => {
-  // Assuming a standard simple object for now, 
-  // if actual file upload is needed, this would use FormData
-  const response = await api.post<Document>('/documents', data);
+export const uploadDocument = async (data: FormData) => {
+  const response = await api.post<Document>('/api/documents', data, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
   return response.data;
 };
 
 export const updateDocument = async (id: number, data: any) => {
-  const response = await api.put<Document>(`/documents/${id}`, data);
+  const response = await api.put<Document>(`/api/documents/${id}`, data);
   return response.data;
 };
 
 export const deleteDocument = async (id: number) => {
-  await api.delete(`/documents/${id}`);
+  await api.delete(`/api/documents/${id}`);
 };
 
 export const verifyDocument = async (id: number) => {
-  const response = await api.patch<Document>(`/documents/${id}/verify`);
+  const response = await api.patch<Document>(`/api/documents/${id}/verify`);
   return response.data;
 };
