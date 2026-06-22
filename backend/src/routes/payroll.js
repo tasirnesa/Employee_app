@@ -23,6 +23,7 @@ router.delete('/compensations/:id', authenticateToken, authorize(PERMISSIONS.PAY
 router.post('/run', authenticateToken, authorize(PERMISSIONS.PAYROLL_RUN), payrollController.runPayroll);
 router.post('/preview', authenticateToken, authorize(PERMISSIONS.PAYROLL_RUN), payrollController.previewPayroll);
 router.post('/distribute', authenticateToken, authorize(PERMISSIONS.PAYROLL_RUN), payrollController.distributePayslips);
+router.get('/export/:period', authenticateToken, authorize(PERMISSIONS.PAYROLL_RUN), payrollController.exportBankCsv);
 
 // --- Config: Positions ---
 router.get('/position-config', authenticateToken, authorize(PERMISSIONS.PAYROLL_VIEW), payrollController.getPositionConfigs);

@@ -77,35 +77,21 @@ const Payroll: React.FC = () => {
   const [selectedPositionId, setSelectedPositionId] = useState<string>('');
   const [positionConfig, setPositionConfig] = useState({
     positionName: '',
-    basicSalary: '',
-    allowances: '',
-    bonus: '',
-    overtimeMultiplier: '1.5',
-    pensionEmployeePct: '0.07',
-    taxFixed: '0',
-    insuranceEmployeeFixed: '0',
-    otherDeductionsFixed: '0',
-    latePenaltyRate: '0.5',
-    perfectAttendanceBonus: '50',
-    absenteeismThreshold: '2',
-
+    gradeId: '',
+    positionAllowance: '',
+    fuelAllowance: '',
+    qualifications: '',
   });
   const [runPeriod, setRunPeriod] = useState<string>(''); // YYYY-MM
   // Scale defaults configuration (admin)
   const [scaleKeyEditing, setScaleKeyEditing] = useState<string>('');
   const [scaleConfig, setScaleConfig] = useState({
-    label: '',
-    basicSalary: '',
-    allowances: '',
-    bonus: '',
-    overtimeMultiplier: '1.5',
-    pensionEmployeePct: '0.07',
-    taxFixed: '0',
-    insuranceEmployeeFixed: '0',
-    otherDeductionsFixed: '0',
-    latePenaltyRate: '0.5',
-    perfectAttendanceBonus: '50',
-    absenteeismThreshold: '2',
+    name: '',
+    minSalary: '',
+    midSalary: '',
+    maxSalary: '',
+    housingPct: '',
+    transportPct: '',
   });
 
   // Check user role for access control
@@ -180,18 +166,12 @@ const Payroll: React.FC = () => {
       const res = await api.get(`/api/payroll/scale-config/${scaleKeyEditing}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
       const cfg = res.data || {};
       setScaleConfig({
-        label: cfg.label || '',
-        basicSalary: String(cfg.basicSalary ?? ''),
-        allowances: String(cfg.allowances ?? ''),
-        bonus: String(cfg.bonus ?? ''),
-        overtimeMultiplier: String(cfg.overtimeMultiplier ?? '1.5'),
-        pensionEmployeePct: String(cfg.pensionEmployeePct ?? '0.07'),
-        taxFixed: String(cfg.taxFixed ?? '0'),
-        insuranceEmployeeFixed: String(cfg.insuranceEmployeeFixed ?? '0'),
-        otherDeductionsFixed: String(cfg.otherDeductionsFixed ?? '0'),
-        latePenaltyRate: String(cfg.latePenaltyRate ?? '0.5'),
-        perfectAttendanceBonus: String(cfg.perfectAttendanceBonus ?? '50'),
-        absenteeismThreshold: String(cfg.absenteeismThreshold ?? '2'),
+        name: cfg.name || cfg.label || '',
+        minSalary: String(cfg.minSalary ?? ''),
+        midSalary: String(cfg.midSalary ?? ''),
+        maxSalary: String(cfg.maxSalary ?? ''),
+        housingPct: String(cfg.housingPct ?? '0'),
+        transportPct: String(cfg.transportPct ?? '0'),
       });
       return cfg;
     },
@@ -205,17 +185,12 @@ const Payroll: React.FC = () => {
       const token = localStorage.getItem('token');
       const payload = {
         ...scaleConfig,
-        basicSalary: Number(scaleConfig.basicSalary || 0),
-        allowances: Number(scaleConfig.allowances || 0),
-        bonus: Number(scaleConfig.bonus || 0),
-        overtimeMultiplier: Number(scaleConfig.overtimeMultiplier || 1.5),
-        pensionEmployeePct: Number(scaleConfig.pensionEmployeePct || 0.07),
-        taxFixed: Number(scaleConfig.taxFixed || 0),
-        insuranceEmployeeFixed: Number(scaleConfig.insuranceEmployeeFixed || 0),
-        otherDeductionsFixed: Number(scaleConfig.otherDeductionsFixed || 0),
-        latePenaltyRate: Number(scaleConfig.latePenaltyRate || 0.5),
-        perfectAttendanceBonus: Number(scaleConfig.perfectAttendanceBonus || 50),
-        absenteeismThreshold: Number(scaleConfig.absenteeismThreshold || 2),
+        name: scaleConfig.name || scaleKeyEditing,
+        minSalary: Number(scaleConfig.minSalary || 0),
+        midSalary: Number(scaleConfig.midSalary || 0),
+        maxSalary: Number(scaleConfig.maxSalary || 0),
+        housingPct: Number(scaleConfig.housingPct || 0),
+        transportPct: Number(scaleConfig.transportPct || 0),
       } as any;
       const res = await api.put(`/api/payroll/scale-config/${scaleKeyEditing}`, payload, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
       return res.data;
@@ -236,18 +211,11 @@ const Payroll: React.FC = () => {
       const res = await api.get(`/api/payroll/position-config/${selectedPositionId}`, { headers: { Authorization: `Bearer ${token}` } });
       const cfg = res.data || {};
       setPositionConfig({
-        positionName: cfg.positionName || '',
-        basicSalary: String(cfg.basicSalary ?? ''),
-        allowances: String(cfg.allowances ?? ''),
-        bonus: String(cfg.bonus ?? ''),
-        overtimeMultiplier: String(cfg.overtimeMultiplier ?? '1.5'),
-        pensionEmployeePct: String(cfg.pensionEmployeePct ?? '0.07'),
-        taxFixed: String(cfg.taxFixed ?? '0'),
-        insuranceEmployeeFixed: String(cfg.insuranceEmployeeFixed ?? '0'),
-        otherDeductionsFixed: String(cfg.otherDeductionsFixed ?? '0'),
-        latePenaltyRate: String(cfg.latePenaltyRate ?? '0.5'),
-        perfectAttendanceBonus: String(cfg.perfectAttendanceBonus ?? '50'),
-        absenteeismThreshold: String(cfg.absenteeismThreshold ?? '2'),
+        positionName: cfg.name || cfg.positionName || '',
+        gradeId: String(cfg.gradeId ?? ''),
+        positionAllowance: String(cfg.positionAllowance ?? '0'),
+        fuelAllowance: String(cfg.fuelAllowance ?? '0'),
+        qualifications: cfg.qualifications || '',
       });
       return cfg;
     },
@@ -260,17 +228,11 @@ const Payroll: React.FC = () => {
       const token = localStorage.getItem('token');
       const payload = {
         ...positionConfig,
-        basicSalary: Number(positionConfig.basicSalary || 0),
-        allowances: Number(positionConfig.allowances || 0),
-        bonus: Number(positionConfig.bonus || 0),
-        overtimeMultiplier: Number(positionConfig.overtimeMultiplier || 1.5),
-        pensionEmployeePct: Number(positionConfig.pensionEmployeePct || 0.07),
-        taxFixed: Number(positionConfig.taxFixed || 0),
-        insuranceEmployeeFixed: Number(positionConfig.insuranceEmployeeFixed || 0),
-        otherDeductionsFixed: Number(positionConfig.otherDeductionsFixed || 0),
-        latePenaltyRate: Number(positionConfig.latePenaltyRate || 0.5),
-        perfectAttendanceBonus: Number(positionConfig.perfectAttendanceBonus || 50),
-        absenteeismThreshold: Number(positionConfig.absenteeismThreshold || 2),
+        positionName: positionConfig.positionName,
+        gradeId: positionConfig.gradeId ? Number(positionConfig.gradeId) : null,
+        positionAllowance: Number(positionConfig.positionAllowance || 0),
+        fuelAllowance: Number(positionConfig.fuelAllowance || 0),
+        qualifications: positionConfig.qualifications,
       } as any;
       const res = await api.put(`/api/payroll/position-config/${selectedPositionId}`, payload, { headers: { Authorization: `Bearer ${token}` } });
       return res.data;
@@ -639,18 +601,17 @@ const Payroll: React.FC = () => {
                   {(positions || []).map((p: any) => (<option key={p.id} value={p.id}>{p.name}</option>))}
                 </Select>
               </FormControl>
-              <TextField label="Position Name" value={positionConfig.positionName} onChange={(e) => setPositionConfig({ ...positionConfig, positionName: e.target.value })} />
-              <TextField label="Basic Salary" type="number" value={positionConfig.basicSalary} onChange={(e) => setPositionConfig({ ...positionConfig, basicSalary: e.target.value })} />
-              <TextField label="Allowances" type="number" value={positionConfig.allowances} onChange={(e) => setPositionConfig({ ...positionConfig, allowances: e.target.value })} />
-              <TextField label="Bonus" type="number" value={positionConfig.bonus} onChange={(e) => setPositionConfig({ ...positionConfig, bonus: e.target.value })} />
-              <TextField label="Overtime Multiplier" type="number" value={positionConfig.overtimeMultiplier} onChange={(e) => setPositionConfig({ ...positionConfig, overtimeMultiplier: e.target.value })} />
-              <TextField label="Pension Employee %" type="number" value={positionConfig.pensionEmployeePct} onChange={(e) => setPositionConfig({ ...positionConfig, pensionEmployeePct: e.target.value })} />
-              <TextField label="Tax (fixed)" type="number" value={positionConfig.taxFixed} onChange={(e) => setPositionConfig({ ...positionConfig, taxFixed: e.target.value })} />
-              <TextField label="Insurance (employee)" type="number" value={positionConfig.insuranceEmployeeFixed} onChange={(e) => setPositionConfig({ ...positionConfig, insuranceEmployeeFixed: e.target.value })} />
-              <TextField label="Other Deductions" type="number" value={positionConfig.otherDeductionsFixed} onChange={(e) => setPositionConfig({ ...positionConfig, otherDeductionsFixed: e.target.value })} />
-              <TextField label="Late Penalty (h)" type="number" inputProps={{ step: "0.1" }} value={positionConfig.latePenaltyRate} onChange={(e) => setPositionConfig({ ...positionConfig, latePenaltyRate: e.target.value })} helperText="Hours of pay deducted per late" />
-              <TextField label="Perfect Att. Bonus" type="number" value={positionConfig.perfectAttendanceBonus} onChange={(e) => setPositionConfig({ ...positionConfig, perfectAttendanceBonus: e.target.value })} />
-              <TextField label="Absent Threshold" type="number" value={positionConfig.absenteeismThreshold} onChange={(e) => setPositionConfig({ ...positionConfig, absenteeismThreshold: e.target.value })} helperText="Days of absence before extra penalty" />
+              <TextField label="Position Name" value={positionConfig.positionName || ''} disabled />
+              <FormControl sx={{ minWidth: 150 }}>
+                <InputLabel>Grade</InputLabel>
+                <Select native label="Grade" value={positionConfig.gradeId || ''} onChange={(e) => setPositionConfig({ ...positionConfig, gradeId: (e.target as any).value })}>
+                  <option value="">No Grade</option>
+                  {allScales && Object.keys(allScales).map(k => <option key={allScales[k].id} value={allScales[k].id}>{allScales[k].name}</option>)}
+                </Select>
+              </FormControl>
+              <TextField label="Position Allowance" type="number" value={positionConfig.positionAllowance || ''} onChange={(e) => setPositionConfig({ ...positionConfig, positionAllowance: e.target.value })} />
+              <TextField label="Fuel Allowance" type="number" value={positionConfig.fuelAllowance || ''} onChange={(e) => setPositionConfig({ ...positionConfig, fuelAllowance: e.target.value })} />
+              <TextField label="Qualifications" value={positionConfig.qualifications || ''} onChange={(e) => setPositionConfig({ ...positionConfig, qualifications: e.target.value })} />
             </Box>
             <Box sx={{ mt: 2 }}>
               <Button variant="contained" onClick={() => { if (!selectedPositionId) { alert('Select a position first'); return; } savePosCfg.mutate(); }}>Save Defaults</Button>
@@ -670,23 +631,17 @@ const Payroll: React.FC = () => {
                 <InputLabel id="scale-select-label">Load Existing</InputLabel>
                 <Select native labelId="scale-select-label" label="Load Existing" onChange={(e) => setScaleKeyEditing(String((e.target as any).value))}>
                   <option value="">Select Scale</option>
-                  {allScales && Object.keys(allScales).map((k) => (<option key={k} value={k}>{(allScales as any)[k]?.label || k}</option>))}
+                  {allScales && Object.keys(allScales).map((k) => (<option key={k} value={k}>{(allScales as any)[k]?.name || k}</option>))}
                 </Select>
               </FormControl>
             </Box>
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <TextField label="Label" value={scaleConfig.label} onChange={(e) => setScaleConfig({ ...scaleConfig, label: e.target.value })} />
-              <TextField label="Basic Salary" type="number" value={scaleConfig.basicSalary} onChange={(e) => setScaleConfig({ ...scaleConfig, basicSalary: e.target.value })} />
-              <TextField label="Allowances" type="number" value={scaleConfig.allowances} onChange={(e) => setScaleConfig({ ...scaleConfig, allowances: e.target.value })} />
-              <TextField label="Bonus" type="number" value={scaleConfig.bonus} onChange={(e) => setScaleConfig({ ...scaleConfig, bonus: e.target.value })} />
-              <TextField label="Overtime Multiplier" type="number" value={scaleConfig.overtimeMultiplier} onChange={(e) => setScaleConfig({ ...scaleConfig, overtimeMultiplier: e.target.value })} />
-              <TextField label="Pension Employee %" type="number" value={scaleConfig.pensionEmployeePct} onChange={(e) => setScaleConfig({ ...scaleConfig, pensionEmployeePct: e.target.value })} />
-              <TextField label="Tax (fixed)" type="number" value={scaleConfig.taxFixed} onChange={(e) => setScaleConfig({ ...scaleConfig, taxFixed: e.target.value })} />
-              <TextField label="Insurance (employee)" type="number" value={scaleConfig.insuranceEmployeeFixed} onChange={(e) => setScaleConfig({ ...scaleConfig, insuranceEmployeeFixed: e.target.value })} />
-              <TextField label="Other Deductions" type="number" value={scaleConfig.otherDeductionsFixed} onChange={(e) => setScaleConfig({ ...scaleConfig, otherDeductionsFixed: e.target.value })} />
-              <TextField label="Late Penalty (h)" type="number" inputProps={{ step: "0.1" }} value={scaleConfig.latePenaltyRate} onChange={(e) => setScaleConfig({ ...scaleConfig, latePenaltyRate: e.target.value })} />
-              <TextField label="Perfect Att. Bonus" type="number" value={scaleConfig.perfectAttendanceBonus} onChange={(e) => setScaleConfig({ ...scaleConfig, perfectAttendanceBonus: e.target.value })} />
-              <TextField label="Absent Threshold" type="number" value={scaleConfig.absenteeismThreshold} onChange={(e) => setScaleConfig({ ...scaleConfig, absenteeismThreshold: e.target.value })} />
+              <TextField label="Scale/Grade Name" value={scaleConfig.name || ''} onChange={(e) => setScaleConfig({ ...scaleConfig, name: e.target.value })} />
+              <TextField label="Min Salary" type="number" value={scaleConfig.minSalary || ''} onChange={(e) => setScaleConfig({ ...scaleConfig, minSalary: e.target.value })} />
+              <TextField label="Mid Salary" type="number" value={scaleConfig.midSalary || ''} onChange={(e) => setScaleConfig({ ...scaleConfig, midSalary: e.target.value })} />
+              <TextField label="Max Salary" type="number" value={scaleConfig.maxSalary || ''} onChange={(e) => setScaleConfig({ ...scaleConfig, maxSalary: e.target.value })} />
+              <TextField label="Housing %" type="number" value={scaleConfig.housingPct || ''} onChange={(e) => setScaleConfig({ ...scaleConfig, housingPct: e.target.value })} />
+              <TextField label="Transport %" type="number" value={scaleConfig.transportPct || ''} onChange={(e) => setScaleConfig({ ...scaleConfig, transportPct: e.target.value })} />
             </Box>
             <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
               <Button variant="contained" onClick={() => { if (!scaleKeyEditing) { alert('Enter a scale key'); return; } saveScaleCfg.mutate(); }}>Save Scale</Button>
@@ -724,6 +679,34 @@ const Payroll: React.FC = () => {
                   startIcon={<EmailIcon />}
                 > 
                   {distributePayslips.isPending ? 'Sending...' : 'Email All Payslips'} 
+                </Button>
+              </Tooltip>
+              <Tooltip title="Download CSV bank export for this period">
+                <Button 
+                  variant="outlined" 
+                  color="info"
+                  onClick={async () => {
+                    try {
+                      const token = localStorage.getItem('token');
+                      const response = await api.get(`/api/payroll/export/${runPeriod}`, {
+                        headers: { Authorization: `Bearer ${token}` },
+                        responseType: 'blob'
+                      });
+                      const url = window.URL.createObjectURL(new Blob([response.data]));
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.setAttribute('download', `payroll_${runPeriod}.csv`);
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    } catch(e: any) {
+                      alert('Error exporting: ' + e?.response?.data?.error || e.message);
+                    }
+                  }}
+                  disabled={!runPeriod}
+                  startIcon={<AttachMoneyIcon />}
+                > 
+                  Export Bank CSV
                 </Button>
               </Tooltip>
             </Box>

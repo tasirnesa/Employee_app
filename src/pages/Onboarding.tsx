@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Container,
     Paper,
@@ -45,6 +45,7 @@ import {
     VerifiedUser as VerificationIcon,
 } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../lib/axios';
 import { format } from 'date-fns';
 
@@ -105,6 +106,8 @@ interface OnboardingRecord {
 
 const OnboardingManagement: React.FC = () => {
     const queryClient = useQueryClient();
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
     const [activeTab, setActiveTab] = useState(0);
     const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
@@ -113,6 +116,16 @@ const OnboardingManagement: React.FC = () => {
     const [newTask, setNewTask] = useState({ title: '', description: '' });
     const [newTraining, setNewTraining] = useState({ trainingName: '' });
     const [newAsset, setNewAsset] = useState({ assetType: '', brand: '', serialNumber: '' });
+
+    useEffect(() => {
+        const employeeId = searchParams.get('employeeId');
+        if (employeeId) {
+            const parsed = Number(employeeId);
+            if (Number.isFinite(parsed) && parsed > 0) {
+                setSelectedEmployeeId(parsed);
+            }
+        }
+    }, [searchParams]);
 
     // Mutations
     const addAssetMutation = useMutation({
@@ -186,6 +199,15 @@ const OnboardingManagement: React.FC = () => {
         }
     });
 
+    const completeOnboardingMutation = useMutation({
+        mutationFn: async (id: number) =>
+            await api.patch(`/api/onboarding/${id}`, { status: 'Completed', completedAt: new Date().toISOString() }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['onboarding', selectedEmployeeId] });
+            queryClient.invalidateQueries({ queryKey: ['onboardings'] });
+        },
+    });
+
     const addTaskMutation = useMutation({
         mutationFn: async (data: any) => 
             await api.post(`/api/onboarding/${detail?.id}/tasks`, data),
@@ -231,11 +253,33 @@ const OnboardingManagement: React.FC = () => {
                         <Typography variant="h5" fontWeight={700}>
                             Onboarding: {detail.employee.firstName} {detail.employee.lastName}
                         </Typography>
-                        <Chip 
-                            label={detail.status} 
-                            color={detail.status === 'Completed' ? 'success' : 'primary'} 
-                            variant="outlined"
-                        />
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                            {calculateProgress(detail) === 100 && detail.status !== 'Completed' && (
+                                <Button
+                                    variant="contained"
+                                    color="success"
+                                    size="small"
+                                    disabled={completeOnboardingMutation.isPending}
+                                    onClick={() => completeOnboardingMutation.mutate(detail.id)}
+                                >
+                                    Mark Complete
+                                </Button>
+                            )}
+                            {detail.status === 'Completed' && (
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => navigate('/evaluations/create')}
+                                >
+                                    Start Evaluation
+                                </Button>
+                            )}
+                            <Chip 
+                                label={detail.status} 
+                                color={detail.status === 'Completed' ? 'success' : 'primary'} 
+                                variant="outlined"
+                            />
+                        </Box>
                     </Box>
                     <Typography color="text.secondary" variant="body2">
                         {detail.employee.position?.name} • {detail.employee.department?.name}

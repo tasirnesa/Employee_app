@@ -13,7 +13,7 @@ const onboardingService = {
     const userName = userData.userName?.trim();
     const email = employeeData.email?.trim();
 
-    return await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // 1. Check uniqueness
       const existingUser = await tx.user.findUnique({ where: { userName } });
       if (existingUser) throw new Error(`Username "${userName}" already exists.`);

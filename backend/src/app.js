@@ -62,12 +62,8 @@ app.use('/api/employees', authenticateToken, employeeRoutes);
 app.use('/api/departments', authenticateToken, departmentRoutes);
 app.use('/api/positions', authenticateToken, positionRoutes);
 app.use('/api/criteria', authenticateToken, criteriaRoutes);
-app.use('/api/recruitment', recruitmentRoutes);
-app.use('/api/benefits', benefitRoutes);
-app.use('/api/onboarding', onboardingRoutes);
-app.use('/api/assets', assetRoutes);
-app.use('/api/verification', verificationRoutes);
 app.use('/api/sessions', authenticateToken, sessionRoutes);
+app.use('/api/evaluations', authenticateToken, evaluationRoutes);
 app.use('/api/results', authenticateToken, evaluationRoutes); // Redirected to evaluation routes
 app.use('/api/goals', authenticateToken, goalRoutes);
 app.use('/api/key-result-progress', authenticateToken, keyResultProgressRoutes);
@@ -87,6 +83,7 @@ app.use('/api/documents', authenticateToken, documentRoutes);
 app.use('/api/performance', authenticateToken, performanceRoutes);
 app.use('/api/dashboard', authenticateToken, dashboardRoutes);
 app.use('/api/assets', authenticateToken, assetRoutes);
+app.use('/api/verification', authenticateToken, verificationRoutes);
 app.use('/api/probation', authenticateToken, probationRoutes);
 
 // Health check

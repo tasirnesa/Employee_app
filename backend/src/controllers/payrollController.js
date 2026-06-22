@@ -67,44 +67,82 @@ const payrollController = {
 
   // --- Position Config ---
   getPositionConfigs: asyncHandler(async (req, res) => {
-    res.json(payrollService.loadPositionConfigs());
+    const prisma = require('../config/prisma');
+    const positions = await prisma.position.findMany({ include: { grade: true } });
+    const map = {};
+    for (const p of positions) {
+      map[String(p.id)] = p;
+    }
+    res.json(map);
   }),
 
   getPositionConfig: asyncHandler(async (req, res) => {
-    const cfg = payrollService.loadPositionConfigs();
-    res.json(cfg[String(req.params.positionId)] || null);
+    const prisma = require('../config/prisma');
+    const p = await prisma.position.findUnique({ where: { id: parseInt(req.params.positionId) }, include: { grade: true } });
+    res.json(p || null);
   }),
 
   updatePositionConfig: asyncHandler(async (req, res) => {
-    const positionId = String(req.params.positionId);
-    const cfg = payrollService.loadPositionConfigs();
-    cfg[positionId] = {
-      ...req.body,
-      updatedAt: new Date().toISOString(),
+    const prisma = require('../config/prisma');
+    const positionId = parseInt(req.params.positionId);
+    const { gradeId, positionAllowance, fuelAllowance, qualifications } = req.body;
+    
+    const updateData = {
+        positionAllowance: Number(positionAllowance || 0),
+        fuelAllowance: Number(fuelAllowance || 0)
     };
-    payrollService.savePositionConfigs(cfg);
-    res.json(cfg[positionId]);
+    if (gradeId !== undefined) updateData.gradeId = gradeId ? parseInt(gradeId) : null;
+    if (qualifications !== undefined) updateData.qualifications = qualifications;
+    
+    const p = await prisma.position.update({
+      where: { id: positionId },
+      data: updateData,
+      include: { grade: true }
+    });
+    res.json(p);
   }),
 
   // --- Scale Config ---
   getScaleConfigs: asyncHandler(async (req, res) => {
-    res.json(payrollService.loadScaleConfigs());
+    const prisma = require('../config/prisma');
+    const grades = await prisma.grade.findMany();
+    const map = {};
+    for (const g of grades) {
+      map[g.name] = g;
+    }
+    res.json(map);
   }),
 
   getScaleConfig: asyncHandler(async (req, res) => {
-    const cfg = payrollService.loadScaleConfigs();
-    res.json(cfg[String(req.params.scaleKey)] || null);
+    const prisma = require('../config/prisma');
+    const g = await prisma.grade.findUnique({ where: { name: String(req.params.scaleKey) } });
+    res.json(g || null);
   }),
 
   updateScaleConfig: asyncHandler(async (req, res) => {
+    const prisma = require('../config/prisma');
     const key = String(req.params.scaleKey);
-    const cfg = payrollService.loadScaleConfigs();
-    cfg[key] = {
-      ...req.body,
-      updatedAt: new Date().toISOString(),
-    };
-    payrollService.saveScaleConfigs(cfg);
-    res.json(cfg[key]);
+    const { name, minSalary, midSalary, maxSalary, housingPct, transportPct } = req.body;
+    const g = await prisma.grade.upsert({
+      where: { name: key },
+      update: {
+        name: name || key,
+        minSalary: Number(minSalary || 0),
+        midSalary: Number(midSalary || 0),
+        maxSalary: Number(maxSalary || 0),
+        housingPct: Number(housingPct || 0),
+        transportPct: Number(transportPct || 0),
+      },
+      create: {
+        name: key,
+        minSalary: Number(minSalary || 0),
+        midSalary: Number(midSalary || 0),
+        maxSalary: Number(maxSalary || 0),
+        housingPct: Number(housingPct || 0),
+        transportPct: Number(transportPct || 0),
+      }
+    });
+    res.json(g);
   }),
 
   assignScale: asyncHandler(async (req, res) => {
@@ -122,6 +160,13 @@ const payrollController = {
   distributePayslips: asyncHandler(async (req, res) => {
     const result = await payrollService.distributePayslips(req.body.period);
     res.json(result);
+  }),
+
+  exportBankCsv: asyncHandler(async (req, res) => {
+    const csv = await payrollService.generateBankExport(req.params.period);
+    res.header('Content-Type', 'text/csv');
+    res.attachment(`payroll_${req.params.period}.csv`);
+    return res.send(csv);
   }),
 };
 

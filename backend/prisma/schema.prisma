@@ -83,10 +83,30 @@ model Position {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  gradeId           Int?
+  qualifications    String?
+  positionAllowance Decimal   @default(0) @db.Decimal(10, 2)
+  fuelAllowance     Decimal   @default(0) @db.Decimal(10, 2)
+
+  grade             Grade?     @relation(fields: [gradeId], references: [id])
   reportsToPosition Position?  @relation("PositionHierarchy", fields: [reportsTo], references: [id])
   subordinates      Position[] @relation("PositionHierarchy")
   users             User[] // Users with this position
   employees         Employee[]
+}
+
+model Grade {
+  id              Int       @id @default(autoincrement())
+  name            String    @unique // e.g. G1, G2
+  minSalary       Decimal   @db.Decimal(10, 2)
+  midSalary       Decimal   @db.Decimal(10, 2)
+  maxSalary       Decimal   @db.Decimal(10, 2)
+  housingPct      Decimal   @default(0) @db.Decimal(5, 2)
+  transportPct    Decimal   @default(0) @db.Decimal(5, 2)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  positions       Position[]
 }
 
 model Evaluation {
@@ -367,6 +387,10 @@ model Payslip {
   employeeId    Int
   period        String // e.g., "January 2024"
   basicSalary   Decimal   @db.Decimal(10, 2)
+  housingAllowance Decimal  @default(0) @db.Decimal(10, 2)
+  transportAllowance Decimal @default(0) @db.Decimal(10, 2)
+  positionAllowance Decimal  @default(0) @db.Decimal(10, 2)
+  fuelAllowance Decimal     @default(0) @db.Decimal(10, 2)
   allowances    Decimal   @db.Decimal(10, 2)
   overtimePay   Decimal   @default(0) @db.Decimal(10, 2)
   lateDeduction Decimal   @default(0) @db.Decimal(10, 2)
@@ -374,6 +398,10 @@ model Payslip {
   attendancePenalty Decimal @default(0) @db.Decimal(10, 2)
   deductions    Decimal   @db.Decimal(10, 2)
   netSalary     Decimal   @db.Decimal(10, 2)
+  ytdGross      Decimal   @default(0) @db.Decimal(10, 2)
+  ytdTaxes      Decimal   @default(0) @db.Decimal(10, 2)
+  ytdDeductions Decimal   @default(0) @db.Decimal(10, 2)
+  ytdNet        Decimal   @default(0) @db.Decimal(10, 2)
   status        String // Generated, Paid, Pending
   generatedDate DateTime  @default(now())
   paidDate      DateTime?
@@ -389,6 +417,10 @@ model Compensation {
   employeeId        Int
   position          String
   basicSalary       Decimal  @db.Decimal(10, 2)
+  housingAllowance  Decimal  @default(0) @db.Decimal(10, 2)
+  transportAllowance Decimal @default(0) @db.Decimal(10, 2)
+  positionAllowance Decimal  @default(0) @db.Decimal(10, 2)
+  fuelAllowance     Decimal  @default(0) @db.Decimal(10, 2)
   allowances        Decimal  @db.Decimal(10, 2)
   bonus             Decimal  @db.Decimal(10, 2)
   totalCompensation Decimal  @db.Decimal(10, 2)

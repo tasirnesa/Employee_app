@@ -82,7 +82,7 @@ describe('attendanceService', () => {
       ]);
 
       await expect(attendanceService.manualPulse({ employeeId: 1, date }))
-        .rejects.toThrow('On leave: Annual');
+        .rejects.toThrow('Cannot mark attendance: Employee is on approved Annual on this date.');
     });
 
     it('should create record if not on leave', async () => {

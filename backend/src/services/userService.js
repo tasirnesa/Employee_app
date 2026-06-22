@@ -87,7 +87,7 @@ const userService = {
   changePassword: async (userId, currentPassword, newPassword) => {
     if (!newPassword || !currentPassword) throw new Error('Both current and new passwords are required');
     
-    const user = await userRepository.findById(userId);
+    const user = await prisma.user.findUnique({ where: { id: parseInt(userId) } });
     if (!user) throw new Error('User not found');
 
     const ok = await bcrypt.compare(currentPassword, user.password);

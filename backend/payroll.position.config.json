@@ -1,0 +1,32 @@
+{
+  "2": {
+    "positionName": "CBSE",
+    "basicSalary": 213333,
+    "allowances": 15230,
+    "bonus": 1000,
+    "overtimeMultiplier": 1.5,
+    "pensionEmployeePct": 0.07,
+    "taxFixed": 10,
+    "insuranceEmployeeFixed": 11,
+    "otherDeductionsFixed": 0,
+    "latePenaltyRate": 0.5,
+    "perfectAttendanceBonus": 50,
+    "absenteeismThreshold": 2,
+    "updatedAt": "2026-06-22T12:00:10.378Z"
+  },
+  "3": {
+    "positionName": "Test",
+    "basicSalary": 10598,
+    "allowances": 12,
+    "bonus": 123333,
+    "overtimeMultiplier": 1.5,
+    "pensionEmployeePct": 0.07,
+    "taxFixed": 39,
+    "insuranceEmployeeFixed": 80,
+    "otherDeductionsFixed": 1253,
+    "latePenaltyRate": 0.5,
+    "perfectAttendanceBonus": 50,
+    "absenteeismThreshold": 2,
+    "updatedAt": "2026-06-22T08:16:02.635Z"
+  }
+}

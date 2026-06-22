@@ -7,7 +7,7 @@ const _checkIfOnLeave = async (employeeId, date) => {
   const attendanceDate = new Date(date);
   attendanceDate.setHours(0, 0, 0, 0);
 
-  const overlappingLeaves = await leaveRepository.findOverlapping(employeeId, attendanceDate, attendanceDate);
+  const overlappingLeaves = await leaveRepository.findOverlapping(employeeId, attendanceDate, attendanceDate) || [];
   const approvedLeave = overlappingLeaves.find(l => l.status === 'Approved');
   
   if (approvedLeave) {

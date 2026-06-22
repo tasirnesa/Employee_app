@@ -2,6 +2,8 @@ const employeeRepository = require('../repositories/employeeRepository');
 const userRepository = require('../repositories/userRepository');
 const bcrypt = require('bcrypt');
 const path = require('path');
+const prisma = require('../config/prisma');
+const payrollService = require('./payrollService');
 
 const employeeService = {
   getAllEmployees: async (isActive) => {
@@ -60,7 +62,78 @@ const employeeService = {
     }
 
     try {
-      return await employeeRepository.create(data);
+      const createdEmployee = await employeeRepository.create(data);
+
+      if (createdEmployee.userId) {
+        if (data.scaleKey) {
+           const map = payrollService.loadScaleAssignments();
+           map[String(createdEmployee.userId)] = String(data.scaleKey);
+           payrollService.saveScaleAssignments(map);
+           
+           const scaleCfg = payrollService.loadScaleConfigs();
+           const sCfg = scaleCfg[String(data.scaleKey)];
+           if (sCfg) {
+             await prisma.compensation.create({
+                data: {
+                  employeeId: createdEmployee.userId,
+                  position: sCfg.label || 'Default Scale',
+                  basicSalary: Number(sCfg.basicSalary || 0),
+                  allowances: Number(sCfg.allowances || 0),
+                  bonus: Number(sCfg.bonus || 0),
+                  totalCompensation: Number(sCfg.basicSalary || 0) + Number(sCfg.allowances || 0) + Number(sCfg.bonus || 0),
+                  effectiveDate: createdEmployee.hireDate || new Date(),
+                  status: 'Active'
+                }
+             });
+           }
+        } else if (createdEmployee.positionId) {
+          const position = await prisma.position.findUnique({
+            where: { id: createdEmployee.positionId },
+            include: { grade: true }
+          });
+
+          if (position) {
+            let basicSalary = Number(data.basicSalary || 0);
+            let housingAllowance = 0;
+            let transportAllowance = 0;
+            const positionAllowance = Number(position.positionAllowance || 0);
+            const fuelAllowance = Number(position.fuelAllowance || 0);
+
+            if (position.grade) {
+               const g = position.grade;
+               // use midSalary if no basicSalary provided
+               if (!basicSalary && g.midSalary) basicSalary = Number(g.midSalary);
+               // Clamp basic salary within grade bounds
+               if (g.minSalary && basicSalary < Number(g.minSalary)) basicSalary = Number(g.minSalary);
+               if (g.maxSalary && basicSalary > Number(g.maxSalary)) basicSalary = Number(g.maxSalary);
+               
+               housingAllowance = basicSalary * (Number(g.housingPct || 0) / 100);
+               transportAllowance = basicSalary * (Number(g.transportPct || 0) / 100);
+            }
+
+            const allowances = housingAllowance + transportAllowance + positionAllowance + fuelAllowance;
+            
+            await prisma.compensation.create({
+              data: {
+                employeeId: createdEmployee.userId,
+                position: position.name || 'Default Position',
+                basicSalary: basicSalary,
+                housingAllowance: housingAllowance,
+                transportAllowance: transportAllowance,
+                positionAllowance: positionAllowance,
+                fuelAllowance: fuelAllowance,
+                allowances: allowances,
+                bonus: Number(data.bonus || 0),
+                totalCompensation: basicSalary + allowances + Number(data.bonus || 0),
+                effectiveDate: createdEmployee.hireDate || new Date(),
+                status: 'Active'
+              }
+            });
+          }
+        }
+      }
+
+      return createdEmployee;
     } catch (error) {
       if (error.code === 'P2002') throw new Error('Email already exists');
       throw error;

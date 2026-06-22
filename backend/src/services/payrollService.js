@@ -126,12 +126,47 @@ const payrollService = {
 
       const calc = await payrollService._calculatePayrollDetails(u.id, comp, start, end);
 
-      const existing = await payrollRepository.findPayslipByPeriod(u.id, `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`);
+      const periodLabel = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
+      const existing = await payrollRepository.findPayslipByPeriod(u.id, periodLabel);
+
+      // YTD Calculation Loop
+      const pastPayslips = await prisma.payslip.findMany({
+        where: { employeeId: u.id, period: { startsWith: String(start.getFullYear()) } }
+      });
+      let ytdGross = calc.grossEarnings;
+      let ytdTaxes = calc.breakdown.tax;
+      let ytdDeductions = calc.deductions;
+      let ytdNet = calc.netSalary;
+      for (const p of pastPayslips) {
+        if (p.period !== periodLabel) {
+          const pGross = parseFloat(p.basicSalary || 0) + parseFloat(p.allowances || 0) + 
+                         parseFloat(p.overtimePay || 0) + parseFloat(p.attendanceBonus || 0);
+          ytdGross += pGross;
+          ytdTaxes += (parseFloat(p.ytdTaxes) - parseFloat(p.ytdTaxes)); // need to use a better way, wait, I can just use p.tax if stored? 
+          // p doesn't have tax stored directly in columns, only ytdTaxes or deductions.
+          // Wait, since ytdTaxes is additive, we can just take the latest past payslip's ytd values!
+          // But summing up is safer if we just added the columns. 
+        }
+      }
+      // Simple override: just take max YTD from past payslips + current
+      const validPast = pastPayslips.filter(p => p.period !== periodLabel);
+      if (validPast.length > 0) {
+        const lastP = validPast.sort((a,b) => b.period.localeCompare(a.period))[0];
+        ytdGross = parseFloat(lastP.ytdGross || 0) + calc.grossEarnings;
+        ytdTaxes = parseFloat(lastP.ytdTaxes || 0) + calc.breakdown.tax;
+        ytdDeductions = parseFloat(lastP.ytdDeductions || 0) + calc.deductions;
+        ytdNet = parseFloat(lastP.ytdNet || 0) + calc.netSalary;
+      }
+
       let payslip;
       const payslipData = {
         employeeId: u.id,
-        period: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`,
+        period: periodLabel,
         basicSalary: calc.basicSalary,
+        housingAllowance: calc.housingAllowance,
+        transportAllowance: calc.transportAllowance,
+        positionAllowance: calc.positionAllowance,
+        fuelAllowance: calc.fuelAllowance,
         allowances: calc.allowances,
         overtimePay: calc.overtimePay,
         lateDeduction: calc.lateDeduction,
@@ -139,6 +174,10 @@ const payrollService = {
         attendancePenalty: calc.attendancePenalty,
         deductions: calc.deductions,
         netSalary: calc.netSalary,
+        ytdGross,
+        ytdTaxes,
+        ytdDeductions,
+        ytdNet,
         status: 'Generated',
       };
 
@@ -278,6 +317,29 @@ const payrollService = {
     return { total: payslips.length, success: successCount, failed: failCount };
   },
 
+  generateBankExport: async (period) => {
+    if (!period) throw new Error('Period is required');
+    const payslips = await prisma.payslip.findMany({
+      where: { period },
+      include: { 
+        employee: { 
+          include: { 
+            employees: true 
+          } 
+        } 
+      }
+    });
+
+    let csv = "Employee Name,Bank Name,Account Number,Net Salary,Currency\n";
+    for (const ps of payslips) {
+      const emp = ps.employee?.employees?.[0]; // from User -> employees
+      const bankName = emp?.bankName || 'Unknown Bank';
+      const bankAccount = emp?.bankAccount || 'No Account';
+      csv += `"${ps.employee?.fullName || 'Unknown'}","${bankName}","${bankAccount}",${ps.netSalary},"USD"\n`;
+    }
+    return csv;
+  },
+
   // --- Config Helpers ---
   loadPositionConfigs: () => payrollService._loadJson(CONFIG_FILE),
   savePositionConfigs: (cfg) => payrollService._saveJson(CONFIG_FILE, cfg),
@@ -350,7 +412,52 @@ const payrollService = {
     return null;
   },
 
+  _calculateProgressiveTax: (taxableIncome) => {
+    const brackets = [
+      { limit: 600, rate: 0 },
+      { limit: 1650, rate: 0.10 },
+      { limit: 3200, rate: 0.15 },
+      { limit: 5250, rate: 0.20 },
+      { limit: 7800, rate: 0.25 },
+      { limit: 10900, rate: 0.30 },
+      { limit: Infinity, rate: 0.35 }
+    ];
+    let tax = 0;
+    let previousLimit = 0;
+    for (const b of brackets) {
+      if (taxableIncome > b.limit) {
+        tax += (b.limit - previousLimit) * b.rate;
+        previousLimit = b.limit;
+      } else {
+        tax += (taxableIncome - previousLimit) * b.rate;
+        break;
+      }
+    }
+    return tax;
+  },
+
   _calculatePayrollDetails: async (userId, comp, start, end) => {
+    // Dynamic Prorating
+    const emp = await prisma.employee.findFirst({
+      where: { userId },
+      include: { offboarding: true }
+    });
+
+    let effectiveStart = start;
+    let effectiveEnd = end;
+
+    if (emp) {
+      if (emp.hireDate && new Date(emp.hireDate) > effectiveStart) {
+        effectiveStart = new Date(emp.hireDate);
+      }
+      const offboard = emp.offboarding?.find(o => o.actualLastDate && o.status === 'Completed');
+      if (offboard && offboard.actualLastDate && new Date(offboard.actualLastDate) < effectiveEnd) {
+        effectiveEnd = new Date(offboard.actualLastDate);
+      } else if (!emp.isActive && emp.updatedAt && new Date(emp.updatedAt) < effectiveEnd) {
+         effectiveEnd = new Date(emp.updatedAt);
+      }
+    }
+
     const [times, unpaidDays, benefits, perksTotal, attendanceSum] = await Promise.all([
       payrollService._aggregateTimesheets(userId, start, end),
       payrollService._aggregateUnpaidLeaveDays(userId, start, end),
@@ -359,16 +466,15 @@ const payrollService = {
       payrollService._aggregateAttendanceProfile(userId, start, end),
     ]);
 
-    const workingDays = payrollService._businessDaysInRange(start, end);
-    const basic = Number(comp.basicSalary || 0);
-    
-    // --- User Formula Implementation ---
-    
-    // 1. Daily & Hourly Rate
-    const dailyRate = workingDays > 0 ? (basic / workingDays) : 0;
-    const hourlyRate = dailyRate / 8; // Assuming 8 working hours per day as per standard
-    
-    // 2. Overtime Calculation
+    const totalMonthWorkingDays = payrollService._businessDaysInRange(start, end);
+    const effectiveWorkingDays = payrollService._businessDaysInRange(effectiveStart, effectiveEnd);
+
+    const fullBasic = Number(comp.basicSalary || 0);
+    const dailyRate = totalMonthWorkingDays > 0 ? (fullBasic / totalMonthWorkingDays) : 0;
+    const basic = dailyRate * effectiveWorkingDays; // prorated
+    const hourlyRate = dailyRate / 8; 
+
+    // 2. Overtime Calculation (incorporating standard and premium/holiday variance implicitly via multiplier)
     const totalOTHours = Number(times.overtime || 0) + Number(attendanceSum.overtimeHours || 0);
     const overtimeRate = hourlyRate * Number(comp.overtimeMultiplier || 1.5);
     const overtimePay = totalOTHours * overtimeRate;
@@ -401,9 +507,16 @@ const payrollService = {
     // --- Final Totals ---
     const grossEarnings = basic + Number(comp.allowances || 0) + Number(comp.bonus || 0) + overtimePay + Number(perksTotal || 0) + attendanceBonus;
     
+    // Taxes & Progressive Calculation
     const pensionEmployee = basic * Number(comp.pensionEmployeePct ?? 0.07);
+    const fixedTaxFallback = Number(comp.taxFixed || 0);
+    
+    // Taxable base (gross - pension)
+    const taxableIncome = Math.max(0, grossEarnings - pensionEmployee);
+    const progressiveTax = fixedTaxFallback > 0 ? fixedTaxFallback : payrollService._calculateProgressiveTax(taxableIncome);
+
     const deductions = lateDeduction + unpaidDeduction + absenceDeduction + attendancePenalty;
-    const standardDeductions = pensionEmployee + Number(comp.taxFixed || 0) + Number(comp.insuranceEmployeeFixed || 0) + Number(comp.otherDeductionsFixed || 0) + Number(benefits.employee || 0);
+    const standardDeductions = pensionEmployee + progressiveTax + Number(comp.insuranceEmployeeFixed || 0) + Number(comp.otherDeductionsFixed || 0) + Number(benefits.employee || 0);
     
     const totalDeductions = standardDeductions + deductions;
     const netSalary = grossEarnings - totalDeductions;
@@ -412,6 +525,10 @@ const payrollService = {
       basicSalary: basic,
       dailyRate,
       hourlyRate,
+      housingAllowance: Number(comp.housingAllowance || 0),
+      transportAllowance: Number(comp.transportAllowance || 0),
+      positionAllowance: Number(comp.positionAllowance || 0),
+      fuelAllowance: Number(comp.fuelAllowance || 0),
       allowances: Number(comp.allowances || 0),
       bonus: Number(comp.bonus || 0),
       overtimePay,
@@ -426,10 +543,10 @@ const payrollService = {
       netSalary,
       breakdown: {
         pensionEmployee,
-        tax: Number(comp.taxFixed || 0),
+        tax: progressiveTax,
         insuranceEmp: Number(comp.insuranceEmployeeFixed || 0),
         overtimeHours: totalOTHours,
-        workingDays,
+        workingDays: effectiveWorkingDays,
         lateCount,
         latePenaltyDays,
         unpaidLeaveDays: unpaidDays.unpaidLeaveDays,

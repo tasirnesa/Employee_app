@@ -47,6 +47,7 @@ import NotificationsPage from './pages/NotificationsPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import DocumentManagement from './pages/DocumentManagement';
+import AssetManagement from './pages/AssetManagement';
 import Offboarding from './pages/Offboarding';
 import Onboarding from './pages/Onboarding';
 import SelfServiceOnboarding from './pages/SelfServiceOnboarding';
@@ -184,6 +185,7 @@ const AppContent: React.FC = () => {
             <Route path="/positions" element={<ProtectedRoute blockEmployee={true}><PositionManagement /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/document-management" element={<ProtectedRoute><DocumentManagement /></ProtectedRoute>} />
+            <Route path="/asset-management" element={<ProtectedRoute blockEmployee={true}><AssetManagement /></ProtectedRoute>} />
             <Route path="/onboarding" element={!isEmployee ? <ProtectedRoute blockEmployee={true}><Onboarding /></ProtectedRoute> : <Navigate to="/dashboard" />} />
             <Route path="/onboarding/me" element={<ProtectedRoute><SelfServiceOnboarding /></ProtectedRoute>} />
             <Route path="/offboarding" element={<ProtectedRoute blockEmployee={true}><Offboarding /></ProtectedRoute>} />

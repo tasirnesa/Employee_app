@@ -38,6 +38,7 @@ import EventIcon from '@mui/icons-material/Event';
 import BadgeIcon from '@mui/icons-material/Badge';
 import ChecklistIcon from '@mui/icons-material/Checklist';
 import DescriptionIcon from '@mui/icons-material/Description';
+import DevicesIcon from '@mui/icons-material/Devices';
 // removed toggle icons in favor of text label "EES"
 
 interface SidebarProps {
@@ -425,6 +426,12 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
               <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/document-management'); recordRecent('Documents', '/document-management'); }} selected={location.pathname === '/document-management'}>
                 <ListItemText primary="Document Management" />
               </ListItemButton>
+              {!isEmployee && (
+                <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/asset-management'); recordRecent('Assets', '/asset-management'); }} selected={location.pathname === '/asset-management'}>
+                  <ListItemIcon sx={{ minWidth: 36 }}><DevicesIcon fontSize="small" /></ListItemIcon>
+                  <ListItemText primary="Asset Management" />
+                </ListItemButton>
+              )}
             </List>
           </Collapse>
 

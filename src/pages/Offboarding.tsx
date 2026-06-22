@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import {
   Container,
   Typography,
@@ -68,6 +69,7 @@ interface OffboardingRecord {
 
 const Offboarding: React.FC = () => {
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [initiateDialogOpen, setInitiateDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<OffboardingRecord | null>(null);
@@ -95,6 +97,14 @@ const Offboarding: React.FC = () => {
     },
   });
 
+  useEffect(() => {
+    const employeeId = searchParams.get('employeeId');
+    if (employeeId) {
+      setFormData(prev => ({ ...prev, employeeId }));
+      setInitiateDialogOpen(true);
+    }
+  }, [searchParams]);
+
   // Mutations
   const initiateMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -112,18 +122,21 @@ const Offboarding: React.FC = () => {
 
   const completeTaskMutation = useMutation({
     mutationFn: async (taskId: number) => {
-      const response = await api.put(`/api/offboarding/tasks/${taskId}/complete`);
+      const response = await api.patch(`/api/offboarding/tasks/${taskId}/complete`);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (updatedTask) => {
       queryClient.invalidateQueries({ queryKey: ['offboardings'] });
-      // Update local state if needed
+      setSelectedRecord(prev => prev ? {
+        ...prev,
+        tasks: prev.tasks.map(task => task.id === updatedTask.id ? { ...task, ...updatedTask } : task),
+      } : prev);
     },
   });
 
   const finalizeMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await api.put(`/api/offboarding/${id}/finalize`);
+      const response = await api.post(`/api/offboarding/${id}/finalize`);
       return response.data;
     },
     onSuccess: () => {

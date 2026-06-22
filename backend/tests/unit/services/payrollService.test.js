@@ -104,15 +104,16 @@ describe('payrollService', () => {
       // Business days in Jan 2024: 23
       // hourly = 4000 / (23 * 8) = 21.739
       // overtimePay = 10 * (21.739 * 1.5) = 326.086
-      // gross = 4000 + 500 + 200 + 326.086 + 50 = 5076.086
+      // perfect attendance bonus = 50
+      // gross = 4000 + 500 + 200 + 326.086 + 50 perk + 50 attendance bonus = 5126.086
       // pension = 4000 * 0.07 = 280
       // deductions = 280 + 300 + 50 + 20 + 100 = 750
-      // net = 5076.086 - 750 = 4326.086
+      // net = 5126.086 - 750 = 4376.086
 
       expect(result.basicSalary).toBe(4000);
-      expect(result.grossEarnings).toBeCloseTo(5076.086);
+      expect(result.grossEarnings).toBeCloseTo(5126.086);
       expect(result.deductions).toBe(750);
-      expect(result.netSalary).toBeCloseTo(4326.086);
+      expect(result.netSalary).toBeCloseTo(4376.086);
     });
   });
 });

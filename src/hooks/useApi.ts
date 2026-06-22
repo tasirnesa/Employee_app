@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { QueryKey } from '@tanstack/react-query';
+import axios from 'axios';
 import { apiService } from '../services/apiService';
 import { toast } from 'react-toastify';
 
 // Generic hook for API queries
 export const useApiQuery = <T>(
-  queryKey: string[],
+  queryKey: QueryKey,
   queryFn: () => Promise<T>,
   options?: any
 ) => {
@@ -40,7 +42,10 @@ export const useApiMutation = <TData, TVariables>(
     },
     onError: (error) => {
       console.error('Mutation error:', error);
-      toast.error(error.response?.data?.error || 'An error occurred');
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.error || error.message
+        : 'An error occurred';
+      toast.error(message);
       options?.onError?.(error);
     },
   });
