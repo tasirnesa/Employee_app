@@ -33,6 +33,32 @@ const evaluationController = {
     res.json(sessions);
   }),
 
+  createSession: asyncHandler(async (req, res) => {
+    const { title, startDate, endDate, department } = req.body;
+    
+    if (!title || !startDate || !endDate) {
+      const err = new Error('Title, Start Date, and End Date are required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Default to 'off' status, will be manually turned 'on' in Activate panel
+    const sessionType = 'off'; 
+
+    const session = await prisma.evaluationSession.create({
+      data: {
+        title,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        department: department || null,
+        type: sessionType,
+        activatedBy: req.user?.id || 1, // Fallback to sys admin if token id acts up
+      }
+    });
+
+    res.status(201).json(session);
+  }),
+
   getSessionStats: asyncHandler(async (req, res) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());

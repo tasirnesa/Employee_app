@@ -218,6 +218,54 @@ const CreateEvaluation: React.FC = () => {
                 InputProps={{ readOnly: true }}
                 sx={{ bgcolor: 'background.paper' }}
               />
+              <Field
+                as={TextField}
+                name="evaluationType"
+                label="Evaluation Type"
+                fullWidth
+                error={touched.evaluationType && !!errors.evaluationType}
+                helperText={touched.evaluationType && errors.evaluationType}
+                sx={{ bgcolor: 'background.paper' }}
+              />
+              <FormControl fullWidth error={touched.sessionID && !!errors.sessionID}>
+                <InputLabel id="session-label">Session</InputLabel>
+                <Field as={Select} name="sessionID" labelId="session-label" label="Session" sx={{ bgcolor: 'background.paper' }}>
+                  <MenuItem value={0} disabled>Select Session</MenuItem>
+                  {(() => {
+                    const evaluatorEmployee = employees?.find(e => e.userId === currentUserId);
+                    const evaluatorDept = evaluatorEmployee && typeof evaluatorEmployee.department === 'object' 
+                      ? (evaluatorEmployee.department as any)?.name 
+                      : (evaluatorEmployee?.department || '');
+                    const evaluatorDeptStr = String(evaluatorDept).trim().toLowerCase();
+                    const now = new Date();
+                    
+                    return (sessions || [])
+                      .filter(s => {
+                        // Status check
+                        const isOn = String(s.type || '').toLowerCase() === 'on';
+                        if (!isOn) return false;
+
+                        // Date range check
+                        const start = new Date(s.startDate);
+                        const end = new Date(s.endDate);
+                        if (now < start || now > end) return false;
+
+                        // Department check
+                        if (!s.department) return true;
+                        if (!evaluatorDeptStr) return true;
+                        return String(s.department || '').trim().toLowerCase() === evaluatorDeptStr;
+                      })
+                      .map((s) => (
+                        <MenuItem key={s.sessionID} value={s.sessionID}>
+                          {s.title}{s.department ? ` - ${s.department}` : ''}
+                        </MenuItem>
+                      ));
+                  })()}
+                </Field>
+                {touched.sessionID && errors.sessionID && (
+                  <Typography color="error" variant="caption">{errors.sessionID}</Typography>
+                )}
+              </FormControl>
               <FormControl fullWidth error={touched.evaluateeID && !!errors.evaluateeID}>
                 <InputLabel id="evaluatee-label">Evaluatee</InputLabel>
                 <Field
@@ -234,7 +282,10 @@ const CreateEvaluation: React.FC = () => {
                       .filter((e) => {
                         const session = (sessions || []).find(s => s.sessionID === values.sessionID);
                         if (!session || !session.department) return true;
-                        return String(e.department || '').trim().toLowerCase() === String(session.department || '').trim().toLowerCase();
+                        const empDept = e.department && typeof e.department === 'object' 
+                          ? (e.department as any).name 
+                          : String(e.department || '');
+                        return String(empDept).trim().toLowerCase() === String(session.department || '').trim().toLowerCase();
                       })
                       .map((e) => (
                         <MenuItem key={e.id} value={e.userId ? (e.userId as number) : e.id}>
@@ -247,51 +298,6 @@ const CreateEvaluation: React.FC = () => {
                 </Field>
                 {touched.evaluateeID && errors.evaluateeID && (
                   <Typography color="error" variant="caption">{errors.evaluateeID}</Typography>
-                )}
-              </FormControl>
-              <Field
-                as={TextField}
-                name="evaluationType"
-                label="Evaluation Type"
-                fullWidth
-                error={touched.evaluationType && !!errors.evaluationType}
-                helperText={touched.evaluationType && errors.evaluationType}
-                sx={{ bgcolor: 'background.paper' }}
-              />
-              <FormControl fullWidth error={touched.sessionID && !!errors.sessionID}>
-                <InputLabel id="session-label">Session</InputLabel>
-                <Field as={Select} name="sessionID" labelId="session-label" label="Session" sx={{ bgcolor: 'background.paper' }}>
-                  <MenuItem value={0} disabled>Select Session</MenuItem>
-                  {(() => {
-                    const evaluatorEmployee = employees?.find(e => e.userId === currentUserId);
-                    const evaluatorDept = (evaluatorEmployee?.department || '').trim().toLowerCase();
-                    const now = new Date();
-                    
-                    return (sessions || [])
-                      .filter(s => {
-                        // Status check
-                        const isOn = String(s.type || '').toLowerCase() === 'on';
-                        if (!isOn) return false;
-
-                        // Date range check
-                        const start = new Date(s.startDate);
-                        const end = new Date(s.endDate);
-                        if (now < start || now > end) return false;
-
-                        // Department check
-                        if (!s.department) return true;
-                        if (!evaluatorDept) return true;
-                        return (s.department || '').trim().toLowerCase() === evaluatorDept;
-                      })
-                      .map((s) => (
-                        <MenuItem key={s.sessionID} value={s.sessionID}>
-                          {s.title}{s.department ? ` - ${s.department}` : ''}
-                        </MenuItem>
-                      ));
-                  })()}
-                </Field>
-                {touched.sessionID && errors.sessionID && (
-                  <Typography color="error" variant="caption">{errors.sessionID}</Typography>
                 )}
               </FormControl>
               <Box sx={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: 1, p: 1 }}>

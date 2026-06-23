@@ -4,6 +4,7 @@ const employeeRepository = {
   findAll: async (where = {}) => {
     return await prisma.employee.findMany({
       where,
+      include: { department: true, position: true },
       orderBy: { id: 'desc' },
     });
   },
@@ -11,21 +12,21 @@ const employeeRepository = {
   findById: async (id) => {
     return await prisma.employee.findUnique({
       where: { id: parseInt(id) },
-      include: { department: true }
+      include: { department: true, position: true }
     });
   },
 
   findByEmail: async (email) => {
     return await prisma.employee.findUnique({
       where: { email },
-      include: { department: true }
+      include: { department: true, position: true }
     });
   },
 
   findByUserId: async (userId) => {
     return await prisma.employee.findFirst({
       where: { userId: parseInt(userId) },
-      include: { department: true }
+      include: { department: true, position: true }
     });
   },
 
