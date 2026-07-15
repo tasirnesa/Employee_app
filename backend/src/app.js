@@ -61,6 +61,7 @@ app.use('/api/users', authenticateToken, userRoutes);
 app.use('/api/employees', authenticateToken, employeeRoutes);
 app.use('/api/departments', authenticateToken, departmentRoutes);
 app.use('/api/positions', authenticateToken, positionRoutes);
+app.use('/api/recruitment', authenticateToken, recruitmentRoutes);
 app.use('/api/criteria', authenticateToken, criteriaRoutes);
 app.use('/api/sessions', authenticateToken, sessionRoutes);
 app.use('/api/evaluations', authenticateToken, evaluationRoutes);

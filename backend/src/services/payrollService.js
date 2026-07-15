@@ -40,9 +40,9 @@ const payrollService = {
     const current = await payrollRepository.findPayslipById(id);
     if (!current) throw new Error('Payslip not found');
 
-    const netSalary = parseFloat(basicSalary ?? current.basicSalary) + 
-                      parseFloat(allowances ?? current.allowances) - 
-                      parseFloat(deductions ?? current.deductions);
+    const netSalary = parseFloat(basicSalary ?? current.basicSalary) +
+      parseFloat(allowances ?? current.allowances) -
+      parseFloat(deductions ?? current.deductions);
 
     return await payrollRepository.updatePayslip(id, {
       ...data,
@@ -78,7 +78,7 @@ const payrollService = {
     const current = await payrollRepository.findActiveCompensation(data.employeeId, new Date()); // Simplification, should find by ID but findActive is what we have
     // Wait, I should add findCompensationById to repository if missing, but it's not missing in my previous view_file of repository
     // Ah, I see: updateCompensation in repository uses findUnique with id.
-    
+
     const { basicSalary, allowances, bonus } = data;
     const basic = parseFloat(basicSalary ?? 0);
     const allow = parseFloat(allowances ?? 0);
@@ -104,9 +104,9 @@ const payrollService = {
     const start = payrollService._startOfMonth(periodLabel);
     const end = payrollService._endOfMonth(start);
 
-    const users = await userRepository.findAll({ 
-      status: 'true', 
-      activeStatus: 'true' 
+    const users = await userRepository.findAll({
+      status: 'true',
+      activeStatus: 'true'
     });
 
     const posCfg = payrollService.loadPositionConfigs();
@@ -116,7 +116,7 @@ const payrollService = {
 
     for (const u of users) {
       let comp = await payrollRepository.findActiveCompensation(u.id, end);
-      
+
       // Fallbacks
       if (!comp) {
         comp = payrollService._getFallbackCompensation(u, start, scaleAssign, scaleCfg, posCfg);
@@ -139,8 +139,8 @@ const payrollService = {
       let ytdNet = calc.netSalary;
       for (const p of pastPayslips) {
         if (p.period !== periodLabel) {
-          const pGross = parseFloat(p.basicSalary || 0) + parseFloat(p.allowances || 0) + 
-                         parseFloat(p.overtimePay || 0) + parseFloat(p.attendanceBonus || 0);
+          const pGross = parseFloat(p.basicSalary || 0) + parseFloat(p.allowances || 0) +
+            parseFloat(p.overtimePay || 0) + parseFloat(p.attendanceBonus || 0);
           ytdGross += pGross;
           ytdTaxes += (parseFloat(p.ytdTaxes) - parseFloat(p.ytdTaxes)); // need to use a better way, wait, I can just use p.tax if stored? 
           // p doesn't have tax stored directly in columns, only ytdTaxes or deductions.
@@ -151,7 +151,7 @@ const payrollService = {
       // Simple override: just take max YTD from past payslips + current
       const validPast = pastPayslips.filter(p => p.period !== periodLabel);
       if (validPast.length > 0) {
-        const lastP = validPast.sort((a,b) => b.period.localeCompare(a.period))[0];
+        const lastP = validPast.sort((a, b) => b.period.localeCompare(a.period))[0];
         ytdGross = parseFloat(lastP.ytdGross || 0) + calc.grossEarnings;
         ytdTaxes = parseFloat(lastP.ytdTaxes || 0) + calc.breakdown.tax;
         ytdDeductions = parseFloat(lastP.ytdDeductions || 0) + calc.deductions;
@@ -172,6 +172,8 @@ const payrollService = {
         lateDeduction: calc.lateDeduction,
         attendanceBonus: calc.attendanceBonus,
         attendancePenalty: calc.attendancePenalty,
+        benefitsDeduction: calc.breakdown.benefitsEmployee,
+        perksAllowance: calc.perks,
         deductions: calc.deductions,
         netSalary: calc.netSalary,
         ytdGross,
@@ -220,10 +222,10 @@ const payrollService = {
       }
     }
 
-    return { 
-      period: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`, 
-      count: results.length, 
-      results 
+    return {
+      period: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`,
+      count: results.length,
+      results
     };
   },
 
@@ -251,12 +253,12 @@ const payrollService = {
     if (!period) throw new Error('Period is required');
     const payslips = await prisma.payslip.findMany({
       where: { period },
-      include: { 
-        employee: { 
-          include: { 
-            employees: true 
-          } 
-        } 
+      include: {
+        employee: {
+          include: {
+            employees: true
+          }
+        }
       }
     });
 
@@ -321,12 +323,12 @@ const payrollService = {
     if (!period) throw new Error('Period is required');
     const payslips = await prisma.payslip.findMany({
       where: { period },
-      include: { 
-        employee: { 
-          include: { 
-            employees: true 
-          } 
-        } 
+      include: {
+        employee: {
+          include: {
+            employees: true
+          }
+        }
       }
     });
 
@@ -454,7 +456,7 @@ const payrollService = {
       if (offboard && offboard.actualLastDate && new Date(offboard.actualLastDate) < effectiveEnd) {
         effectiveEnd = new Date(offboard.actualLastDate);
       } else if (!emp.isActive && emp.updatedAt && new Date(emp.updatedAt) < effectiveEnd) {
-         effectiveEnd = new Date(emp.updatedAt);
+        effectiveEnd = new Date(emp.updatedAt);
       }
     }
 
@@ -472,7 +474,7 @@ const payrollService = {
     const fullBasic = Number(comp.basicSalary || 0);
     const dailyRate = totalMonthWorkingDays > 0 ? (fullBasic / totalMonthWorkingDays) : 0;
     const basic = dailyRate * effectiveWorkingDays; // prorated
-    const hourlyRate = dailyRate / 8; 
+    const hourlyRate = dailyRate / 8;
 
     // 2. Overtime Calculation (incorporating standard and premium/holiday variance implicitly via multiplier)
     const totalOTHours = Number(times.overtime || 0) + Number(attendanceSum.overtimeHours || 0);
@@ -506,18 +508,18 @@ const payrollService = {
 
     // --- Final Totals ---
     const grossEarnings = basic + Number(comp.allowances || 0) + Number(comp.bonus || 0) + overtimePay + Number(perksTotal || 0) + attendanceBonus;
-    
+
     // Taxes & Progressive Calculation
     const pensionEmployee = basic * Number(comp.pensionEmployeePct ?? 0.07);
     const fixedTaxFallback = Number(comp.taxFixed || 0);
-    
+
     // Taxable base (gross - pension)
     const taxableIncome = Math.max(0, grossEarnings - pensionEmployee);
     const progressiveTax = fixedTaxFallback > 0 ? fixedTaxFallback : payrollService._calculateProgressiveTax(taxableIncome);
 
     const deductions = lateDeduction + unpaidDeduction + absenceDeduction + attendancePenalty;
     const standardDeductions = pensionEmployee + progressiveTax + Number(comp.insuranceEmployeeFixed || 0) + Number(comp.otherDeductionsFixed || 0) + Number(benefits.employee || 0);
-    
+
     const totalDeductions = standardDeductions + deductions;
     const netSalary = grossEarnings - totalDeductions;
 

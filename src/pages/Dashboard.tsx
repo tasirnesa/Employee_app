@@ -36,7 +36,7 @@ import {
   SupportAgent as SupportIcon,
 } from '@mui/icons-material';
 import HrStats from '../components/HrStats';
-import DashboardQuickActions from '../components/DashboardQuickActions';
+import DashboardWorklets from '../components/DashboardWorklets';
 import DashboardCharts from '../components/DashboardCharts';
 
 interface DashboardAction {
@@ -224,7 +224,7 @@ const Dashboard: React.FC = () => {
           </Typography>
         </Box>
 
-        <DashboardQuickActions role={role} />
+        <DashboardWorklets role={role} />
         <HrStats stats={dashboardStats} />
 
         {showOrgAnalytics && (

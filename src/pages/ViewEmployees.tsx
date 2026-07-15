@@ -11,6 +11,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import RateReviewIcon from '@mui/icons-material/RateReview';
 import PersonRemoveIcon from '@mui/icons-material/PersonRemove';
 import DevicesIcon from '@mui/icons-material/Devices';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 const ViewEmployees: React.FC = () => {
   const navigate = useNavigate();
@@ -116,6 +117,11 @@ const ViewEmployees: React.FC = () => {
                   <Tooltip title="Edit Employee">
                     <IconButton color="primary" onClick={() => navigate(`/employees/${e.id}/edit`)}>
                       <EditIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="360° Profile">
+                    <IconButton color="secondary" onClick={() => navigate(`/employees/${e.id}/profile`)}>
+                      <AccountCircleIcon />
                     </IconButton>
                   </Tooltip>
                 </TableCell>

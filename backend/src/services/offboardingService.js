@@ -56,7 +56,7 @@ const offboardingService = {
           '/offboarding'
         );
       }
-      
+
       // 2. Notify Admins
       const admins = await userRepository.findManyByRole('Admin');
       for (const admin of admins) {
@@ -108,6 +108,43 @@ const offboardingService = {
 
     await offboardingRepository.update(id, { status: 'Completed', actualLastDate: new Date() });
     await employeeRepository.update(offboarding.employeeId, { isActive: false });
+
+    // Auto mark all assets assigned to the employee as Pending Return
+    await prisma.asset.updateMany({
+      where: { employeeId: offboarding.employeeId },
+      data: { status: 'Pending Return' }
+    });
+
+    const userId = offboarding.employee?.userId;
+    if (userId) {
+      // 1. Terminate active Benefits
+      await prisma.benefit.updateMany({
+        where: { employeeId: userId, status: 'Active' },
+        data: { status: 'Inactive', expiryDate: new Date() }
+      });
+
+      // 2. Terminate active Perks
+      await prisma.perk.updateMany({
+        where: { employeeId: userId, status: 'Active' },
+        data: { status: 'Inactive', endDate: new Date() }
+      });
+
+      // 3. Terminate active Compensation
+      await prisma.compensation.updateMany({
+        where: { employeeId: userId, status: 'Active' },
+        data: { status: 'Inactive' }
+      });
+
+      // 4. Deactivate User Account (stops Payroll & login access)
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          activeStatus: 'false',
+          locked: 'true',
+          status: 'false'
+        }
+      });
+    }
 
     // Notify Admins of completion
     try {

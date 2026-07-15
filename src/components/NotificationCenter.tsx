@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     IconButton,
     Badge,
@@ -19,6 +19,8 @@ import { fetchNotifications, markAsRead, markAllAsRead } from '../api/notificati
 import type { Notification } from '../api/notificationApi';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
+import { toast } from 'react-toastify';
 
 const NotificationCenter: React.FC = () => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -30,7 +32,26 @@ const NotificationCenter: React.FC = () => {
         queryFn: fetchNotifications,
     });
 
-    const unreadCount = notifications.filter((n) => !n.isRead).length;
+    const unreadCount = notifications.filter((n: any) => !n.isRead).length;
+
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const socket = io(socketUrl, {
+            auth: { token }
+        });
+
+        socket.on('notification', (newNotification: Notification) => {
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+            toast.info(`${newNotification.title}: ${newNotification.message}`);
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, [queryClient]);
 
     const markReadMutation = useMutation({
         mutationFn: markAsRead,
@@ -140,8 +161,8 @@ const NotificationCenter: React.FC = () => {
 
                 <Divider />
                 <Box sx={{ p: 1, textAlign: 'center' }}>
-                    <Button fullWidth onClick={() => { navigate('/notifications'); handleClose(); }}>
-                        View all notifications
+                    <Button fullWidth onClick={() => { navigate('/inbox'); handleClose(); }}>
+                        View all tasks & notifications
                     </Button>
                 </Box>
             </Menu>

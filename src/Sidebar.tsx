@@ -23,6 +23,7 @@ import RateReviewIcon from '@mui/icons-material/RateReview';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import SettingsIcon from '@mui/icons-material/Settings';
+import InboxIcon from '@mui/icons-material/Inbox';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
@@ -237,6 +238,19 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
             </ListItemButton>
           </ListItem>
 
+          <ListItem disablePadding>
+            <ListItemButton
+              selected={location.pathname === '/inbox'}
+              onClick={() => { navigate('/inbox'); recordRecent('My Tasks', '/inbox'); }}
+              sx={{ justifyContent: 'flex-start', borderRadius: 2, mx: 1, my: 0.5 }}
+            >
+              <ListItemIcon sx={{ minWidth: 56, justifyContent: 'center' }}>
+                <InboxIcon />
+              </ListItemIcon>
+              <ListItemText primary="My Tasks" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
+            </ListItemButton>
+          </ListItem>
+
           {/* User Management */}
           {!isEmployee && (
             <>
@@ -293,10 +307,13 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
                     <ListItemText primary="Positions" />
                   </ListItemButton>
                   <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/onboarding/wizard'); recordRecent('New Hire Wizard', '/onboarding/wizard'); }} selected={location.pathname === '/onboarding/wizard'}>
-                    <ListItemText primary="New Hire Wizard" sx={{ fontWeight: 600, color: 'primary.main' }} />
+                    <ListItemText primary="Add New Hire (Wizard)" sx={{ fontWeight: 600, color: 'primary.main' }} />
                   </ListItemButton>
                   <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/onboarding'); recordRecent('Onboarding', '/onboarding'); }} selected={location.pathname === '/onboarding'}>
-                    <ListItemText primary="Onboarding Management" sx={{ fontWeight: 600, color: 'success.main' }} />
+                    <ListItemText primary="Manage Onboarding" sx={{ fontWeight: 600, color: 'success.main' }} />
+                  </ListItemButton>
+                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/probation'); recordRecent('Probation', '/probation'); }} selected={location.pathname === '/probation'}>
+                    <ListItemText primary="Probation Reviews" />
                   </ListItemButton>
                   <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/offboarding'); recordRecent('Offboarding', '/offboarding'); }} selected={location.pathname === '/offboarding'}>
                     <ListItemText primary="Offboarding" sx={{ color: 'error.main' }} />

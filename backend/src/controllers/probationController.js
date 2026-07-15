@@ -8,6 +8,11 @@ const probationController = {
     res.json(result);
   }),
 
+  getAllProbations: asyncHandler(async (req, res) => {
+    const result = await probationService.getAllProbations();
+    res.json(result);
+  }),
+
   updateProbation: asyncHandler(async (req, res) => {
     const result = await probationService.updateProbation(req.params.id, req.body);
     res.json(result);

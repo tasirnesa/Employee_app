@@ -79,6 +79,18 @@ const Recruitment: React.FC = () => {
     },
   });
 
+  // Fetch positions data for dropdown
+  const { data: positions } = useQuery({
+    queryKey: ['positions'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      const response = await api.get('/api/positions', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    },
+  });
+
   // Create candidate mutation
   const createCandidateMutation = useMutation({
     mutationFn: async (candidateData: any) => {
@@ -89,7 +101,7 @@ const Recruitment: React.FC = () => {
       });
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data: any, variables: any) => {
       queryClient.invalidateQueries({ queryKey: ['candidates'] });
       setCandidateDialogOpen(false);
       setCandidateForm({
@@ -105,6 +117,12 @@ const Recruitment: React.FC = () => {
         status: 'Applied',
         notes: ''
       });
+
+      if (variables.status === 'Hired') {
+        if (window.confirm('Candidate successfully created as Hired! Would you like to begin their onboarding process now?')) {
+          navigate(`/onboarding/wizard?candidateId=${data.id}`);
+        }
+      }
     },
     onError: (error: any) => {
       console.error('Error creating candidate:', error);
@@ -123,11 +141,19 @@ const Recruitment: React.FC = () => {
       });
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data: any, variables: any) => {
+      const candidateId = selectedCandidate?.id || data.id;
       queryClient.invalidateQueries({ queryKey: ['candidates'] });
       setCandidateDialogOpen(false);
       setSelectedCandidate(null);
-      alert('Candidate updated successfully');
+
+      if (variables.status === 'Hired') {
+        if (window.confirm('Candidate marked as Hired! Would you like to begin their onboarding process now?')) {
+          navigate(`/onboarding/wizard?candidateId=${candidateId}`);
+        }
+      } else {
+        alert('Candidate updated successfully');
+      }
     },
     onError: (error: any) => alert('Error updating candidate: ' + (error.response?.data?.error || error.message)),
   });
@@ -222,7 +248,7 @@ const Recruitment: React.FC = () => {
     };
 
     console.log('Sending candidate data:', candidateData);
-    
+
     if (selectedCandidate) {
       updateCandidateMutation.mutate(candidateData);
     } else {
@@ -374,17 +400,15 @@ const Recruitment: React.FC = () => {
                   <TableCell>
                     {!isEmployee && (
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        {candidate.status !== 'Hired' && (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            color="success"
-                            startIcon={<PersonAddIcon />}
-                            onClick={() => navigate(`/onboarding/wizard?candidateId=${candidate.id}`)}
-                          >
-                            Hire
-                          </Button>
-                        )}
+                        <Button
+                          size="small"
+                          variant={candidate.status === 'Hired' ? 'outlined' : 'contained'}
+                          color="success"
+                          startIcon={<PersonAddIcon />}
+                          onClick={() => navigate(`/onboarding/wizard?candidateId=${candidate.id}`)}
+                        >
+                          {candidate.status === 'Hired' ? 'Onboard' : 'Hire'}
+                        </Button>
                         <IconButton onClick={(e) => {
                           setSelectedCandidate(candidate);
                           handleMenuClick(e);
@@ -472,16 +496,14 @@ const Recruitment: React.FC = () => {
                     <Button size="small" color="primary">
                       View Details
                     </Button>
-                    {candidate.status !== 'Hired' && (
-                      <Button
-                        size="small"
-                        color="success"
-                        variant="contained"
-                        onClick={() => navigate(`/onboarding/wizard?candidateId=${candidate.id}`)}
-                      >
-                        Hire
-                      </Button>
-                    )}
+                    <Button
+                      size="small"
+                      color="success"
+                      variant={candidate.status === 'Hired' ? 'outlined' : 'contained'}
+                      onClick={() => navigate(`/onboarding/wizard?candidateId=${candidate.id}`)}
+                    >
+                      {candidate.status === 'Hired' ? 'Start Onboarding' : 'Hire'}
+                    </Button>
                   </CardActions>
                 )}
               </Card>
@@ -496,15 +518,13 @@ const Recruitment: React.FC = () => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        {selectedCandidate?.status !== 'Hired' && (
-          <MenuItem onClick={() => {
-            handleMenuClose();
-            navigate(`/onboarding/wizard?candidateId=${selectedCandidate?.id}`);
-          }}>
-            <PersonAddIcon sx={{ mr: 1, color: 'success.main' }} />
-            Hire Candidate
-          </MenuItem>
-        )}
+        <MenuItem onClick={() => {
+          handleMenuClose();
+          navigate(`/onboarding/wizard?candidateId=${selectedCandidate?.id}`);
+        }}>
+          <PersonAddIcon sx={{ mr: 1, color: 'success.main' }} />
+          {selectedCandidate?.status === 'Hired' ? 'Start Onboarding' : 'Hire Candidate'}
+        </MenuItem>
         <MenuItem onClick={handleEdit}>
           <EditIcon sx={{ mr: 1 }} />
           Edit Candidate
@@ -572,10 +592,19 @@ const Recruitment: React.FC = () => {
               <TextField
                 fullWidth
                 label="Position"
+                select
+                SelectProps={{ native: true }}
                 variant="outlined"
                 value={candidateForm.position}
                 onChange={(e) => handleCandidateFormChange('position', e.target.value)}
-              />
+              >
+                <option value="">Select Position</option>
+                {positions?.map((pos: any) => (
+                  <option key={pos.id} value={pos.name}>
+                    {pos.name}
+                  </option>
+                ))}
+              </TextField>
             </Box>
             <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
               <TextField
@@ -655,8 +684,8 @@ const Recruitment: React.FC = () => {
             onClick={handleCandidateSubmit}
             disabled={createCandidateMutation.isPending || updateCandidateMutation.isPending}
           >
-            {createCandidateMutation.isPending || updateCandidateMutation.isPending 
-              ? 'Saving...' 
+            {createCandidateMutation.isPending || updateCandidateMutation.isPending
+              ? 'Saving...'
               : (selectedCandidate ? 'Update Candidate' : 'Add Candidate')}
           </Button>
         </DialogActions>

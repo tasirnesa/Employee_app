@@ -13,7 +13,9 @@ class SocketService {
   init(server) {
     this.io = new Server(server, {
       cors: {
-        origin: FRONTEND_URL,
+        origin: function (origin, callback) {
+          callback(null, true); // Allow all origins for dev flexibility
+        },
         methods: ['GET', 'POST'],
         credentials: true
       }
@@ -22,7 +24,7 @@ class SocketService {
     // Middleware for authentication
     this.io.use((socket, next) => {
       const token = socket.handshake.auth.token || socket.handshake.query.token;
-      
+
       if (!token) {
         return next(new Error('Authentication error: No token provided'));
       }

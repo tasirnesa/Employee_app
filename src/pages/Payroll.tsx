@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/axios';
 import type { Payslip, Compensation } from '../types/interfaces';
-import { 
+import {
   Container,
   Typography,
   Table,
@@ -49,7 +49,7 @@ const Payroll: React.FC = () => {
   const [selectedPayslip, setSelectedPayslip] = useState<Payslip | null>(null);
   const [selectedCompensation, setSelectedCompensation] = useState<Compensation | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  
+
   // Form states
   const [payslipForm, setPayslipForm] = useState({
     employeeId: '',
@@ -63,7 +63,7 @@ const Payroll: React.FC = () => {
     deductions: '',
     netSalary: ''
   });
-  
+
   const [compensationForm, setCompensationForm] = useState({
     employeeId: '',
     position: '',
@@ -470,7 +470,7 @@ const Payroll: React.FC = () => {
         const lateDeduction = parseFloat(updated.lateDeduction) || 0;
         const attendancePenalty = parseFloat(updated.attendancePenalty) || 0;
         const deductions = parseFloat(updated.deductions) || 0;
-        
+
         // Net = (Basic + Allowances + OT + Bonus) - (Deductions + Late + Penalty)
         updated.netSalary = (basicSalary + allowances + overtimePay + attendanceBonus - deductions - lateDeduction - attendancePenalty).toString();
       }
@@ -658,17 +658,17 @@ const Payroll: React.FC = () => {
             <Typography variant="h6" gutterBottom>Run Payroll</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
               <TextField label="Period" type="month" InputLabelProps={{ shrink: true }} value={runPeriod} onChange={(e) => setRunPeriod(e.target.value)} />
-              <Button 
-                variant="contained" 
-                onClick={() => runPayroll.mutate()} 
+              <Button
+                variant="contained"
+                onClick={() => runPayroll.mutate()}
                 disabled={runPayroll.isPending || !runPeriod}
                 startIcon={<AttachMoneyIcon />}
-              > 
-                {runPayroll.isPending ? 'Running...' : 'Run Payroll'} 
+              >
+                {runPayroll.isPending ? 'Running...' : 'Run Payroll'}
               </Button>
               <Tooltip title="Send payslips to all employees for this period via email">
-                <Button 
-                  variant="outlined" 
+                <Button
+                  variant="outlined"
                   color="secondary"
                   onClick={() => {
                     if (window.confirm(`Are you sure you want to email all payslips for ${runPeriod}?`)) {
@@ -677,13 +677,13 @@ const Payroll: React.FC = () => {
                   }}
                   disabled={distributePayslips.isPending || !runPeriod}
                   startIcon={<EmailIcon />}
-                > 
-                  {distributePayslips.isPending ? 'Sending...' : 'Email All Payslips'} 
+                >
+                  {distributePayslips.isPending ? 'Sending...' : 'Email All Payslips'}
                 </Button>
               </Tooltip>
               <Tooltip title="Download CSV bank export for this period">
-                <Button 
-                  variant="outlined" 
+                <Button
+                  variant="outlined"
                   color="info"
                   onClick={async () => {
                     try {
@@ -699,13 +699,13 @@ const Payroll: React.FC = () => {
                       document.body.appendChild(link);
                       link.click();
                       document.body.removeChild(link);
-                    } catch(e: any) {
+                    } catch (e: any) {
                       alert('Error exporting: ' + e?.response?.data?.error || e.message);
                     }
                   }}
                   disabled={!runPeriod}
                   startIcon={<AttachMoneyIcon />}
-                > 
+                >
                   Export Bank CSV
                 </Button>
               </Tooltip>
@@ -724,8 +724,8 @@ const Payroll: React.FC = () => {
               <TableRow>
                 <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Employee</TableCell>
                 <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Basic</TableCell>
-                <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Overtime</TableCell>
-                <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Bonus</TableCell>
+                <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Allow/Perks</TableCell>
+                <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Overtime & Bonus</TableCell>
                 <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Deductions</TableCell>
                 <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Net Salary</TableCell>
                 <TableCell sx={{ fontWeight: 700, bgcolor: 'primary.main', color: 'primary.contrastText' }}>Status</TableCell>
@@ -742,20 +742,40 @@ const Payroll: React.FC = () => {
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">{payslip.period}</Typography>
-                  </TableCell>
-                  <TableCell>
                     <Box>
-                      <Typography variant="body2">{formatCurrency(payslip.basicSalary)}</Typography>
-                      <Typography variant="caption" color="text.secondary">+{formatCurrency(payslip.allowances)} allow.</Typography>
+                      <Typography variant="body2" fontWeight={600}>{formatCurrency(payslip.basicSalary)}</Typography>
+                      <Typography variant="caption" color="text.secondary">{payslip.period}</Typography>
                     </Box>
                   </TableCell>
-                  <TableCell color="success.main">{formatCurrency(payslip.overtimePay)}</TableCell>
-                  <TableCell color="success.main">{formatCurrency(payslip.attendanceBonus)}</TableCell>
                   <TableCell>
                     <Box>
-                      <Typography variant="body2" color="error.main">-{formatCurrency(Number(payslip.deductions) + Number(payslip.lateDeduction) + Number(payslip.attendancePenalty))}</Typography>
-                      <Typography variant="caption" color="text.secondary">Incl. {formatCurrency(payslip.lateDeduction)} late</Typography>
+                      <Typography variant="body2">+{formatCurrency(payslip.allowances)} allow.</Typography>
+                      {Number(payslip.perksAllowance) > 0 && (
+                        <Typography variant="caption" color="info.main" display="block">+{formatCurrency(payslip.perksAllowance)} perks</Typography>
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body2" color="success.main">OT: {formatCurrency(payslip.overtimePay)}</Typography>
+                      {Number(payslip.attendanceBonus) > 0 && (
+                        <Typography variant="caption" color="success.main" display="block">Bon: {formatCurrency(payslip.attendanceBonus)}</Typography>
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body2" color="error.main">-{formatCurrency(Number(payslip.deductions))}</Typography>
+                      {Number(payslip.benefitsDeduction) > 0 && (
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Incl. {formatCurrency(payslip.benefitsDeduction)} benefits
+                        </Typography>
+                      )}
+                      {Number(payslip.lateDeduction) > 0 && (
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Incl. {formatCurrency(payslip.lateDeduction)} late
+                        </Typography>
+                      )}
                     </Box>
                   </TableCell>
                   <TableCell><Typography variant="subtitle2" fontWeight={600} color="primary">{formatCurrency(payslip.netSalary)}</Typography></TableCell>
@@ -817,8 +837,8 @@ const Payroll: React.FC = () => {
       </Menu>
 
       {/* Generate Payslip Dialog */}
-      <Dialog 
-        open={payslipDialogOpen} 
+      <Dialog
+        open={payslipDialogOpen}
         onClose={() => {
           setPayslipDialogOpen(false);
           setSelectedPayslip(null);
@@ -834,8 +854,8 @@ const Payroll: React.FC = () => {
             deductions: '',
             netSalary: ''
           });
-        }} 
-        maxWidth="md" 
+        }}
+        maxWidth="md"
         fullWidth
       >
         <DialogTitle>{selectedPayslip ? 'Edit Payslip' : 'Generate Payslip'}</DialogTitle>
@@ -885,8 +905,8 @@ const Payroll: React.FC = () => {
       </Dialog>
 
       {/* Update Compensation Dialog */}
-      <Dialog 
-        open={compensationDialogOpen} 
+      <Dialog
+        open={compensationDialogOpen}
         onClose={() => {
           setCompensationDialogOpen(false);
           setSelectedCompensation(null);
@@ -898,8 +918,8 @@ const Payroll: React.FC = () => {
             bonus: '',
             effectiveDate: ''
           });
-        }} 
-        maxWidth="md" 
+        }}
+        maxWidth="md"
         fullWidth
       >
         <DialogTitle>{selectedCompensation ? 'Edit Compensation' : 'Update Compensation'}</DialogTitle>

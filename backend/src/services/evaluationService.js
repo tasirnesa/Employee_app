@@ -56,7 +56,7 @@ const evaluationService = {
     if (evaluateeEmployeeId && !evaluateeID) {
       const employee = await employeeRepository.findById(evaluateeEmployeeId);
       if (!employee) throw new Error(`Employee with id ${evaluateeEmployeeId} does not exist`);
-      
+
       if (!employee.userId) {
         evaluateeID = await evaluationService._createLinkedUserForEmployee(employee, authUserId);
       } else {
@@ -96,7 +96,7 @@ const evaluationService = {
     const now = new Date();
     const isOn = String(sessionExists.type || '').toLowerCase() === 'on';
     if (!isOn) throw new Error('Evaluation is not active for this session');
-    
+
     if (now < new Date(sessionExists.startDate) || now > new Date(sessionExists.endDate)) {
       throw new Error('Evaluation is outside the active date range');
     }
@@ -152,6 +152,50 @@ const evaluationService = {
       console.warn('Failed to create notification for evaluation:', notifErr.message);
     }
 
+    // Auto-Recalculate Performance
+    try {
+      const [evaluations, timesheets, goals] = await Promise.all([
+        prisma.evaluation.findMany({
+          where: { evaluateeID: parseInt(evaluateeID) },
+          include: { results: true }
+        }),
+        prisma.timesheet.findMany({
+          where: { employeeId: parseInt(evaluateeID), status: 'Approved' }
+        }),
+        prisma.goal.findMany({
+          where: { activatedBy: parseInt(evaluateeID) }
+        })
+      ]);
+
+      let avgEvaluationScore = 0;
+      if (evaluations.length > 0) {
+        const allScores = evaluations.flatMap(e => e.results.map(r => (r.score || 0)));
+        if (allScores.length > 0) {
+          avgEvaluationScore = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+        }
+      }
+      const totalTasks = goals.filter(g => g.status === 'Completed').length;
+      const totalHours = timesheets.reduce((sum, t) => sum + (t.hoursWorked || 0), 0);
+
+      const now = new Date();
+      const period = `${now.toLocaleString('default', { month: 'long' })} ${now.getFullYear()}`;
+
+      await prisma.performance.create({
+        data: {
+          userId: parseInt(evaluateeID),
+          evaluatorId: parseInt(evaluatorID),
+          tasksCompleted: totalTasks,
+          hoursWorked: Math.round(totalHours),
+          overallRating: avgEvaluationScore || 3.0,
+          evaluationPeriod: period,
+          date: now,
+          feedback: 'Automatically recalculated upon new evaluation completion.'
+        }
+      });
+    } catch (perfErr) {
+      console.warn('Failed to auto-recalculate performance:', perfErr.message);
+    }
+
     return { ...evaluationRecord, resultsCount };
   },
 
@@ -160,7 +204,7 @@ const evaluationService = {
     const baseUserName = (employee.email?.split('@')[0] || `${employee.firstName}.${employee.lastName}`).replace(/[^a-zA-Z0-9._-]/g, '').toLowerCase() || `emp${empId}`;
     let userName = baseUserName;
     let suffix = 0;
-    
+
     // ensure uniqueness
     while (true) {
       const exists = await userRepository.findByUsername(userName);
@@ -185,7 +229,7 @@ const evaluationService = {
       createdDate: new Date(),
       createdBy: authUserId || 1,
     });
-    
+
     await employeeRepository.update(empId, { userId: createdUser.id });
     return createdUser.id;
   }

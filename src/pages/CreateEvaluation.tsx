@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Formik, Form, Field, type FieldProps } from 'formik';
-import * as Yup from 'yup';
 import api from '../lib/axios';
 import {
   Container,
+  Paper,
   Typography,
   TextField,
   Button,
@@ -20,394 +19,407 @@ import {
   Radio,
   FormLabel,
   TextareaAutosize,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   CircularProgress,
   Checkbox,
+  Stepper,
+  Step,
+  StepLabel,
+  Divider,
 } from '@mui/material';
-import type { Evaluation, User, EvaluationCriteria, EvaluationResult, Employee, Goal } from '../types/interfaces';
+import {
+  Assignment as EvalIcon,
+  CheckCircle as SuccessIcon,
+  Score as ScoreIcon,
+  Preview as PreviewIcon,
+} from '@mui/icons-material';
+import type { Evaluation, EvaluationCriteria, EvaluationResult, Employee, Goal } from '../types/interfaces';
 import { listEmployees } from '../api/employeeApi';
 import { useUser } from '../context/UserContext';
 
+const steps = ['Setup Details', 'Scoring & Feedback', 'Review & Submit'];
+
 const CreateEvaluation: React.FC = () => {
-  console.log('CreateEvaluation rendering');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [selectedEvaluator, setSelectedEvaluator] = useState<number | null>(null);
-  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
-  const [updatePerformance, setUpdatePerformance] = useState(true);
-  const [pendingEvaluationData, setPendingEvaluationData] = useState<
-    | { evaluation: Partial<Evaluation>; results: Partial<EvaluationResult>[]; goalsResults: { gid: number; progress: number }[] }
-    | null
-  >(null);
-
   const { user } = useUser();
   const currentUserId = user?.id || JSON.parse(localStorage.getItem('userProfile') || 'null')?.id;
+  const currentFullName = user?.fullName || JSON.parse(localStorage.getItem('userProfile') || 'null')?.fullName || 'Current User';
 
-  const { data: employees, isLoading: employeesLoading, error: employeesError } = useQuery({
-    queryKey: ['employees', 'active-for-evaluation'],
-    queryFn: async () => {
-      const res = await listEmployees();
-      return res as Employee[];
-    },
+  const [activeStep, setActiveStep] = useState(0);
+  const [errors, setErrors] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState({
+    evaluationType: '',
+    sessionID: 0,
+    evaluateeID: 0,
+    criteriaScores: {} as { [key: number]: number },
+    criteriaFeedback: {} as { [key: number]: string },
   });
 
-  const { data: criteria, isLoading: criteriaLoading, error: criteriaError } = useQuery({
+  const [updatePerformance, setUpdatePerformance] = useState(true);
+  const pendingEvaluateeUserIdRef = useRef<number | null>(null);
+
+  // Queries
+  const { data: employees, isLoading: employeesLoading } = useQuery({
+    queryKey: ['employees', 'active-for-evaluation'],
+    queryFn: async () => (await listEmployees()) as Employee[],
+  });
+
+  const { data: criteria, isLoading: criteriaLoading } = useQuery({
     queryKey: ['criteria'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token');
-      const response = await api.get('/api/criteria', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      console.log('Fetched criteria:', response.data);
+      const response = await api.get('/api/criteria');
       return response.data as EvaluationCriteria[];
     },
   });
 
-  // Load goals for selected evaluatee (based on evaluatee selection)
-  const [evaluateeUserIdForGoals, setEvaluateeUserIdForGoals] = useState<number | null>(null);
-  const { data: evaluateeGoals } = useQuery({
-    queryKey: ['goals', evaluateeUserIdForGoals],
-    queryFn: async () => {
-      if (!evaluateeUserIdForGoals) return [] as Goal[];
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token');
-      const res = await api.get('/api/goals', {
-        params: { userId: evaluateeUserIdForGoals },
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.data as Goal[];
-    },
-    enabled: evaluateeUserIdForGoals != null,
-  });
-
-  // Load sessions for selection and department filtering
-  const { data: sessions } = useQuery({
+  const { data: sessions, isLoading: sessionsLoading } = useQuery({
     queryKey: ['sessions-for-eval'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token');
-      const response = await api.get('/api/sessions', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.get('/api/sessions');
       return response.data as Array<{ sessionID: number; title: string; startDate: string; endDate: string; department?: string; type: string }>;
     },
   });
 
+  // Evaluatee Goals
+  const { data: evaluateeGoals } = useQuery({
+    queryKey: ['goals', pendingEvaluateeUserIdRef.current],
+    queryFn: async () => {
+      if (!pendingEvaluateeUserIdRef.current) return [] as Goal[];
+      const res = await api.get('/api/goals', { params: { userId: pendingEvaluateeUserIdRef.current } });
+      return res.data as Goal[];
+    },
+    enabled: pendingEvaluateeUserIdRef.current != null,
+  });
+
   const createEvaluationMutation = useMutation({
-    mutationFn: async (evaluationData: { evaluation: Partial<Evaluation>; results: Partial<EvaluationResult>[] }) => {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token');
-      const response = await api.post('/api/evaluations', evaluationData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    mutationFn: async (evaluationData: any) => {
+      const response = await api.post('/api/evaluations', evaluationData);
       return response.data;
     },
-    onSuccess: async (_created, _vars, _ctx) => {
+    onSuccess: async () => {
       try {
         queryClient.invalidateQueries({ queryKey: ['evaluations'] });
-        if (updatePerformance) {
-          const token = localStorage.getItem('token');
-          const evaluateeUserId = pendingEvaluateeUserIdRef.current;
-          if (token && evaluateeUserId) {
-            await api.post(
-              '/api/performance/recalculate',
-              { userId: evaluateeUserId },
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-          }
+        if (updatePerformance && pendingEvaluateeUserIdRef.current) {
+          await api.post('/api/performance/recalculate', { userId: pendingEvaluateeUserIdRef.current });
         }
       } catch (e) {
-        console.error('Performance recalc error:', (e as any).response?.data || (e as any).message);
+        console.error('Performance recalc error:', e);
       } finally {
-        navigate('/evaluations/view');
+        setActiveStep(steps.length); // Move to success step
       }
     },
     onError: (error: any) => {
-      console.error('Create evaluation error:', error.response?.data || error.message);
+      setErrors(error.response?.data?.error || error.message || 'Error saving evaluation');
     },
   });
-  // Keep track of resolved evaluatee userId for optional performance recalculation
-  const pendingEvaluateeUserIdRef = React.useRef<number | null>(null);
 
+  // Derived states
+  const evaluatorEmployee = employees?.find((e) => e.userId === currentUserId);
+  const evaluatorDeptStr = typeof evaluatorEmployee?.department === 'object'
+    ? String((evaluatorEmployee.department as any)?.name).trim().toLowerCase()
+    : String(evaluatorEmployee?.department || '').trim().toLowerCase();
 
-  const validationSchema = Yup.object({
-    evaluatorID: Yup.number().required('Evaluator is required'),
-    evaluateeID: Yup.number().required('Evaluatee is required').test(
-      'not-same-as-evaluator',
-      'Evaluatee cannot be the same as evaluator',
-      (value, context) => value !== context.parent.evaluatorID
-    ),
-    evaluationType: Yup.string().required('Evaluation type is required'),
-    sessionID: Yup.number().required('Session is required').positive().integer(),
-    criteriaScores: Yup.object().test(
-      'criteria-required',
-      'At least one criterion score is required',
-      (value) => Object.values(value || {}).some(score => score !== undefined && score !== 0)
-    ),
+  const now = new Date();
+  const availableSessions = (sessions || []).filter((s) => {
+    const isOn = String(s.type || '').toLowerCase() === 'on';
+    if (!isOn) return false;
+    const start = new Date(s.startDate);
+    const end = new Date(s.endDate);
+    if (now < start || now > end) return false;
+    if (!s.department || !evaluatorDeptStr) return true;
+    return String(s.department).trim().toLowerCase() === evaluatorDeptStr;
   });
 
-  if (employeesLoading || criteriaLoading) return <Typography>Loading data...</Typography>;
-  if (employeesError) return <Typography color="error">Error: {(employeesError as Error).message}</Typography>;
-  if (criteriaError) return <Typography color="error">Error: {(criteriaError as Error).message}</Typography>;
+  const selectedSession = availableSessions.find((s) => s.sessionID === formData.sessionID);
+
+  const availableEvaluatees = (employees || [])
+    .filter((e) => (e.userId || -1) !== currentUserId)
+    .filter((e) => {
+      if (!selectedSession || !selectedSession.department) return true;
+      const empDept = typeof e.department === 'object' ? (e.department as any)?.name : e.department;
+      return String(empDept || '').trim().toLowerCase() === String(selectedSession.department).trim().toLowerCase();
+    });
+
+  const selectedEvaluateeName = availableEvaluatees.find(
+    (e) => (e.userId || e.id) === formData.evaluateeID
+  )?.firstName + ' ' + availableEvaluatees.find(
+    (e) => (e.userId || e.id) === formData.evaluateeID
+  )?.lastName;
+
+  // Handlers
+  const handleNext = () => {
+    setErrors(null);
+    if (activeStep === 0) {
+      if (!formData.evaluationType || !formData.sessionID || !formData.evaluateeID) {
+        setErrors('Evaluation Type, Session, and Evaluatee are required.');
+        return;
+      }
+      // Update pending evaluatee ref for goals query
+      const byEmp = employees?.find((e) => e.userId === formData.evaluateeID || e.id === formData.evaluateeID);
+      pendingEvaluateeUserIdRef.current = byEmp?.userId || formData.evaluateeID;
+    }
+    if (activeStep === 1) {
+      const hasScores = Object.values(formData.criteriaScores).some((s) => s > 0);
+      if (!hasScores) {
+        setErrors('Please score at least one criterion before continuing.');
+        return;
+      }
+    }
+    setActiveStep((prev) => prev + 1);
+  };
+
+  const handleBack = () => {
+    setErrors(null);
+    setActiveStep((prev) => prev - 1);
+  };
+
+  const handleSubmit = () => {
+    setErrors(null);
+    let evaluateeEmployeeId: number | undefined = undefined;
+    const byEmp = employees?.find((e) => e.userId === formData.evaluateeID || e.id === formData.evaluateeID);
+    if (byEmp) {
+      evaluateeEmployeeId = byEmp.id;
+    }
+
+    const goalsResults = (evaluateeGoals || []).map((g) => ({ gid: g.gid, progress: g.progress ?? 0 }));
+
+    const payload = {
+      evaluation: {
+        evaluatorID: Number(currentUserId),
+        evaluateeID: pendingEvaluateeUserIdRef.current,
+        evaluateeEmployeeId,
+        evaluationType: formData.evaluationType,
+        sessionID: formData.sessionID,
+      },
+      results: (criteria || []).map((criterion) => ({
+        criteriaID: criterion.criteriaID,
+        score: formData.criteriaScores[criterion.criteriaID] || 0,
+        feedback: formData.criteriaFeedback[criterion.criteriaID] || '',
+      })),
+      goalsResults,
+    };
+
+    createEvaluationMutation.mutate(payload);
+  };
+
+  // Render Steps
+  const renderStepContent = (step: number) => {
+    switch (step) {
+      case 0: // Setup Details
+        return (
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+            <Box sx={{ gridColumn: 'span 2' }}>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <EvalIcon color="primary" /> Evaluation Setup
+              </Typography>
+            </Box>
+
+            <TextField label="Evaluator" value={currentFullName} fullWidth InputProps={{ readOnly: true }} />
+
+            <TextField
+              label="Evaluation Type"
+              fullWidth
+              placeholder="e.g. Annual Review, Mid-Year Check-in"
+              value={formData.evaluationType}
+              onChange={(e) => setFormData({ ...formData, evaluationType: e.target.value })}
+            />
+
+            <FormControl fullWidth>
+              <InputLabel>Session</InputLabel>
+              <Select
+                value={formData.sessionID}
+                label="Session"
+                onChange={(e) => {
+                  setFormData({ ...formData, sessionID: Number(e.target.value), evaluateeID: 0 }); // reset evaluatee on session change
+                }}
+              >
+                <MenuItem value={0} disabled>Select Session</MenuItem>
+                {availableSessions.map((s) => (
+                  <MenuItem key={s.sessionID} value={s.sessionID}>
+                    {s.title}{s.department ? ` - ${s.department}` : ''}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth disabled={!formData.sessionID}>
+              <InputLabel>Evaluatee</InputLabel>
+              <Select
+                value={formData.evaluateeID}
+                label="Evaluatee"
+                onChange={(e) => setFormData({ ...formData, evaluateeID: Number(e.target.value) })}
+              >
+                <MenuItem value={0} disabled>
+                  {formData.sessionID ? "Select Evaluatee" : "Select Session First"}
+                </MenuItem>
+                {availableEvaluatees.map((e) => (
+                  <MenuItem key={e.id} value={e.userId ? e.userId : e.id}>
+                    {e.firstName} {e.lastName} ({e.email})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        );
+
+      case 1: // Scoring & Feedback
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <ScoreIcon color="primary" /> Scoring & Feedback
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Evaluating {selectedEvaluateeName || 'Employee'}. Rate them on a scale of 1-5 for each metric.
+            </Typography>
+
+            <Box sx={{ maxHeight: '420px', overflowY: 'auto', pr: 2 }}>
+              {criteria?.map((criterion) => (
+                <Paper key={criterion.criteriaID} variant="outlined" sx={{ p: 3, mb: 2, borderRadius: 2, bgcolor: '#f8fafc' }}>
+                  <FormLabel component="legend" sx={{ mb: 1.5, fontWeight: 700, color: '#1e293b' }}>
+                    {criterion.title}
+                  </FormLabel>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {criterion.description || 'Rate this metric from 1 (Poor) to 5 (Excellent).'}
+                  </Typography>
+                  <RadioGroup
+                    row
+                    value={formData.criteriaScores[criterion.criteriaID] || ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      criteriaScores: { ...formData.criteriaScores, [criterion.criteriaID]: parseInt(e.target.value) }
+                    })}
+                  >
+                    {[1, 2, 3, 4, 5].map((val) => (
+                      <FormControlLabel key={val} value={val} control={<Radio />} label={val.toString()} />
+                    ))}
+                  </RadioGroup>
+                  <TextareaAutosize
+                    value={formData.criteriaFeedback[criterion.criteriaID] || ''}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      criteriaFeedback: { ...formData.criteriaFeedback, [criterion.criteriaID]: e.target.value }
+                    })}
+                    minRows={2}
+                    placeholder={`Provide optional feedback for ${criterion.title}...`}
+                    style={{ width: '100%', marginTop: '16px', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontFamily: 'inherit' }}
+                  />
+                </Paper>
+              ))}
+            </Box>
+          </Box>
+        );
+
+      case 2: // Review & Submit
+        const scoredCount = Object.values(formData.criteriaScores).filter(v => v > 0).length;
+        const totalScore = Object.values(formData.criteriaScores).reduce((a, b) => a + (b || 0), 0);
+        const avgScore = scoredCount > 0 ? (totalScore / scoredCount).toFixed(1) : 'N/A';
+
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <PreviewIcon color="primary" /> Review Submission
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Please review the evaluation summary before submitting.
+            </Typography>
+
+            <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, mb: 3 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>Evaluatee</Typography>
+                  <Typography variant="body1" fontWeight={700}>{selectedEvaluateeName}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>Session</Typography>
+                  <Typography variant="body1" fontWeight={700}>{selectedSession?.title}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>Type</Typography>
+                  <Typography variant="body1" fontWeight={700}>{formData.evaluationType}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>Average Score</Typography>
+                  <Typography variant="body1" fontWeight={700}>{avgScore} / 5</Typography>
+                </Box>
+              </Box>
+            </Paper>
+
+            <FormControlLabel
+              control={<Checkbox checked={updatePerformance} onChange={(e) => setUpdatePerformance(e.target.checked)} />}
+              label="Recalculate dynamic performance analytics for this user upon submission"
+            />
+          </Box>
+        );
+      default:
+        return null;
+    }
+  };
+
+  if (employeesLoading || criteriaLoading || sessionsLoading) return <Typography sx={{ p: 3 }}>Loading wizard...</Typography>;
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 8, bgcolor: 'background.paper', p: 4, borderRadius: 2, boxShadow: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Create Evaluation
-      </Typography>
-      <Formik
-        initialValues={{
-          evaluatorID: Number(currentUserId) || 0,
-          evaluateeID: 0,
-          evaluationType: '',
-          sessionID: 0,
-          criteriaScores: {} as { [key: number]: number },
-          criteriaFeedback: {} as { [key: number]: string },
-        }}
-        validationSchema={validationSchema}
-        onSubmit={(values, { setSubmitting, setFieldError }) => {
-          if (!criteria || criteria.length === 0) {
-            console.error('Criteria data is missing or empty');
-            setSubmitting(false);
-            return;
-          }
-          // Normalize evaluateeID: allow selecting employee.id if userId missing; map to userId if available
-          let evaluateeIdToUse = values.evaluateeID;
-          let evaluateeEmployeeId: number | undefined = undefined;
-          const byEmp = employees?.find((e) => e.id === values.evaluateeID);
-          if (byEmp) {
-            evaluateeEmployeeId = byEmp.id;
-            evaluateeIdToUse = byEmp.userId || 0;
-          }
-          pendingEvaluateeUserIdRef.current = evaluateeIdToUse || null;
-          setEvaluateeUserIdForGoals(evaluateeIdToUse || null);
-          const goalsResults = (evaluateeGoals || []).map((g) => ({ gid: g.gid, progress: g.progress ?? 0 }));
-          const evaluationData = {
-            evaluation: {
-              evaluatorID: Number(currentUserId),
-              evaluateeID: evaluateeIdToUse || undefined,
-              evaluateeEmployeeId,
-              evaluationType: values.evaluationType,
-              sessionID: values.sessionID,
-            },
-            results: criteria.map((criterion) => ({
-              criteriaID: criterion.criteriaID, // Matches Criteria type
-              score: values.criteriaScores[criterion.criteriaID] || 0,
-              feedback: values.criteriaFeedback[criterion.criteriaID] || '',
-            })),
-            goalsResults,
-          };
-          console.log('Submitting evaluation data:', evaluationData);
-          setPendingEvaluationData(evaluationData);
-          setOpenConfirmDialog(true);
-          setSubmitting(false);
-        }}
-      >
-        {({ errors, touched, isSubmitting, setFieldValue, values }) => (
-          <Form>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <TextField
-                label="Evaluator"
-                value={user?.fullName || JSON.parse(localStorage.getItem('userProfile') || 'null')?.fullName || 'Current User'}
-                fullWidth
-                InputProps={{ readOnly: true }}
-                sx={{ bgcolor: 'background.paper' }}
-              />
-              <Field
-                as={TextField}
-                name="evaluationType"
-                label="Evaluation Type"
-                fullWidth
-                error={touched.evaluationType && !!errors.evaluationType}
-                helperText={touched.evaluationType && errors.evaluationType}
-                sx={{ bgcolor: 'background.paper' }}
-              />
-              <FormControl fullWidth error={touched.sessionID && !!errors.sessionID}>
-                <InputLabel id="session-label">Session</InputLabel>
-                <Field as={Select} name="sessionID" labelId="session-label" label="Session" sx={{ bgcolor: 'background.paper' }}>
-                  <MenuItem value={0} disabled>Select Session</MenuItem>
-                  {(() => {
-                    const evaluatorEmployee = employees?.find(e => e.userId === currentUserId);
-                    const evaluatorDept = evaluatorEmployee && typeof evaluatorEmployee.department === 'object' 
-                      ? (evaluatorEmployee.department as any)?.name 
-                      : (evaluatorEmployee?.department || '');
-                    const evaluatorDeptStr = String(evaluatorDept).trim().toLowerCase();
-                    const now = new Date();
-                    
-                    return (sessions || [])
-                      .filter(s => {
-                        // Status check
-                        const isOn = String(s.type || '').toLowerCase() === 'on';
-                        if (!isOn) return false;
+    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+      <Paper sx={{ p: { xs: 2, md: 4 }, borderRadius: 3, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
 
-                        // Date range check
-                        const start = new Date(s.startDate);
-                        const end = new Date(s.endDate);
-                        if (now < start || now > end) return false;
+        {activeStep === steps.length ? (
+          <Box sx={{ textAlign: 'center', py: 6 }}>
+            <SuccessIcon sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
+            <Typography variant="h5" fontWeight={700} gutterBottom>
+              Evaluation Submitted!
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+              The performance evaluation has been successfully recorded.
+            </Typography>
+            <Button variant="contained" onClick={() => navigate('/evaluations/view')} size="large">
+              View All Evaluations
+            </Button>
+          </Box>
+        ) : (
+          <Box>
+            <Typography variant="h5" align="center" fontWeight={700} gutterBottom sx={{ color: '#1e293b' }}>
+              Create Evaluation
+            </Typography>
 
-                        // Department check
-                        if (!s.department) return true;
-                        if (!evaluatorDeptStr) return true;
-                        return String(s.department || '').trim().toLowerCase() === evaluatorDeptStr;
-                      })
-                      .map((s) => (
-                        <MenuItem key={s.sessionID} value={s.sessionID}>
-                          {s.title}{s.department ? ` - ${s.department}` : ''}
-                        </MenuItem>
-                      ));
-                  })()}
-                </Field>
-                {touched.sessionID && errors.sessionID && (
-                  <Typography color="error" variant="caption">{errors.sessionID}</Typography>
-                )}
-              </FormControl>
-              <FormControl fullWidth error={touched.evaluateeID && !!errors.evaluateeID}>
-                <InputLabel id="evaluatee-label">Evaluatee</InputLabel>
-                <Field
-                  as={Select}
-                  name="evaluateeID"
-                  labelId="evaluatee-label"
-                  label="Evaluatee"
-                  sx={{ bgcolor: 'background.paper' }}
-                >
-                  <MenuItem value={0} disabled>Select Evaluatee</MenuItem>
-                  {employees && employees.length > 0 ? (
-                    employees
-                      ?.filter((e) => (e.userId || -1) !== currentUserId)
-                      .filter((e) => {
-                        const session = (sessions || []).find(s => s.sessionID === values.sessionID);
-                        if (!session || !session.department) return true;
-                        const empDept = e.department && typeof e.department === 'object' 
-                          ? (e.department as any).name 
-                          : String(e.department || '');
-                        return String(empDept).trim().toLowerCase() === String(session.department || '').trim().toLowerCase();
-                      })
-                      .map((e) => (
-                        <MenuItem key={e.id} value={e.userId ? (e.userId as number) : e.id}>
-                          {e.firstName} {e.lastName} ({e.email})
-                        </MenuItem>
-                      ))
-                  ) : (
-                    <MenuItem value={0} disabled>No employees available</MenuItem>
-                  )}
-                </Field>
-                {touched.evaluateeID && errors.evaluateeID && (
-                  <Typography color="error" variant="caption">{errors.evaluateeID}</Typography>
-                )}
-              </FormControl>
-              <Box sx={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: 1, p: 1 }}>
-                {criteria?.map((criterion) => (
-                  <Box key={criterion.criteriaID} sx={{ mb: 2 }}>
-                    <FormLabel component="legend" sx={{ mb: 1, fontWeight: 'bold' }}>
-                      {criterion.title}
-                    </FormLabel>
-                    <Field name={`criteriaScores[${criterion.criteriaID}]`}>
-                      {({ field }: FieldProps) => (
-                        <RadioGroup {...field} row onChange={(e) => setFieldValue(`criteriaScores[${criterion.criteriaID}]`, parseInt(e.target.value))}>
-                          {[1, 2, 3, 4, 5].map((value) => (
-                            <FormControlLabel
-                              key={value}
-                              value={value}
-                              control={<Radio />}
-                              label={value.toString()}
-                            />
-                          ))}
-                        </RadioGroup>
-                      )}
-                    </Field>
-                    <Field name={`criteriaFeedback[${criterion.criteriaID}]`}>
-                      {({ field }: FieldProps) => (
-                        <TextareaAutosize
-                          {...field}
-                          minRows={2}
-                          placeholder="Add feedback (optional)"
-                          style={{ width: '100%', marginTop: 8, padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
-                        />
-                      )}
-                    </Field>
-                    {touched.criteriaScores?.[criterion.criteriaID] && errors.criteriaScores && typeof errors.criteriaScores === 'string' && (
-                      <Typography color="error" variant="caption">{errors.criteriaScores}</Typography>
-                    )}
-                  </Box>
-                ))}
-              </Box>
-              {/* <Alert severity="info" sx={{ borderRadius: 2 }}>
-                The above criteria are applied the same way for all employees.
-              </Alert> */}
-              {createEvaluationMutation.isError && (
-                <Alert severity="error" sx={{ borderRadius: 2 }}>
-                  Error creating evaluation: {createEvaluationMutation.error?.response?.data?.error || createEvaluationMutation.error?.message || 'Unknown error'}
-                </Alert>
-              )}
-              <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={isSubmitting || createEvaluationMutation.isPending} // Changed to isPending
-                  fullWidth
-                  startIcon={isSubmitting || createEvaluationMutation.isPending ? <CircularProgress size={20} /> : null} // Changed to isPending
-                >
-                  {isSubmitting || createEvaluationMutation.isPending ? 'Creating...' : 'Save'}
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => navigate('/evaluations/view')}
-                  fullWidth
-                >
-                  Cancel
-                </Button>
-              </Box>
+            <Stepper activeStep={activeStep} sx={{ mb: 4, mt: 2 }}>
+              {steps.map((label) => (
+                <Step key={label}>
+                  <StepLabel>{label}</StepLabel>
+                </Step>
+              ))}
+            </Stepper>
 
-              <Dialog
-                open={openConfirmDialog}
-                onClose={() => setOpenConfirmDialog(false)}
-                aria-labelledby="confirm-save-title"
-              >
-                <DialogTitle id="confirm-save-title">Confirm Save</DialogTitle>
-                <DialogContent>
-                  <DialogContentText>
-                    Are you sure you want to save this evaluation? You can optionally update the employee's performance score after saving.
-                  </DialogContentText>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={updatePerformance}
-                        onChange={(e) => setUpdatePerformance(e.target.checked)}
-                      />
-                    }
-                    label="Recalculate performance after saving"
-                    sx={{ mt: 2 }}
-                  />
-                </DialogContent>
-                <DialogActions>
-                  <Button onClick={() => setOpenConfirmDialog(false)} disabled={createEvaluationMutation.isPending}>
-                    Back
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      if (pendingEvaluationData) {
-                        createEvaluationMutation.mutate(pendingEvaluationData);
-                      }
-                      setOpenConfirmDialog(false);
-                    }}
-                    variant="contained"
-                    color="primary"
-                    disabled={createEvaluationMutation.isPending}
-                    startIcon={createEvaluationMutation.isPending ? <CircularProgress size={20} /> : null}
-                  >
-                    {createEvaluationMutation.isPending ? 'Saving...' : 'Confirm'}
-                  </Button>
-                </DialogActions>
-              </Dialog>
+            {errors && <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>{errors}</Alert>}
+
+            <Box sx={{ minHeight: '300px', mb: 4 }}>
+              {renderStepContent(activeStep)}
             </Box>
-          </Form>
+
+            <Divider sx={{ mb: 3 }} />
+
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Button disabled={activeStep === 0} onClick={handleBack} variant="outlined">
+                Back
+              </Button>
+              {activeStep === steps.length - 1 ? (
+                <Button
+                  variant="contained"
+                  onClick={handleSubmit}
+                  disabled={createEvaluationMutation.isPending}
+                  startIcon={createEvaluationMutation.isPending ? <CircularProgress size={20} color="inherit" /> : null}
+                  size="large"
+                >
+                  Submit Evaluation
+                </Button>
+              ) : (
+                <Button variant="contained" onClick={handleNext} size="large">
+                  Next Step
+                </Button>
+              )}
+            </Box>
+          </Box>
         )}
-      </Formik>
+      </Paper>
     </Container>
   );
 };

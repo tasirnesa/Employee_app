@@ -7,6 +7,18 @@ const probationService = {
     });
   },
 
+  getAllProbations: async () => {
+    return await prisma.probationPeriod.findMany({
+      include: {
+        onboarding: {
+          include: {
+            employee: true
+          }
+        }
+      }
+    });
+  },
+
   createProbation: async (onboardingId, data) => {
     return await prisma.probationPeriod.create({
       data: {

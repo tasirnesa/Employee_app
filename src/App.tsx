@@ -49,9 +49,11 @@ import ResetPassword from './pages/ResetPassword';
 import DocumentManagement from './pages/DocumentManagement';
 import AssetManagement from './pages/AssetManagement';
 import Offboarding from './pages/Offboarding';
-import Onboarding from './pages/Onboarding';
-import SelfServiceOnboarding from './pages/SelfServiceOnboarding';
-
+import OnboardingManagement from './pages/OnboardingManagement';
+import MyOnboarding from './pages/MyOnboarding';
+import ProbationManagement from './pages/ProbationManagement';
+import WorkerProfile360 from './pages/WorkerProfile360';
+import MyTasks from './pages/MyTasks';
 
 const AppContent: React.FC = () => {
   console.log('App component rendering');
@@ -167,6 +169,7 @@ const AppContent: React.FC = () => {
             <Route path="/employees/view" element={<ProtectedRoute blockEmployee={true}><ViewEmployees /></ProtectedRoute>} />
             <Route path="/employees/create" element={<ProtectedRoute blockEmployee={true}><CreateEmployee /></ProtectedRoute>} />
             <Route path="/employees/:id/edit" element={<ProtectedRoute blockEmployee={true}><EditEmployee /></ProtectedRoute>} />
+            <Route path="/employees/:id/profile" element={<ProtectedRoute blockEmployee={true}><WorkerProfile360 /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/schedule" element={<ProtectedRoute><ScheduleMenu /></ProtectedRoute>} />
@@ -184,10 +187,12 @@ const AppContent: React.FC = () => {
             <Route path="/departments" element={<ProtectedRoute blockEmployee={true}><DepartmentManagement /></ProtectedRoute>} />
             <Route path="/positions" element={<ProtectedRoute blockEmployee={true}><PositionManagement /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+            <Route path="/inbox" element={<ProtectedRoute><MyTasks /></ProtectedRoute>} />
             <Route path="/document-management" element={<ProtectedRoute><DocumentManagement /></ProtectedRoute>} />
             <Route path="/asset-management" element={<ProtectedRoute blockEmployee={true}><AssetManagement /></ProtectedRoute>} />
-            <Route path="/onboarding" element={!isEmployee ? <ProtectedRoute blockEmployee={true}><Onboarding /></ProtectedRoute> : <Navigate to="/dashboard" />} />
-            <Route path="/onboarding/me" element={<ProtectedRoute><SelfServiceOnboarding /></ProtectedRoute>} />
+            <Route path="/onboarding" element={!isEmployee ? <ProtectedRoute blockEmployee={true}><OnboardingManagement /></ProtectedRoute> : <Navigate to="/dashboard" />} />
+            <Route path="/onboarding/me" element={<ProtectedRoute><MyOnboarding /></ProtectedRoute>} />
+            <Route path="/probation" element={<ProtectedRoute blockEmployee={true}><ProbationManagement /></ProtectedRoute>} />
             <Route path="/offboarding" element={<ProtectedRoute blockEmployee={true}><Offboarding /></ProtectedRoute>} />
             <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
           </Routes>

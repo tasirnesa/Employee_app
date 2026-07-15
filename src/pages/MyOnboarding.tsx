@@ -32,7 +32,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/axios';
 import { format } from 'date-fns';
 
-const SelfServiceOnboarding: React.FC = () => {
+const MyOnboarding: React.FC = () => {
     const [activeTab, setActiveTab] = React.useState(0);
     const queryClient = useQueryClient();
 
@@ -80,17 +80,17 @@ const SelfServiceOnboarding: React.FC = () => {
                         <Typography variant="body2" fontWeight={600}>Your Onboarding Progress</Typography>
                         <Typography variant="body2" fontWeight={600}>{calculateProgress(onboarding)}%</Typography>
                     </Box>
-                    <LinearProgress 
-                        variant="determinate" 
-                        value={calculateProgress(onboarding)} 
+                    <LinearProgress
+                        variant="determinate"
+                        value={calculateProgress(onboarding)}
                         sx={{ height: 12, borderRadius: 6, bgcolor: 'rgba(255,255,255,0.1)', '& .MuiLinearProgress-bar': { bgcolor: '#10b981' } }}
                     />
                 </Box>
             </Paper>
 
             <Paper sx={{ borderRadius: 3, overflow: 'hidden' }}>
-                <Tabs 
-                    value={activeTab} 
+                <Tabs
+                    value={activeTab}
                     onChange={(_, v) => setActiveTab(v)}
                     variant="fullWidth"
                     sx={{ borderBottom: 1, borderColor: 'divider' }}
@@ -110,8 +110,8 @@ const SelfServiceOnboarding: React.FC = () => {
                                     <ListItemIcon>
                                         {task.status === 'Completed' ? <DoneIcon color="success" /> : <PendingIcon color="disabled" />}
                                     </ListItemIcon>
-                                    <ListItemText 
-                                        primary={task.title} 
+                                    <ListItemText
+                                        primary={task.title}
                                         secondary={task.description}
                                         primaryTypographyProps={{ fontWeight: 600 }}
                                     />
@@ -128,8 +128,8 @@ const SelfServiceOnboarding: React.FC = () => {
                                     <ListItemIcon>
                                         {doc.status === 'Verified' ? <DoneIcon color="success" /> : <DocIcon />}
                                     </ListItemIcon>
-                                    <ListItemText 
-                                        primary={doc.title} 
+                                    <ListItemText
+                                        primary={doc.title}
                                         secondary={`Status: ${doc.status}`}
                                         primaryTypographyProps={{ fontWeight: 600 }}
                                     />
@@ -163,8 +163,8 @@ const SelfServiceOnboarding: React.FC = () => {
                             {onboarding.employee.assets.map((asset: any) => (
                                 <ListItem key={asset.id} divider sx={{ py: 2 }}>
                                     <ListItemIcon><AssetIcon color="primary" /></ListItemIcon>
-                                    <ListItemText 
-                                        primary={asset.assetType} 
+                                    <ListItemText
+                                        primary={asset.assetType}
                                         secondary={`${asset.brand || ''} • SN: ${asset.serialNumber || 'N/A'}`}
                                         primaryTypographyProps={{ fontWeight: 600 }}
                                     />
@@ -214,15 +214,15 @@ const SelfServiceOnboarding: React.FC = () => {
                                     <ListItemIcon>
                                         {v.status === 'Verified' ? <VerificationIcon color="success" /> : <VerificationIcon color="disabled" />}
                                     </ListItemIcon>
-                                    <ListItemText 
-                                        primary={v.type} 
+                                    <ListItemText
+                                        primary={v.type}
                                         secondary={v.notes || `Your verification is ${v.status.toLowerCase()}.`}
                                         primaryTypographyProps={{ fontWeight: 600 }}
                                     />
-                                    <Chip 
-                                        label={v.status} 
-                                        size="small" 
-                                        color={v.status === 'Verified' ? 'success' : v.status === 'Failed' ? 'error' : 'warning'} 
+                                    <Chip
+                                        label={v.status}
+                                        size="small"
+                                        color={v.status === 'Verified' ? 'success' : v.status === 'Failed' ? 'error' : 'warning'}
                                     />
                                 </ListItem>
                             ))}
@@ -239,4 +239,4 @@ const SelfServiceOnboarding: React.FC = () => {
     );
 };
 
-export default SelfServiceOnboarding;
+export default MyOnboarding;
