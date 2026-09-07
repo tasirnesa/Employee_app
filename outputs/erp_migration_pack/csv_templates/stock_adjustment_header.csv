@@ -1,0 +1,2 @@
+adjustment_id,document_number,plant_id,storage_location_id,reason_code_id,status,created_by,created_at,approved_by,approved_at,physical_inventory_id
+REF-ADJUSTMENT_ID-001,Sample document number,REF-PLANT_ID-001,REF-STORAGE_LOCATION_ID-001,REF-REASON_CODE_ID-001,,REF-CREATED_BY-001,2026-01-01,REF-APPROVED_BY-001,2026-01-01,REF-PHYSICAL_INVENTORY_ID-001

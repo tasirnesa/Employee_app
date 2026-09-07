@@ -1,0 +1,2 @@
+po_charge_id,po_id,charge_type,amount,currency_code
+MIG-PO_CHARGE-001,REF-PO_ID-001,Sample charge type,0,PO_-001

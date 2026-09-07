@@ -1,0 +1,2 @@
+fiscal_year_id,year_label,start_date,end_date,is_closed,created_at,company_id,status,year,approved_at,approved_by,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by
+MIG-FISCAL_YEAR-001,Sample year label,2026-01-01,2026-01-01,true,2026-01-01,REF-COMPANY_ID-001,,0,2026-01-01,REF-APPROVED_BY-001,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001

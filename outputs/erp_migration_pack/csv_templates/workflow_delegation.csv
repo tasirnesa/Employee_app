@@ -1,0 +1,2 @@
+id,delegator_id,delegatee_id,start_date,end_date,is_active,created_at,created_by,updated_at,updated_by
+REF-ID-001,REF-DELEGATOR_ID-001,REF-DELEGATEE_ID-001,2026-01-01,2026-01-01,true,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001

@@ -1,0 +1,2 @@
+id,workflow_instance_id,workflow_instance_step_id,action,action_by,action_at,comments,snapshot_approver_name,snapshot_approver_role,snapshot_approver_position,snapshot_approver_department,is_delegated_action,original_approver_id
+REF-ID-001,REF-WORKFLOW_INSTANCE_ID-001,REF-WORKFLOW_INSTANCE_STEP_ID-001,Sample action,REF-ACTION_BY-001,2026-01-01,,Sample snapshot approver name,,,,true,REF-ORIGINAL_APPROVER_ID-001

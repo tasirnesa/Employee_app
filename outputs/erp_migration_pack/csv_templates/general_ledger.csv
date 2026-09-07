@@ -1,0 +1,2 @@
+gl_id,journal_entry_id,account_id,company_id,fiscal_year,fiscal_period,ledger_id,posting_date,document_date,document_number,debit_amount,credit_amount,currency_code,description,source_module,created_at,approved_at,approved_by,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,line_number
+REF-GL_ID-001,REF-JOURNAL_ENTRY_ID-001,REF-ACCOUNT_ID-001,REF-COMPANY_ID-001,0,0,REF-LEDGER_ID-001,2026-01-01,2026-01-01,,0,0,GEN-001,,,2026-01-01,2026-01-01,REF-APPROVED_BY-001,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,0

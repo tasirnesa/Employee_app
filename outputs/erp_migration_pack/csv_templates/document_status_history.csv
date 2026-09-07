@@ -1,0 +1,2 @@
+status_history_id,entity_type,entity_id,from_status,to_status,changed_by,changed_at,comment
+REF-STATUS_HISTORY_ID-001,Sample entity type,REF-ENTITY_ID-001,,Sample to status,REF-CHANGED_BY-001,2026-01-01,

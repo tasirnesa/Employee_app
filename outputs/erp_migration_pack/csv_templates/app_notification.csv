@@ -1,0 +1,2 @@
+notification_id,user_id,title,message,type,action_url,entity_type,entity_id,is_read,created_at,read_at
+REF-NOTIFICATION_ID-001,REF-USER_ID-001,Sample title,Sample message,Sample type,,,REF-ENTITY_ID-001,true,2026-01-01,2026-01-01

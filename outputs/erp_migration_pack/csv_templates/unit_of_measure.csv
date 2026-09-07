@@ -1,0 +1,2 @@
+uom_code,uom_name,description,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,approved_at,approved_by
+UNI-001,Sample uom name,,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001

@@ -1,0 +1,2 @@
+ap_payment_line_id,ap_payment_id,ap_invoice_id,amount_paid,discount_taken,notes
+MIG-AP_PAYMENT_LINE-001,REF-AP_PAYMENT_ID-001,REF-AP_INVOICE_ID-001,0,0,

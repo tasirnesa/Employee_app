@@ -1,0 +1,2 @@
+asset_transaction_type_id,code,name,category,is_capitalization,is_depreciation,is_retirement,is_reversal,reverse_transaction_id,created_at
+MIG-ASSET_TRANSACTION_TYPE-001,ASS-001,Sample name,Sample category,true,true,true,true,REF-REVERSE_TRANSACTION_ID-001,2026-01-01

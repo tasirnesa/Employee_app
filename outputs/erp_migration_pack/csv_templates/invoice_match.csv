@@ -1,0 +1,2 @@
+match_id,invoice_line_id,po_line_id,grn_line_id,matched_quantity,matched_price,is_within_tolerance,created_at,approved_at,approved_by,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by
+REF-MATCH_ID-001,REF-INVOICE_LINE_ID-001,REF-PO_LINE_ID-001,REF-GRN_LINE_ID-001,0,0,true,2026-01-01,2026-01-01,REF-APPROVED_BY-001,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001

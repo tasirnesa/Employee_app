@@ -1,0 +1,2 @@
+controlling_area_id,controlling_area_code,controlling_area_name,currency_code,active,created_by,created_at,updated_by,updated_at,valid_from,valid_to,description
+MIG-CONTROLLING_AREA-001,CON-001,Sample controlling area name,CON-001,true,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,2026-01-01,2026-01-01,

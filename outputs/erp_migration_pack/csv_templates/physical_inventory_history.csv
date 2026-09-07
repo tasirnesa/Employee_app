@@ -1,0 +1,2 @@
+pi_history_id,pi_id,cost_center_id,fiscal_year,quarter,functional_count,semi_functional_count,damaged_count,transferred_count,not_existed_count,total_assets_count,created_by,created_at,updated_by,updated_at
+REF-PI_HISTORY_ID-001,REF-PI_ID-001,REF-COST_CENTER_ID-001,0,0,0,0,0,0,0,0,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01

@@ -1,0 +1,2 @@
+employee_id,first_name,middle_name,last_name,branch_team,email,alt_email,phone,alt_phone,cost_center_id,status,employee_code,branch_team_id,process_id,subprocess_id,manager_employee_id,department_id,position_title
+MIG-EMPLOYEE-001,Sample first name,Sample middle name,Sample last name,,migration@example.com,migration@example.com,,,REF-COST_CENTER_ID-001,,EMP-001,REF-BRANCH_TEAM_ID-001,REF-PROCESS_ID-001,REF-SUBPROCESS_ID-001,REF-MANAGER_EMPLOYEE_ID-001,REF-DEPARTMENT_ID-001,

@@ -1,0 +1,2 @@
+movement_type_id,code,name,description,posting_area,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,approved_at,approved_by,movement_category_id,requires_cost_center,requires_reference,requires_attachment,is_reversal,is_expenditure
+MIG-MOVEMENT_TYPE-001,MOV-001,Sample name,,,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001,REF-MOVEMENT_CATEGORY_ID-001,true,true,true,true,true

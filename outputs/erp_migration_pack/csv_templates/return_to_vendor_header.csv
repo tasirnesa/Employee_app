@@ -1,0 +1,2 @@
+rtv_id,document_number,grn_id,po_id,supplier_id,reason_code_id,status,created_by,created_at,updated_by,updated_at,approved_at,approved_by,movement_type_id,company_id
+REF-RTV_ID-001,Sample document number,REF-GRN_ID-001,REF-PO_ID-001,REF-SUPPLIER_ID-001,REF-REASON_CODE_ID-001,,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,2026-01-01,REF-APPROVED_BY-001,REF-MOVEMENT_TYPE_ID-001,REF-COMPANY_ID-001

@@ -1,0 +1,2 @@
+history_id,cost_center_id,profit_center_id,valid_from,valid_to,approved_at,approved_by,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by
+REF-HISTORY_ID-001,REF-COST_CENTER_ID-001,REF-PROFIT_CENTER_ID-001,2026-01-01,2026-01-01,2026-01-01,REF-APPROVED_BY-001,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001

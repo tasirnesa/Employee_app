@@ -1,0 +1,2 @@
+assignment_id,assignment_type,po_id,assigned_officer_id,assigned_by,assigned_at,status,notes,contract_assignement_code
+REF-ASSIGNMENT_ID-001,Sample assignment type,REF-PO_ID-001,REF-ASSIGNED_OFFICER_ID-001,REF-ASSIGNED_BY-001,2026-01-01,Sample status,,CON-001

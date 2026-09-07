@@ -1,0 +1,2 @@
+movement_category_id,category_code,category_name,description,display_order,active
+MIG-MOVEMENT_CATEGORY-001,MOV-001,Sample category name,,0,true

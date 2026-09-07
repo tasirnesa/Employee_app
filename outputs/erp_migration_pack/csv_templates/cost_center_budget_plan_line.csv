@@ -1,0 +1,2 @@
+plan_line_id,plan_id,account_id,asset_class_id,material_id,item_description,planned_amount,planned_quantity,unit_of_measure,existing_functional,existing_non_functional,existing_total,plan_replacement_qty,plan_new_qty,plan_total_qty,period_number,line_number,notes,created_by,created_at,updated_by,updated_at
+REF-PLAN_LINE_ID-001,REF-PLAN_ID-001,REF-ACCOUNT_ID-001,REF-ASSET_CLASS_ID-001,REF-MATERIAL_ID-001,,0,0,,0,0,0,0,0,0,0,0,,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01

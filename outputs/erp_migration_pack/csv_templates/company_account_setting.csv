@@ -1,0 +1,2 @@
+company_account_setting_id,company_id,account_key,setting_name,account_id,is_active,created_by,created_at
+MIG-COMPANY_ACCOUNT_SETTING-001,REF-COMPANY_ID-001,Sample account key,Sample setting name,REF-ACCOUNT_ID-001,true,REF-CREATED_BY-001,2026-01-01

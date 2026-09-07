@@ -1,0 +1,2 @@
+payment_line_id,payment_id,description,ap_invoice_id,ar_invoice_id,amount,payment_type,approved_at,approved_by,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,vendor_invoice_number,ap_account_id,discount_taken,supplier_account,withholding_ref_number,open_item_id
+MIG-PAYMENT_LINE-001,REF-PAYMENT_ID-001,,REF-AP_INVOICE_ID-001,REF-AR_INVOICE_ID-001,0,,2026-01-01,REF-APPROVED_BY-001,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,,REF-AP_ACCOUNT_ID-001,0,,,REF-OPEN_ITEM_ID-001

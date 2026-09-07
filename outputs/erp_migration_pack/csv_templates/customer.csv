@@ -1,0 +1,2 @@
+customer_id,customer_code,customer_name,receivable_account_id,tax_id,email,phone,address,created_at,company_id,approved_at,approved_by,created_by,deleted_at,deleted_by,is_active,is_deleted,updated_at,updated_by
+MIG-CUSTOMER-001,CUS-001,Sample customer name,REF-RECEIVABLE_ACCOUNT_ID-001,REF-TAX_ID-001,migration@example.com,,,2026-01-01,REF-COMPANY_ID-001,2026-01-01,REF-APPROVED_BY-001,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,true,2026-01-01,REF-UPDATED_BY-001

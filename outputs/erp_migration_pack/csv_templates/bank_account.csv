@@ -1,0 +1,2 @@
+bank_account_id,account_name,account_number,bank_name,branch_name,currency,gl_account_id,balance,active,approved_at,approved_by,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,clearing_account_id
+MIG-BANK_ACCOUNT-001,Sample account name,Sample account number,Sample bank name,Sample branch name,,REF-GL_ACCOUNT_ID-001,0,true,2026-01-01,REF-APPROVED_BY-001,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,REF-CLEARING_ACCOUNT_ID-001

@@ -1,0 +1,2 @@
+service_entry_line_id,service_entry_id,po_line_id,line_number,description,quantity_ordered,quantity_confirmed,uom_code,unit_price,amount_confirmed,cost_center_id,account_assignment_type,item_category,notes,created_at,updated_at,gross_amount,gross_unit_price,net_amount,tax_amount,tax_posting_indicator,tax_rate,tax_unit_amount,tax_code_id
+MIG-SERVICE_ENTRY_LINE-001,REF-SERVICE_ENTRY_ID-001,REF-PO_LINE_ID-001,0,,0,0,SER-001,0,0,REF-COST_CENTER_ID-001,,,,2026-01-01,2026-01-01,0,0,0,0,,0,0,REF-TAX_CODE_ID-001

@@ -1,0 +1,2 @@
+cost_center_account_id,cost_center_id,account_id,is_primary,valid_from,valid_to,active,created_by,created_at,updated_by,updated_at
+MIG-COST_CENTER_ACCOUNT-001,REF-COST_CENTER_ID-001,REF-ACCOUNT_ID-001,true,2026-01-01,2026-01-01,true,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01

@@ -1,0 +1,2 @@
+id,entity_type,entity_id,workflow_definition_id,requester_id,current_phase,status,started_at,completed_at,created_at,created_by,updated_at,updated_by
+REF-ID-001,Sample entity type,REF-ENTITY_ID-001,REF-WORKFLOW_DEFINITION_ID-001,REF-REQUESTER_ID-001,0,Sample status,2026-01-01,2026-01-01,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001

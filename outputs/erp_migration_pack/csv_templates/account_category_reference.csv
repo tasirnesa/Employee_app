@@ -1,0 +1,2 @@
+acr_id,acr_code,description,created_at,created_by,updated_at,updated_by,deleted_at,deleted_by,is_deleted,material_type_id
+REF-ACR_ID-001,ACC-001,,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,REF-MATERIAL_TYPE_ID-001

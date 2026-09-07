@@ -1,0 +1,2 @@
+line_id,contract_id,po_header_id,po_line_id,po_quantity,recieved_quantity,material_id,cost_center_id,description,quantity,uom,unit_price,total_amount
+REF-LINE_ID-001,REF-CONTRACT_ID-001,REF-PO_HEADER_ID-001,REF-PO_LINE_ID-001,0,0,REF-MATERIAL_ID-001,REF-COST_CENTER_ID-001,,0,,0,0

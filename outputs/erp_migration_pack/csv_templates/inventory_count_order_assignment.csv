@@ -1,0 +1,2 @@
+assignment_id,order_id,cost_center_id,completion_status,pi_id,completed_at,notified_at,created_at
+REF-ASSIGNMENT_ID-001,REF-ORDER_ID-001,REF-COST_CENTER_ID-001,Sample completion status,REF-PI_ID-001,2026-01-01,2026-01-01,2026-01-01

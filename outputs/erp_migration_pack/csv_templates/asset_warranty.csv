@@ -1,0 +1,2 @@
+asset_warranty_id,asset_id,provider,start_date,end_date,terms,created_at,created_by,updated_at,updated_by,approved_at,approved_by
+MIG-ASSET_WARRANTY-001,REF-ASSET_ID-001,,2026-01-01,2026-01-01,,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001

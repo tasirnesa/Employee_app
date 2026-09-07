@@ -1,0 +1,2 @@
+attachment_id,entity_type,entity_id,file_url,file_name,mime_type,notes,created_by,created_at,approved_at,approved_by
+MIG-ATTACHMENT-001,Sample entity type,REF-ENTITY_ID-001,Sample file url,Sample file name,,,REF-CREATED_BY-001,2026-01-01,2026-01-01,REF-APPROVED_BY-001

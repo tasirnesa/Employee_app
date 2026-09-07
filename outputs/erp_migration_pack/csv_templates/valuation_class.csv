@@ -1,0 +1,2 @@
+valuation_class_id,valuation_code,description,price_control,created_by,created_at,updated_by,updated_at,deleted_at,deleted_by,is_deleted,account_category_reference_id
+MIG-VALUATION_CLASS-001,VAL-001,,,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,2026-01-01,REF-DELETED_BY-001,true,REF-ACCOUNT_CATEGORY_REFERENCE_ID-001

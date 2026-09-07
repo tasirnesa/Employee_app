@@ -1,0 +1,2 @@
+depr_posting_id,depr_run_id,journal_entry_id,posting_date,created_at,created_by,approved_at,approved_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by
+REF-DEPR_POSTING_ID-001,REF-DEPR_RUN_ID-001,REF-JOURNAL_ENTRY_ID-001,2026-01-01,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-APPROVED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001

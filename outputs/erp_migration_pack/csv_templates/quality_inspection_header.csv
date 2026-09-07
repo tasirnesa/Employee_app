@@ -1,0 +1,2 @@
+qi_id,document_number,plant_id,status,inspection_date,inspector_user_id,created_at,created_by,updated_at,updated_by,approved_at,approved_by,po_id,po_line_id,material_id,quantity,storage_location_id
+REF-QI_ID-001,Sample document number,REF-PLANT_ID-001,,2026-01-01,REF-INSPECTOR_USER_ID-001,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001,REF-PO_ID-001,REF-PO_LINE_ID-001,REF-MATERIAL_ID-001,0,REF-STORAGE_LOCATION_ID-001

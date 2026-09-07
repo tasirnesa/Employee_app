@@ -1,0 +1,2 @@
+stock_balance_id,material_id,plant_id,storage_location_id,batch_id,uom_code,quantity,unit_price,company_id
+MIG-STOCK_BALANCE-001,REF-MATERIAL_ID-001,REF-PLANT_ID-001,REF-STORAGE_LOCATION_ID-001,REF-BATCH_ID-001,STO-001,0,0,REF-COMPANY_ID-001

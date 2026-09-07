@@ -1,0 +1,2 @@
+integration_mapping_tax_id,tax_code_id,approved_at,approved_by,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,company_id,tax_account_key_id,account_id,effective_from,effective_to
+MIG-INTEGRATION_MAPPING_TAX-001,REF-TAX_CODE_ID-001,2026-01-01,REF-APPROVED_BY-001,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,REF-COMPANY_ID-001,REF-TAX_ACCOUNT_KEY_ID-001,REF-ACCOUNT_ID-001,2026-01-01,2026-01-01

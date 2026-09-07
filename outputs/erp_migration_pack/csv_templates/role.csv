@@ -1,0 +1,2 @@
+role_id,role_code,name,description,updated_at,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_by,approved_at,approved_by
+MIG-ROLE-001,ROL-001,Sample name,,2026-01-01,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001

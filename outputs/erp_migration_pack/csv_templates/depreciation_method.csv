@@ -1,0 +1,2 @@
+depreciation_method_id,code,name,method,default_useful_life_months,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,approved_at,approved_by
+MIG-DEPRECIATION_METHOD-001,DEP-001,Sample name,Sample method,0,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001

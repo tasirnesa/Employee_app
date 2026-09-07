@@ -1,0 +1,2 @@
+id,po_id,assignment_id,reason_required,is_processed,flagged_at,flagged_by,processed_at,processed_by,is_deleted,deleted_at,deleted_by
+REF-ID-001,REF-PO_ID-001,REF-ASSIGNMENT_ID-001,,true,2026-01-01,REF-FLAGGED_BY-001,2026-01-01,REF-PROCESSED_BY-001,true,2026-01-01,REF-DELETED_BY-001

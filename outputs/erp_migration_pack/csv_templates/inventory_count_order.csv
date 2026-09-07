@@ -1,0 +1,2 @@
+order_id,order_number,title,description,start_date,end_date,applies_to_all,status,remarks,issued_by,issued_at,created_by,created_at,updated_by,updated_at,company_id
+REF-ORDER_ID-001,Sample order number,Sample title,,2026-01-01,2026-01-01,true,Sample status,,REF-ISSUED_BY-001,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-COMPANY_ID-001

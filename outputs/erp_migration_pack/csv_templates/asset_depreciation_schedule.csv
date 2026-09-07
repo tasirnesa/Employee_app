@@ -1,0 +1,2 @@
+schedule_id,area_id,period_number,period_date,planned_amount,accumulated_planned,net_book_value_planned,status,depr_run_line_id,created_at,updated_at
+REF-SCHEDULE_ID-001,REF-AREA_ID-001,0,2026-01-01,0,0,0,Sample status,REF-DEPR_RUN_LINE_ID-001,2026-01-01,2026-01-01

@@ -1,0 +1,2 @@
+payment_id,contract_id,schedule_id,payment_date,amount,payment_percent,currency_code,payment_method,reference_number,transaction_id,invoice_reference,paid_by,status,notes,created_at,created_by,updated_at,updated_by
+REF-PAYMENT_ID-001,REF-CONTRACT_ID-001,REF-SCHEDULE_ID-001,2026-01-01,0,0,CON-001,,,REF-TRANSACTION_ID-001,,REF-PAID_BY-001,Sample status,,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001

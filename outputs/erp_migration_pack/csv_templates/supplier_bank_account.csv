@@ -1,0 +1,2 @@
+supplier_bank_account_id,supplier_id,bank_name,account_number,iban,swift_code,currency,valid_from,valid_to,is_primary,kyc_verified,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,approved_at,approved_by,account_holder_name
+MIG-SUPPLIER_BANK_ACCOUNT-001,REF-SUPPLIER_ID-001,Sample bank name,,,SUP-001,,2026-01-01,2026-01-01,true,true,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001,Sample account holder name

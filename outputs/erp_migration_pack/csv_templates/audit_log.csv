@@ -1,0 +1,2 @@
+audit_id,user_id,action,entity_type,entity_id,old_values,new_values,ip_address,user_agent,created_at
+REF-AUDIT_ID-001,REF-USER_ID-001,Sample action,Sample entity type,REF-ENTITY_ID-001,{},{},,,2026-01-01

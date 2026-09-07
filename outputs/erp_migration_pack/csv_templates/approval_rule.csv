@@ -1,0 +1,2 @@
+approval_rule_id,module,min_amount,max_amount,cost_center_id,category,active,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,purchasing_group_id
+MIG-APPROVAL_RULE-001,Sample module,0,0,REF-COST_CENTER_ID-001,,true,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,REF-PURCHASING_GROUP_ID-001

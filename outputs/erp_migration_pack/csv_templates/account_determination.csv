@@ -1,0 +1,2 @@
+determination_id,chart_of_accounts,transaction_key,valuation_grouping_code,account_modification,gl_account_debit,gl_account_credit,description,created_at,created_by,updated_at,updated_by,deleted_at,deleted_by,is_deleted,valuation_class_id,company_id
+REF-DETERMINATION_ID-001,Sample chart of accounts,Sample transaction key,ACC-001,,Sample gl account debit,Sample gl account credit,,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,REF-VALUATION_CLASS_ID-001,REF-COMPANY_ID-001

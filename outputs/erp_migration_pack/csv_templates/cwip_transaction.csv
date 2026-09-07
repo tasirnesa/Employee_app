@@ -1,0 +1,2 @@
+cwip_tx_id,cwip_project_id,posting_date,amount,currency_code,description,created_at,created_by,approved_at,approved_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by
+REF-CWIP_TX_ID-001,REF-CWIP_PROJECT_ID-001,2026-01-01,0,CWI-001,,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-APPROVED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001

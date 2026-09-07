@@ -1,0 +1,2 @@
+number_range_id,document_type,prefix,suffix,next_number,min_number,max_number,active,created_by,created_at,updated_by,updated_at,fiscal_year_id,fiscal_year_in_number
+REF-NUMBER_RANGE_ID-001,Sample document type,,,0,0,0,true,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-FISCAL_YEAR_ID-001,0

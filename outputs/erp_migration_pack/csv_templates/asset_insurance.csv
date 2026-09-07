@@ -1,0 +1,2 @@
+asset_insurance_id,asset_id,insurer,policy_number,start_date,end_date,coverage_details,created_at,created_by,updated_at,updated_by,approved_at,approved_by,company_id
+MIG-ASSET_INSURANCE-001,REF-ASSET_ID-001,,,2026-01-01,2026-01-01,,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001,REF-COMPANY_ID-001

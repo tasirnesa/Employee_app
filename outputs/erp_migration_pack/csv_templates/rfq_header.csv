@@ -1,0 +1,2 @@
+rfq_id,document_number,pr_id,issue_date,due_date,currency_code,status,created_by,created_at,updated_by,updated_at,approved_at,approved_by,approval_status,rejected_at,rejected_by,rejection_reason,company_id
+REF-RFQ_ID-001,Sample document number,REF-PR_ID-001,2026-01-01,2026-01-01,RFQ-001,,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,2026-01-01,REF-APPROVED_BY-001,,,REF-REJECTED_BY-001,,REF-COMPANY_ID-001

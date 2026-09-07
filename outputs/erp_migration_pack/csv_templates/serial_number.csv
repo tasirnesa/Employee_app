@@ -1,0 +1,2 @@
+serial_id,material_id,serial_number,status,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,approved_at,approved_by
+REF-SERIAL_ID-001,REF-MATERIAL_ID-001,Sample serial number,,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001

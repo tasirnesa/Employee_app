@@ -1,0 +1,2 @@
+reason_code_id,reason_code,category,description,active,updated_at,approved_at,approved_by,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_by
+MIG-REASON_CODE-001,REA-001,Sample category,,true,2026-01-01,2026-01-01,REF-APPROVED_BY-001,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,REF-UPDATED_BY-001

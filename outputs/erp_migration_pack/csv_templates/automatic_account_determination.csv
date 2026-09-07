@@ -1,0 +1,2 @@
+determination_id,transaction_key,valuation_grouping_code,valuation_class_id,account_modification,dr_account_id,cr_account_id,approved_at,approved_by,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by
+REF-DETERMINATION_ID-001,Sample transaction key,AUT-001,REF-VALUATION_CLASS_ID-001,,REF-DR_ACCOUNT_ID-001,REF-CR_ACCOUNT_ID-001,2026-01-01,REF-APPROVED_BY-001,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001

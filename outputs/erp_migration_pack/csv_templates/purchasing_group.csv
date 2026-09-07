@@ -1,0 +1,2 @@
+purchasing_group_id,group_code,group_name,description,created_at,created_by,updated_at,updated_by,deleted_at,deleted_by,is_deleted,approved_at,approved_by,status
+MIG-PURCHASING_GROUP-001,PUR-001,Sample group name,,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-APPROVED_BY-001,

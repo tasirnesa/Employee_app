@@ -1,0 +1,2 @@
+qi_line_id,qi_id,material_id,notes,total_quantity,accepted_quantity,rejected_quantity,po_line_id,apply_for_all,assigned_to,inspection_team_name,status,setup_by
+REF-QI_LINE_ID-001,REF-QI_ID-001,REF-MATERIAL_ID-001,,0,0,0,REF-PO_LINE_ID-001,true,REF-ASSIGNED_TO-001,Sample inspection team name,Sample status,REF-SETUP_BY-001

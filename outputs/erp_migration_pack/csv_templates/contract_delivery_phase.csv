@@ -1,0 +1,2 @@
+id,contract_line_item_id,phase_number,phase_name,scheduled_quantity,delivered_quantity,target_delivery_date,actual_delivery_date,status,notes,created_at,created_by,updated_at,updated_by,is_deleted,deleted_at,deleted_by,valid_from_date
+REF-ID-001,REF-CONTRACT_LINE_ITEM_ID-001,0,Sample phase name,0,0,2026-01-01,2026-01-01,Sample status,,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,true,2026-01-01,REF-DELETED_BY-001,2026-01-01

@@ -1,0 +1,2 @@
+grn_line_id,grn_id,po_line_id,material_id,batch_id,quantity_received,quantity_accepted,quantity_rejected,uom_code,unit_price,tax_code_id,reason_code_id,storage_location_id,reason_note,is_valuated,is_ledger_posted,tax_posting_indicator,gross_unit_price,inspection_line_ids
+MIG-GRN_LINE-001,REF-GRN_ID-001,REF-PO_LINE_ID-001,REF-MATERIAL_ID-001,REF-BATCH_ID-001,0,0,0,GRN-001,0,REF-TAX_CODE_ID-001,REF-REASON_CODE_ID-001,REF-STORAGE_LOCATION_ID-001,,true,true,,0,REF-INSPECTION_LINE_IDS-001

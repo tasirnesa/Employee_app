@@ -1,0 +1,2 @@
+tax_type_id,tax_type_code,name,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,approved_at,approved_by,tax_category,description
+MIG-TAX_TYPE-001,TAX-001,Sample name,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001,Sample tax category,

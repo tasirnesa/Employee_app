@@ -1,0 +1,2 @@
+quotation_id,rfq_id,supplier_id,quote_date,valid_until,currency_code,status,total_amount,approved_at,approved_by,is_winner,warranty_period,delivery_lead_time,delivery_cost,selection_reason,awarded_at,awarded_by,company_id
+REF-QUOTATION_ID-001,REF-RFQ_ID-001,REF-SUPPLIER_ID-001,2026-01-01,2026-01-01,VEN-001,,0,2026-01-01,REF-APPROVED_BY-001,true,,0,0,,2026-01-01,REF-AWARDED_BY-001,REF-COMPANY_ID-001

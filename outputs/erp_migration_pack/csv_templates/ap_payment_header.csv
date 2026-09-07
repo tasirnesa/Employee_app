@@ -1,0 +1,2 @@
+ap_payment_id,document_number,supplier_id,bank_account_id,payment_date,posting_date,payment_method,reference_number,currency_code,total_amount,exchange_rate,status,notes,created_by,created_at,updated_by,updated_at
+REF-AP_PAYMENT_ID-001,Sample document number,REF-SUPPLIER_ID-001,REF-BANK_ACCOUNT_ID-001,2026-01-01,2026-01-01,Sample payment method,,AP_-001,0,0,,,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01

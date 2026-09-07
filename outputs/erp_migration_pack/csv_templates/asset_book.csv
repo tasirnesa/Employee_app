@@ -1,0 +1,2 @@
+asset_book_id,code,name,accounting_principle,gl_asset_account_id,gl_accum_depr_account_id,gl_depr_expense_account_id,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,approved_at,approved_by,company_id
+MIG-ASSET_BOOK-001,ASS-001,Sample name,Sample accounting principle,REF-GL_ASSET_ACCOUNT_ID-001,REF-GL_ACCUM_DEPR_ACCOUNT_ID-001,REF-GL_DEPR_EXPENSE_ACCOUNT_ID-001,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001,REF-COMPANY_ID-001

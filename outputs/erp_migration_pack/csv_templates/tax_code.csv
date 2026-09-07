@@ -1,0 +1,2 @@
+tax_code_id,tax_code,tax_type_id,rate_percent,effective_from,effective_to,withholding,active,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,approved_at,approved_by,company_id,tax_category,description,is_deductible,deductible_percent,wht_base_type,posting_indicator,wht_exemption_threshold
+MIG-TAX_CODE-001,TAX-001,REF-TAX_TYPE_ID-001,0,2026-01-01,2026-01-01,true,true,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001,REF-COMPANY_ID-001,,,true,0,,Sample posting indicator,0

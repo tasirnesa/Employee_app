@@ -1,0 +1,2 @@
+bank_statement_id,bank_account_id,statement_number,statement_date,opening_balance,closing_balance,status,created_at,approved_at,approved_by,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by
+MIG-BANK_STATEMENT-001,REF-BANK_ACCOUNT_ID-001,Sample statement number,2026-01-01,0,0,,2026-01-01,2026-01-01,REF-APPROVED_BY-001,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001

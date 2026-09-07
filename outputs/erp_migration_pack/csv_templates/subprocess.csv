@@ -1,0 +1,2 @@
+subprocess_id,subprocess_name,subprocess_accr,process_id,created_at,created_by
+MIG-SUBPROCESS-001,Sample subprocess name,,REF-PROCESS_ID-001,2026-01-01,REF-CREATED_BY-001

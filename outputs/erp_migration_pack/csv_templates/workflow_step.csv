@@ -1,0 +1,2 @@
+id,workflow_phase_id,assignment_type,assignment_value,role_scope,strategy,quorum_count,prevent_self_approval,fallback_assignment_type,fallback_assignment_value,escalation_timeout_hours,escalation_assignment_type,escalation_assignment_value,created_at,created_by,updated_at,updated_by
+REF-ID-001,REF-WORKFLOW_PHASE_ID-001,Sample assignment type,Sample assignment value,,Sample strategy,0,true,,,0,,,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001

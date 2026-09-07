@@ -1,0 +1,2 @@
+guarantee_id,contract_id,guarantee_type,guarantee_number,issuing_bank,amount,currency_code,issue_date,expiry_date,renewal_date,status,released_date,notification_before_due_date,created_by,created_at,updated_by,updated_at,version_no,is_deleted,deleted_by,deleted_at
+REF-GUARANTEE_ID-001,REF-CONTRACT_ID-001,Sample guarantee type,Sample guarantee number,Sample issuing bank,0,CON-001,2026-01-01,2026-01-01,2026-01-01,Sample status,2026-01-01,0,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,0,true,REF-DELETED_BY-001,2026-01-01

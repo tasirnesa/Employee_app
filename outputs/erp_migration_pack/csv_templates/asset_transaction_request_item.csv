@@ -1,0 +1,2 @@
+item_id,request_id,asset_id,material_id,requested_asset_class_id,requested_description,quantity,remarks,status,fulfillment_asset_id,approved_by,approved_at,rejection_reason,created_at,updated_at,assigned_officer,proceeds_amount
+REF-ITEM_ID-001,REF-REQUEST_ID-001,REF-ASSET_ID-001,REF-MATERIAL_ID-001,REF-REQUESTED_ASSET_CLASS_ID-001,,0,,,REF-FULFILLMENT_ASSET_ID-001,REF-APPROVED_BY-001,2026-01-01,,2026-01-01,2026-01-01,REF-ASSIGNED_OFFICER-001,0

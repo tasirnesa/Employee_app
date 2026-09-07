@@ -1,0 +1,2 @@
+inspector_id,inspection_team_name,team_account_id,employee_id,employee_name,role,is_active,created_by,created_at,updated_by,updated_at,password,username
+REF-INSPECTOR_ID-001,Sample inspection team name,REF-TEAM_ACCOUNT_ID-001,REF-EMPLOYEE_ID-001,Sample employee name,Sample role,true,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,Sample password,Sample username

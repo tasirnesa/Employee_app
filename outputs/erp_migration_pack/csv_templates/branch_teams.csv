@@ -1,0 +1,2 @@
+branch_team_id,branch_name,branch_accr,process_id,subprocess_id,created_at,created_by,branch_grade_id,is_branch,plant_id
+REF-BRANCH_TEAM_ID-001,Sample branch name,,REF-PROCESS_ID-001,REF-SUBPROCESS_ID-001,2026-01-01,REF-CREATED_BY-001,REF-BRANCH_GRADE_ID-001,true,REF-PLANT_ID-001

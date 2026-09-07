@@ -1,0 +1,2 @@
+asset_class_id,code,name,useful_life_months,residual_value,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,approved_at,approved_by,description,last_number_used,number_range_end,number_range_start,company_id
+MIG-ASSET_CLASS-001,ASS-001,Sample name,0,0,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001,,0,0,0,REF-COMPANY_ID-001

@@ -1,0 +1,2 @@
+maintenance_task_id,maintenance_order_id,description,planned_date,actual_date,status
+MIG-MAINTENANCE_TASK-001,REF-MAINTENANCE_ORDER_ID-001,,2026-01-01,2026-01-01,

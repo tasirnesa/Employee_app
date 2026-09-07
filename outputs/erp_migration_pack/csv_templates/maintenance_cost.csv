@@ -1,0 +1,2 @@
+maintenance_cost_id,maintenance_order_id,cost_type,amount,currency_code,stock_movement_id,approved_at,approved_by,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by
+MIG-MAINTENANCE_COST-001,REF-MAINTENANCE_ORDER_ID-001,Sample cost type,0,MAI-001,REF-STOCK_MOVEMENT_ID-001,2026-01-01,REF-APPROVED_BY-001,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001

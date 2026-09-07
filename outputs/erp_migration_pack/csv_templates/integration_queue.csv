@@ -1,0 +1,2 @@
+integration_queue_id,source_module,document_type,document_id,payload,status,last_error,retry_count,created_at,updated_at
+MIG-INTEGRATION_QUEUE-001,Sample source module,Sample document type,REF-DOCUMENT_ID-001,{},Sample status,,0,2026-01-01,2026-01-01

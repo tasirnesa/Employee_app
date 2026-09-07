@@ -1,0 +1,2 @@
+id,module,name,version_no,supersedes_workflow_id,is_active,scope_type,scope_id,conditions,created_at,created_by,updated_at,updated_by
+REF-ID-001,Sample module,Sample name,0,REF-SUPERSEDES_WORKFLOW_ID-001,true,,REF-SCOPE_ID-001,{},2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001

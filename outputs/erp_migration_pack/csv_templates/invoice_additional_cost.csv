@@ -1,0 +1,2 @@
+additional_cost_id,ap_invoice_id,cost_name,amount,posting_method,gl_account_id,allocation_base,created_at,updated_at
+REF-ADDITIONAL_COST_ID-001,REF-AP_INVOICE_ID-001,Sample cost name,0,Sample posting method,REF-GL_ACCOUNT_ID-001,,2026-01-01,2026-01-01

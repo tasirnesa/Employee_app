@@ -1,0 +1,2 @@
+accounting_principle_id,principle_code,principle_name,description,standard_type,country_code,is_active,is_deleted,created_at,created_by,updated_at,updated_by,deleted_at
+REF-ACCOUNTING_PRINCIPLE_ID-001,ACC-001,Sample principle name,,,ACC-001,true,true,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01

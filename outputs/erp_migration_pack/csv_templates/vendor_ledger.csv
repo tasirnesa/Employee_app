@@ -1,0 +1,2 @@
+vendor_ledger_id,supplier_id,posting_date,document_type,document_id,document_number,description,debit_amount,credit_amount,running_balance,currency_code,created_at
+MIG-VENDOR_LEDGER-001,REF-SUPPLIER_ID-001,2026-01-01,Sample document type,REF-DOCUMENT_ID-001,Sample document number,,0,0,0,VEN-001,2026-01-01

@@ -1,0 +1,2 @@
+po_tax_id,po_id,po_line_id,tax_code_id,tax_base_amount,tax_amount,posting_indicator
+MIG-PO_TAX-001,REF-PO_ID-001,REF-PO_LINE_ID-001,REF-TAX_CODE_ID-001,0,0,

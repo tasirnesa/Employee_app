@@ -1,0 +1,2 @@
+approval_step_id,approval_rule_id,sequence_no,approving_group_id,required,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by
+MIG-APPROVAL_STEP-001,REF-APPROVAL_RULE_ID-001,0,REF-APPROVING_GROUP_ID-001,true,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001

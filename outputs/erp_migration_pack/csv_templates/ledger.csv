@@ -1,0 +1,2 @@
+ledger_id,company_id,ledger_code,ledger_name,is_leading,approved_at,approved_by,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,is_active,description,ledger_type,accounting_principle_id,currency_code,accounting_principle
+MIG-LEDGER-001,REF-COMPANY_ID-001,LED-001,Sample ledger name,true,2026-01-01,REF-APPROVED_BY-001,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,true,,,REF-ACCOUNTING_PRINCIPLE_ID-001,LED-001,

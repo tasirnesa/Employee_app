@@ -1,0 +1,2 @@
+performance_id,contract_id,kpi_name,target_value,actual_value,evaluation_date,period_start,period_end,status,notes
+REF-PERFORMANCE_ID-001,REF-CONTRACT_ID-001,Sample kpi name,Sample target value,,2026-01-01,2026-01-01,2026-01-01,,

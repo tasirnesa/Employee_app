@@ -1,0 +1,2 @@
+grir_id,reference_type,reference_id,amount,debit_credit,cleared,created_at,approved_at,approved_by,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by
+REF-GRIR_ID-001,,REF-REFERENCE_ID-001,0,,true,2026-01-01,2026-01-01,REF-APPROVED_BY-001,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001

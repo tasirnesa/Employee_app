@@ -1,0 +1,2 @@
+tax_account_key_id,company_id,key_code,key_name,description,tax_direction,default_account_id,is_active,created_at,created_by,updated_at,updated_by,deleted_at,deleted_by,is_deleted
+MIG-TAX_ACCOUNT_KEY-001,REF-COMPANY_ID-001,TAX-001,Sample key name,,Sample tax direction,REF-DEFAULT_ACCOUNT_ID-001,true,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-DELETED_BY-001,true

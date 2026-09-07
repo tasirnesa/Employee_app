@@ -1,0 +1,2 @@
+integration_mapping_vc_id,valuation_class_id,inventory_account_id,expense_account_id,revenue_account_id,approved_at,approved_by,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by
+REF-INTEGRATION_MAPPING_VC_ID-001,REF-VALUATION_CLASS_ID-001,REF-INVENTORY_ACCOUNT_ID-001,REF-EXPENSE_ACCOUNT_ID-001,REF-REVENUE_ACCOUNT_ID-001,2026-01-01,REF-APPROVED_BY-001,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001

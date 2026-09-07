@@ -1,0 +1,2 @@
+account_group_id,company_id,group_code,group_name,from_account,to_account,last_used,approved_at,approved_by,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,account_type_id
+MIG-ACCOUNT_GROUP-001,REF-COMPANY_ID-001,ACC-001,Sample group name,Sample from account,Sample to account,,2026-01-01,REF-APPROVED_BY-001,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,REF-ACCOUNT_TYPE_ID-001

@@ -1,0 +1,2 @@
+user_id,username,password_hash,password_salt,email,language_code,status,cost_center_id,profit_center_id,last_login,last_password_change,failed_attempts,lock_until,mfa_secret,created_at,updated_at,employee_id
+REF-USER_ID-001,Sample username,Sample password hash,,migration@example.com,APP-001,,REF-COST_CENTER_ID-001,REF-PROFIT_CENTER_ID-001,2026-01-01,2026-01-01,0,2026-01-01,,2026-01-01,2026-01-01,REF-EMPLOYEE_ID-001

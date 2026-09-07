@@ -1,0 +1,2 @@
+material_plant_id,material_id,plant_id,status,min_qty,max_qty,reorder_point,default_storage_location_id,valuation_class_id,created_at,created_by,updated_at,updated_by,approved_at,approved_by
+MIG-MATERIAL_PLANT-001,REF-MATERIAL_ID-001,REF-PLANT_ID-001,,0,0,0,REF-DEFAULT_STORAGE_LOCATION_ID-001,REF-VALUATION_CLASS_ID-001,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001

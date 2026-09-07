@@ -1,0 +1,2 @@
+user_parameter_id,user_id,parameter_key,parameter_value,created_at,updated_at
+MIG-USER_PARAMETER-001,REF-USER_ID-001,Sample parameter key,Sample parameter value,2026-01-01,2026-01-01

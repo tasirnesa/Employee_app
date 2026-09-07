@@ -1,0 +1,2 @@
+resource_id,parent_id,level,resource_key,name,icon,description,updated_at,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_by,approved_at,approved_by,is_visible
+REF-RESOURCE_ID-001,REF-PARENT_ID-001,Sample level,Sample resource key,Sample name,,,2026-01-01,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001,true

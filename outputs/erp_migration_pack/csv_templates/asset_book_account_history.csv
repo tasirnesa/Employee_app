@@ -1,0 +1,2 @@
+history_id,asset_book_id,account_type,old_account_id,new_account_id,changed_at,changed_by
+REF-HISTORY_ID-001,REF-ASSET_BOOK_ID-001,Sample account type,REF-OLD_ACCOUNT_ID-001,REF-NEW_ACCOUNT_ID-001,2026-01-01,REF-CHANGED_BY-001

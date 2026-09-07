@@ -1,0 +1,2 @@
+role_operation_permission_id,role_id,resource_id,operation_id,allowed
+MIG-ROLE_OPERATION_PERMISSION-001,REF-ROLE_ID-001,REF-RESOURCE_ID-001,REF-OPERATION_ID-001,true

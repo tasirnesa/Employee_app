@@ -1,0 +1,2 @@
+asset_location_history_id,asset_id,plant_id,storage_location_id,from_date,to_date,created_at,created_by,approved_at,approved_by,employee_id
+MIG-ASSET_LOCATION_HISTORY-001,REF-ASSET_ID-001,REF-PLANT_ID-001,REF-STORAGE_LOCATION_ID-001,2026-01-01,2026-01-01,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-APPROVED_BY-001,REF-EMPLOYEE_ID-001

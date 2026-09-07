@@ -1,0 +1,2 @@
+adjustment_line_id,adjustment_id,material_id,batch_id,uom_code,unit_cost,pi_id,pi_line_id,stock_balance_id,quantity_delta,reason_code_id,system_qty_before,system_qty_after
+REF-ADJUSTMENT_LINE_ID-001,REF-ADJUSTMENT_ID-001,REF-MATERIAL_ID-001,REF-BATCH_ID-001,STO-001,0,REF-PI_ID-001,REF-PI_LINE_ID-001,REF-STOCK_BALANCE_ID-001,0,REF-REASON_CODE_ID-001,0,0

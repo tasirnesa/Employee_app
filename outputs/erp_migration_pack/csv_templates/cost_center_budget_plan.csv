@@ -1,0 +1,2 @@
+plan_id,cost_center_id,fiscal_year_id,budget_category_id,company_id,status,notes,created_by,created_at,updated_by,updated_at
+REF-PLAN_ID-001,REF-COST_CENTER_ID-001,REF-FISCAL_YEAR_ID-001,REF-BUDGET_CATEGORY_ID-001,REF-COMPANY_ID-001,Sample status,,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01

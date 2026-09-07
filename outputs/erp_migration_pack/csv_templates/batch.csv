@@ -1,0 +1,2 @@
+batch_id,material_id,batch_number,manufacture_date,expiry_date,quality_status,company_id
+MIG-BATCH-001,REF-MATERIAL_ID-001,Sample batch number,2026-01-01,2026-01-01,,REF-COMPANY_ID-001

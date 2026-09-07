@@ -1,0 +1,2 @@
+area_id,asset_id,asset_book_id,depreciation_method_id,depr_start_date,useful_life_months,residual_percentage,status,accumulated_depreciation,net_book_value,current_period,created_at,created_by,updated_at,updated_by
+REF-AREA_ID-001,REF-ASSET_ID-001,REF-ASSET_BOOK_ID-001,REF-DEPRECIATION_METHOD_ID-001,2026-01-01,0,0,Sample status,0,0,0,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001

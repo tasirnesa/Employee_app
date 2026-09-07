@@ -1,0 +1,2 @@
+maintenance_confirmation_id,maintenance_order_id,confirmed_by,confirmed_at,notes
+MIG-MAINTENANCE_CONFIRMATION-001,REF-MAINTENANCE_ORDER_ID-001,REF-CONFIRMED_BY-001,2026-01-01,

@@ -1,0 +1,2 @@
+supplier_material_id,supplier_id,material_group_id,catalog_code,last_price,lead_time_days,valid_from,valid_to,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,approved_at,approved_by,is_preferred,price_currency,material_id
+MIG-SUPPLIER_MATERIAL-001,REF-SUPPLIER_ID-001,REF-MATERIAL_GROUP_ID-001,SUP-001,0,0,2026-01-01,2026-01-01,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001,true,,REF-MATERIAL_ID-001

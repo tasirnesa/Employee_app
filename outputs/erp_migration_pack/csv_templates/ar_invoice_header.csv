@@ -1,0 +1,2 @@
+ar_invoice_id,document_number,customer_id,journal_entry_id,invoice_date,posting_date,due_date,total_amount,status,created_at,company_id,approved_at,approved_by,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by
+REF-AR_INVOICE_ID-001,Sample document number,REF-CUSTOMER_ID-001,REF-JOURNAL_ENTRY_ID-001,2026-01-01,2026-01-01,2026-01-01,0,,2026-01-01,REF-COMPANY_ID-001,2026-01-01,REF-APPROVED_BY-001,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001

@@ -1,0 +1,2 @@
+supplier_evaluation_id,supplier_id,period_start,period_end,score,notes,created_at,created_by,updated_at,updated_by,approved_at,approved_by,status,evaluator_id
+MIG-SUPPLIER_EVALUATION-001,REF-SUPPLIER_ID-001,2026-01-01,2026-01-01,0,,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,REF-APPROVED_BY-001,,REF-EVALUATOR_ID-001

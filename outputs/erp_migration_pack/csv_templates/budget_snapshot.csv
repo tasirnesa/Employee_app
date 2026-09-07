@@ -1,0 +1,2 @@
+snapshot_id,budget_id,cost_center_id,account_id,total_budget,committed_amount,actual_amount,approved_at,approved_by,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by,planned_qty,planned_replacement_qty,planned_new_qty,committed_qty,received_qty,capitalized_qty,remaining_qty,budget_line_id
+REF-SNAPSHOT_ID-001,REF-BUDGET_ID-001,REF-COST_CENTER_ID-001,REF-ACCOUNT_ID-001,0,0,0,2026-01-01,REF-APPROVED_BY-001,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001,0,0,0,0,0,0,0,REF-BUDGET_LINE_ID-001

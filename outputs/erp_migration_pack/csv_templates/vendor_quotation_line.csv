@@ -1,0 +1,2 @@
+quotation_line_id,quotation_id,rfq_line_id,material_id,description,quantity,uom_code,unit_price,tax_code_id,lead_time_days
+REF-QUOTATION_LINE_ID-001,REF-QUOTATION_ID-001,REF-RFQ_LINE_ID-001,REF-MATERIAL_ID-001,,0,VEN-001,0,REF-TAX_CODE_ID-001,0

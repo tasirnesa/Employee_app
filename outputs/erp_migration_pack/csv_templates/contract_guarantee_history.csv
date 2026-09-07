@@ -1,0 +1,2 @@
+history_id,guarantee_id,contract_id,guarantee_type,reference_no,issuing_bank,amount,issue_date,expiry_date,notification_due_date,status,remarks,version_no,change_type,changed_by,changed_at,is_deleted,deleted_by,deleted_at
+REF-HISTORY_ID-001,REF-GUARANTEE_ID-001,REF-CONTRACT_ID-001,,,,0,2026-01-01,2026-01-01,2026-01-01,,,0,Sample change type,REF-CHANGED_BY-001,2026-01-01,true,REF-DELETED_BY-001,2026-01-01

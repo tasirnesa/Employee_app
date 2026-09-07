@@ -1,0 +1,2 @@
+id,workflow_instance_id,workflow_step_id,status,resolved_approvers,created_at,created_by,updated_at,updated_by
+REF-ID-001,REF-WORKFLOW_INSTANCE_ID-001,REF-WORKFLOW_STEP_ID-001,Sample status,{},2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001

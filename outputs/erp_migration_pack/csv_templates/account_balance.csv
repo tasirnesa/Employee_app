@@ -1,0 +1,2 @@
+account_balance_id,company_id,account_id,ledger_id,fiscal_year_id,fiscal_period_id,opening_balance,total_debits,total_credits,closing_balance,currency_code,last_posted_at,created_at,updated_at,approved_at,approved_by,created_by,deleted_at,deleted_by,is_deleted,updated_by
+MIG-ACCOUNT_BALANCE-001,REF-COMPANY_ID-001,REF-ACCOUNT_ID-001,REF-LEDGER_ID-001,REF-FISCAL_YEAR_ID-001,REF-FISCAL_PERIOD_ID-001,0,0,0,0,ACC-001,2026-01-01,2026-01-01,2026-01-01,2026-01-01,REF-APPROVED_BY-001,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,REF-UPDATED_BY-001

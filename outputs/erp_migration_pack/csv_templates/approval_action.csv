@@ -1,0 +1,2 @@
+approval_action_id,entity_type,entity_id,approval_step_id,action,action_by,action_at,comments
+MIG-APPROVAL_ACTION-001,Sample entity type,REF-ENTITY_ID-001,REF-APPROVAL_STEP_ID-001,Sample action,REF-ACTION_BY-001,2026-01-01,

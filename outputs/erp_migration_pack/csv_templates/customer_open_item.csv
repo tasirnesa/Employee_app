@@ -1,0 +1,2 @@
+open_item_id,company_id,customer_id,ar_invoice_id,journal_entry_id,amount,cleared_amount,due_date,status,approved_at,approved_by,created_at,created_by,deleted_at,deleted_by,is_deleted,updated_at,updated_by
+REF-OPEN_ITEM_ID-001,REF-COMPANY_ID-001,REF-CUSTOMER_ID-001,REF-AR_INVOICE_ID-001,REF-JOURNAL_ENTRY_ID-001,0,0,2026-01-01,,2026-01-01,REF-APPROVED_BY-001,2026-01-01,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-UPDATED_BY-001

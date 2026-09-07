@@ -1,0 +1,2 @@
+material_type_id,type_code,name,description,active,created_by,created_at,updated_by,updated_at,number_range_start,number_range_end,last_number_used,deleted_at,deleted_by,is_deleted,approved_at,approved_by,is_fixed_asset,is_service,is_stock
+MIG-MATERIAL_TYPE-001,MAT-001,Sample name,,true,REF-CREATED_BY-001,2026-01-01,REF-UPDATED_BY-001,2026-01-01,0,0,0,2026-01-01,REF-DELETED_BY-001,true,2026-01-01,REF-APPROVED_BY-001,true,true,true

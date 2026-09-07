@@ -1,0 +1,2 @@
+category_id,category_code,category_name,description,created_at,updated_at,approved_at,approved_by,created_by,deleted_at,deleted_by,is_deleted,updated_by,is_expense_budget,is_fixed_asset_budget,company_id
+REF-CATEGORY_ID-001,BUD-001,Sample category name,,2026-01-01,2026-01-01,2026-01-01,REF-APPROVED_BY-001,REF-CREATED_BY-001,2026-01-01,REF-DELETED_BY-001,true,REF-UPDATED_BY-001,true,true,REF-COMPANY_ID-001

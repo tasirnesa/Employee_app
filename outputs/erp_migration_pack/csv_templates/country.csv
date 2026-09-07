@@ -1,0 +1,2 @@
+country_id,name,alpha_2,alpha_3,numeric_code,iso_3166_2,region,sub_region,intermediate_region,region_code,sub_region_code,intermediate_region_code,currency_code,is_active,created_at,updated_at
+MIG-COUNTRY-001,Sample name,Sample alpha 2,Sample alpha 3,COU-001,,,,,COU-001,COU-001,COU-001,COU-001,true,2026-01-01,2026-01-01

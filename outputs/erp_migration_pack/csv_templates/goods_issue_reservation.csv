@@ -1,0 +1,2 @@
+goods_issue_reservation_id,goods_issue_id,reservation_id,created_at,created_by
+MIG-GOODS_ISSUE_RESERVATION-001,REF-GOODS_ISSUE_ID-001,REF-RESERVATION_ID-001,2026-01-01,REF-CREATED_BY-001
