@@ -368,10 +368,14 @@ const WorkerProfile360: React.FC = () => {
                                     <Divider sx={{ mb: 2 }} />
                                     <Stack spacing={1.5}>
                                         <InfoRow label="Full Name" value={`${employee.firstName} ${employee.lastName}`} />
+                                        <InfoRow label="Employee #" value={(employee as any).employeeNumber || '—'} />
                                         <InfoRow label="Email" value={employee.email} />
                                         <InfoRow label="Phone" value={employee.phone || '—'} />
                                         <InfoRow label="Gender" value={employee.gender || '—'} />
                                         <InfoRow label="Date of Birth" value={fmtDate(employee.birthDate)} />
+                                        <InfoRow label="Nationality" value={(employee as any).nationality || '—'} />
+                                        <InfoRow label="National ID" value={(employee as any).nationalId || '—'} />
+                                        <InfoRow label="Address" value={[employee.address, employee.city, employee.country].filter(Boolean).join(', ') || '—'} />
                                     </Stack>
                                 </CardContent>
                             </Card>
@@ -385,6 +389,9 @@ const WorkerProfile360: React.FC = () => {
                                     <Stack spacing={1.5}>
                                         <InfoRow label="Department" value={getName(employee.department)} />
                                         <InfoRow label="Position" value={getName(employee.position)} />
+                                        <InfoRow label="Contract Type" value={(employee as any).contractType || '—'} />
+                                        <InfoRow label="Employment Type" value={(employee as any).employmentType || '—'} />
+                                        <InfoRow label="Work Location" value={(employee as any).workLocation || '—'} />
                                         <InfoRow label="Hire Date" value={fmtDate(employee.hireDate)} />
                                         <InfoRow label="Employee ID" value={`#${employee.id}`} />
                                         <InfoRow label="Status" value={employee.isActive ? 'Active' : 'Inactive'} />

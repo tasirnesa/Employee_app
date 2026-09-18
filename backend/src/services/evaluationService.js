@@ -45,7 +45,7 @@ const evaluationService = {
   },
 
   createEvaluation: async (payload, authUserId) => {
-    const { evaluation, results } = payload;
+    const { evaluation, results, goalsResults } = payload;
     let { evaluatorID, evaluateeID, evaluationType, sessionID, evaluateeEmployeeId } = evaluation;
 
     if (!evaluatorID || (!evaluateeID && !evaluateeEmployeeId) || !evaluationType || !sessionID) {
@@ -118,20 +118,67 @@ const evaluationService = {
       evaluationDate: new Date(),
     });
 
-    // Create Results
+    // Resolve which criteria to score against:
+    // 1. Prefer criteria assigned to the session (SessionCriteria)
+    // 2. Fall back to all authorized criteria if none are assigned to the session
+    const sessionCriteria = await prisma.sessionCriteria.findMany({
+      where: { sessionID: parseInt(sessionID) },
+      include: { criteria: true },
+      orderBy: { id: 'asc' },
+    });
+
+    let scorableCriteriaIds = null;  // null = no restriction
+    if (sessionCriteria.length > 0) {
+      scorableCriteriaIds = new Set(sessionCriteria.map(sc => sc.criteriaID));
+
+      // Enforce required criteria — every required criterion must have a score > 0
+      const requiredIds = sessionCriteria.filter(sc => sc.isRequired).map(sc => sc.criteriaID);
+      const submittedIds = (results || [])
+        .filter(r => r.criteriaID != null && Number(r.score) > 0)
+        .map(r => Number(r.criteriaID));
+
+      const missing = requiredIds.filter(id => !submittedIds.includes(id));
+      if (missing.length > 0) {
+        const missingTitles = sessionCriteria
+          .filter(sc => missing.includes(sc.criteriaID))
+          .map(sc => sc.criteria.title);
+        throw new Error(`Missing required criteria scores: ${missingTitles.join(', ')}`);
+      }
+    }
+
+    // Create Results — only for criteria that belong to this session (if session has criteria)
     let resultsCount = 0;
     if (results && Array.isArray(results) && results.length > 0) {
-      const validResults = results.filter((r) => r.criteriaID != null).map((r) => ({
-        evaluationID: evaluationRecord.evaluationID,
-        criteriaID: r.criteriaID,
-        score: r.score,
-        feedback: r.feedback || null,
-      }));
+      const validResults = results
+        .filter(r =>
+          r.criteriaID != null &&
+          (scorableCriteriaIds === null || scorableCriteriaIds.has(Number(r.criteriaID)))
+        )
+        .map(r => ({
+          evaluationID: evaluationRecord.evaluationID,
+          criteriaID:   Number(r.criteriaID),
+          score:        Number(r.score) || 0,
+          feedback:     r.feedback || null,
+        }));
 
       if (validResults.length) {
         const createdResults = await evaluationRepository.createManyResults(validResults);
         resultsCount = createdResults.count;
       }
+    }
+
+    // Persist goal progress snapshots from the frontend
+    if (goalsResults && Array.isArray(goalsResults) && goalsResults.length > 0) {
+      await Promise.allSettled(
+        goalsResults
+          .filter((g) => g.gid != null && typeof g.progress === 'number')
+          .map((g) =>
+            prisma.goal.update({
+              where: { gid: parseInt(g.gid) },
+              data: { progress: Math.max(0, Math.min(100, g.progress)) },
+            })
+          )
+      );
     }
 
     // Create Notification

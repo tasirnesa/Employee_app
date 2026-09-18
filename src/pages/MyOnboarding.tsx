@@ -45,8 +45,17 @@ const MyOnboarding: React.FC = () => {
         mutationFn: async ({ docId, file }: { docId: number; file: File }) => {
             const formData = new FormData();
             formData.append('file', file);
-            return await api.patch(`/api/onboarding/documents/${docId}/upload`, formData);
+            // employee uploads use the same upload endpoint — no ONBOARDING_MANAGE permission needed for own docs
+            return await api.patch(`/api/onboarding/documents/${docId}/upload`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
         },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['my-onboarding'] }),
+    });
+
+    const updateTrainingMutation = useMutation({
+        mutationFn: async ({ trainingId, status }: { trainingId: number; status: string }) =>
+            await api.patch(`/api/onboarding/trainings/${trainingId}`, { status }),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['my-onboarding'] }),
     });
 
@@ -92,147 +101,295 @@ const MyOnboarding: React.FC = () => {
                 <Tabs
                     value={activeTab}
                     onChange={(_, v) => setActiveTab(v)}
-                    variant="fullWidth"
+                    variant="scrollable"
+                    scrollButtons="auto"
                     sx={{ borderBottom: 1, borderColor: 'divider' }}
                 >
-                    <Tab icon={<TaskIcon />} label="Tasks" />
-                    <Tab icon={<DocIcon />} label="Documents" />
-                    <Tab icon={<AssetIcon />} label="Assets" />
-                    <Tab icon={<ProbationIcon />} label="Probation" />
-                    <Tab icon={<VerificationIcon />} label="Verification" />
+                    <Tab icon={<TaskIcon />}         iconPosition="start" label="Tasks" />
+                    <Tab icon={<DocIcon />}           iconPosition="start" label="Documents" />
+                    <Tab icon={<TrainingIcon />}      iconPosition="start" label="Training" />
+                    <Tab icon={<AssetIcon />}         iconPosition="start" label="Assets" />
+                    <Tab icon={<ProbationIcon />}     iconPosition="start" label="Probation" />
+                    <Tab icon={<VerificationIcon />}  iconPosition="start" label="Verification" />
                 </Tabs>
 
                 <Box sx={{ p: 3 }}>
+
+                    {/* ── 0: Tasks ── */}
                     {activeTab === 0 && (
-                        <List>
-                            {onboarding.tasks.map((task: any) => (
-                                <ListItem key={task.id} divider sx={{ py: 2 }}>
-                                    <ListItemIcon>
-                                        {task.status === 'Completed' ? <DoneIcon color="success" /> : <PendingIcon color="disabled" />}
-                                    </ListItemIcon>
-                                    <ListItemText
-                                        primary={task.title}
-                                        secondary={task.description}
-                                        primaryTypographyProps={{ fontWeight: 600 }}
-                                    />
-                                    <Chip label={task.status} size="small" variant="outlined" />
-                                </ListItem>
-                            ))}
-                        </List>
+                        <>
+                            {onboarding.tasks.length === 0 && (
+                                <Box sx={{ py: 4, textAlign: 'center' }}>
+                                    <Typography color="text.secondary">No tasks assigned yet.</Typography>
+                                </Box>
+                            )}
+                            <List disablePadding>
+                                {onboarding.tasks.map((task: any) => (
+                                    <ListItem key={task.id} divider sx={{ py: 2 }}>
+                                        <ListItemIcon>
+                                            {task.status === 'Completed'
+                                                ? <DoneIcon color="success" />
+                                                : <PendingIcon color="disabled" />}
+                                        </ListItemIcon>
+                                        <ListItemText
+                                            primary={task.title}
+                                            secondary={task.description}
+                                            primaryTypographyProps={{
+                                                fontWeight: 600,
+                                                sx: { textDecoration: task.status === 'Completed' ? 'line-through' : 'none' },
+                                            }}
+                                        />
+                                        <Chip
+                                            label={task.status}
+                                            size="small"
+                                            color={task.status === 'Completed' ? 'success' : 'default'}
+                                            variant="outlined"
+                                        />
+                                    </ListItem>
+                                ))}
+                            </List>
+                        </>
                     )}
 
+                    {/* ── 1: Documents ── */}
                     {activeTab === 1 && (
-                        <List>
-                            {onboarding.documents.map((doc: any) => (
-                                <ListItem key={doc.id} divider sx={{ py: 2 }}>
-                                    <ListItemIcon>
-                                        {doc.status === 'Verified' ? <DoneIcon color="success" /> : <DocIcon />}
-                                    </ListItemIcon>
-                                    <ListItemText
-                                        primary={doc.title}
-                                        secondary={`Status: ${doc.status}`}
-                                        primaryTypographyProps={{ fontWeight: 600 }}
-                                    />
-                                    <ListItemSecondaryAction>
-                                        {doc.status !== 'Verified' && (
-                                            <Button
-                                                variant="contained"
+                        <>
+                            {onboarding.documents.length === 0 && (
+                                <Box sx={{ py: 4, textAlign: 'center' }}>
+                                    <Typography color="text.secondary">No documents required yet.</Typography>
+                                </Box>
+                            )}
+                            <List disablePadding>
+                                {onboarding.documents.map((doc: any) => (
+                                    <ListItem key={doc.id} divider sx={{ py: 2 }}>
+                                        <ListItemIcon>
+                                            {doc.status === 'Verified'
+                                                ? <DoneIcon color="success" />
+                                                : doc.status === 'Rejected'
+                                                    ? <DocIcon color="error" />
+                                                    : <DocIcon color="disabled" />}
+                                        </ListItemIcon>
+                                        <ListItemText
+                                            primary={doc.title}
+                                            secondary={doc.description || `Status: ${doc.status}`}
+                                            primaryTypographyProps={{ fontWeight: 600 }}
+                                        />
+                                        <ListItemSecondaryAction>
+                                            <Chip
+                                                label={doc.status}
                                                 size="small"
-                                                component="label"
-                                                startIcon={<UploadIcon />}
-                                            >
-                                                {doc.status === 'Uploaded' ? 'Update' : 'Upload'}
-                                                <input
-                                                    type="file"
-                                                    hidden
-                                                    onChange={(e) => {
-                                                        const file = e.target.files?.[0];
-                                                        if (file) uploadDocMutation.mutate({ docId: doc.id, file });
-                                                    }}
-                                                />
-                                            </Button>
-                                        )}
-                                    </ListItemSecondaryAction>
-                                </ListItem>
-                            ))}
-                        </List>
+                                                color={
+                                                    doc.status === 'Verified' ? 'success'
+                                                    : doc.status === 'Rejected' ? 'error'
+                                                    : doc.status === 'Uploaded' ? 'warning'
+                                                    : 'default'
+                                                }
+                                                sx={{ mr: doc.status !== 'Verified' ? 1 : 0 }}
+                                            />
+                                            {doc.status !== 'Verified' && (
+                                                <Button
+                                                    variant="contained"
+                                                    size="small"
+                                                    component="label"
+                                                    startIcon={<UploadIcon />}
+                                                    disabled={uploadDocMutation.isPending}
+                                                >
+                                                    {doc.status === 'Uploaded' ? 'Re-upload' : 'Upload'}
+                                                    <input
+                                                        type="file"
+                                                        hidden
+                                                        onChange={(e) => {
+                                                            const file = e.target.files?.[0];
+                                                            if (file) uploadDocMutation.mutate({ docId: doc.id, file });
+                                                        }}
+                                                    />
+                                                </Button>
+                                            )}
+                                        </ListItemSecondaryAction>
+                                    </ListItem>
+                                ))}
+                            </List>
+                        </>
                     )}
 
+                    {/* ── 2: Training ── */}
                     {activeTab === 2 && (
-                        <List>
-                            {onboarding.employee.assets.map((asset: any) => (
-                                <ListItem key={asset.id} divider sx={{ py: 2 }}>
-                                    <ListItemIcon><AssetIcon color="primary" /></ListItemIcon>
-                                    <ListItemText
-                                        primary={asset.assetType}
-                                        secondary={`${asset.brand || ''} • SN: ${asset.serialNumber || 'N/A'}`}
-                                        primaryTypographyProps={{ fontWeight: 600 }}
-                                    />
-                                    <Chip label={asset.status} size="small" color="success" />
-                                </ListItem>
-                            ))}
+                        <>
+                            {onboarding.trainings.length === 0 && (
+                                <Box sx={{ py: 4, textAlign: 'center' }}>
+                                    <Typography color="text.secondary">No trainings assigned yet.</Typography>
+                                </Box>
+                            )}
+                            <List disablePadding>
+                                {onboarding.trainings.map((training: any) => (
+                                    <ListItem key={training.id} divider sx={{ py: 2 }}>
+                                        <ListItemIcon>
+                                            {training.status === 'Completed'
+                                                ? <DoneIcon color="success" />
+                                                : <TrainingIcon color={training.status === 'InProgress' ? 'primary' : 'disabled'} />}
+                                        </ListItemIcon>
+                                        <ListItemText
+                                            primary={training.trainingName}
+                                            secondary={training.description}
+                                            primaryTypographyProps={{ fontWeight: 600 }}
+                                        />
+                                        <ListItemSecondaryAction sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            {training.status === 'Assigned' && (
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    disabled={updateTrainingMutation.isPending}
+                                                    onClick={() => updateTrainingMutation.mutate({ trainingId: training.id, status: 'InProgress' })}
+                                                >
+                                                    Start
+                                                </Button>
+                                            )}
+                                            {training.status === 'InProgress' && (
+                                                <Button
+                                                    size="small"
+                                                    variant="contained"
+                                                    color="success"
+                                                    disabled={updateTrainingMutation.isPending}
+                                                    onClick={() => updateTrainingMutation.mutate({ trainingId: training.id, status: 'Completed' })}
+                                                >
+                                                    Mark Done
+                                                </Button>
+                                            )}
+                                            <Chip
+                                                label={training.status}
+                                                size="small"
+                                                color={
+                                                    training.status === 'Completed' ? 'success'
+                                                    : training.status === 'InProgress' ? 'primary'
+                                                    : 'default'
+                                                }
+                                            />
+                                        </ListItemSecondaryAction>
+                                    </ListItem>
+                                ))}
+                            </List>
+                        </>
+                    )}
+
+                    {/* ── 3: Assets ── */}
+                    {activeTab === 3 && (
+                        <>
                             {onboarding.employee.assets.length === 0 && (
                                 <Box sx={{ py: 4, textAlign: 'center' }}>
                                     <Typography color="text.secondary">No assets assigned yet.</Typography>
                                 </Box>
                             )}
-                        </List>
+                            <List disablePadding>
+                                {onboarding.employee.assets.map((asset: any) => (
+                                    <ListItem key={asset.id} divider sx={{ py: 2 }}>
+                                        <ListItemIcon><AssetIcon color="primary" /></ListItemIcon>
+                                        <ListItemText
+                                            primary={`${asset.assetType}${asset.brand ? ` — ${asset.brand}` : ''}`}
+                                            secondary={`SN: ${asset.serialNumber || 'N/A'}`}
+                                            primaryTypographyProps={{ fontWeight: 600 }}
+                                        />
+                                        <Chip
+                                            label={asset.status}
+                                            size="small"
+                                            color={asset.status === 'Assigned' ? 'success' : 'default'}
+                                        />
+                                    </ListItem>
+                                ))}
+                            </List>
+                        </>
                     )}
 
-                    {activeTab === 3 && (
-                        <Box sx={{ py: 2 }}>
+                    {/* ── 4: Probation ── */}
+                    {activeTab === 4 && (
+                        <Box sx={{ py: 1 }}>
                             {onboarding.probation ? (
                                 <Box sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                                    <Typography variant="h6" gutterBottom>Probation Period</Typography>
-                                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                                        Start: {format(new Date(onboarding.probation.startDate), 'MMM dd, yyyy')}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                                        Review Date: {format(new Date(onboarding.probation.endDate), 'MMM dd, yyyy')}
-                                    </Typography>
-                                    <Box sx={{ mt: 2 }}>
-                                        <Typography variant="body2" fontWeight={600}>Status:</Typography>
-                                        <Chip label={onboarding.probation.status} color="primary" size="small" sx={{ mt: 0.5 }} />
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                        <Typography variant="h6" fontWeight={700}>Probation Period</Typography>
+                                        <Chip
+                                            label={onboarding.probation.status}
+                                            size="small"
+                                            color={
+                                                onboarding.probation.status === 'Passed' ? 'success'
+                                                : onboarding.probation.status === 'Failed' ? 'error'
+                                                : onboarding.probation.status === 'Extended' ? 'warning'
+                                                : 'primary'
+                                            }
+                                            sx={{ fontWeight: 700 }}
+                                        />
                                     </Box>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Start: <strong>{format(new Date(onboarding.probation.startDate), 'MMM dd, yyyy')}</strong>
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                        Review Date: <strong>{format(new Date(onboarding.probation.endDate), 'MMM dd, yyyy')}</strong>
+                                    </Typography>
+                                    {onboarding.probation.evaluation && (
+                                        <Box sx={{ mt: 2, p: 2, bgcolor: '#f1f5f9', borderRadius: 1 }}>
+                                            <Typography variant="caption" fontWeight={700} display="block" gutterBottom color="primary">
+                                                EVALUATION
+                                            </Typography>
+                                            <Typography variant="body2">{onboarding.probation.evaluation}</Typography>
+                                        </Box>
+                                    )}
                                     {onboarding.probation.feedback && (
-                                        <Box sx={{ mt: 3, p: 2, bgcolor: '#f1f5f9', borderRadius: 1 }}>
-                                            <Typography variant="caption" fontWeight={700} display="block" gutterBottom color="primary">FEEDBACK</Typography>
+                                        <Box sx={{ mt: 1, p: 2, bgcolor: '#f0fdf4', borderRadius: 1 }}>
+                                            <Typography variant="caption" fontWeight={700} display="block" gutterBottom color="success.main">
+                                                FEEDBACK FROM HR
+                                            </Typography>
                                             <Typography variant="body2">{onboarding.probation.feedback}</Typography>
                                         </Box>
                                     )}
                                 </Box>
                             ) : (
-                                <Typography color="text.secondary" align="center">Probation details not available.</Typography>
+                                <Box sx={{ py: 4, textAlign: 'center' }}>
+                                    <ProbationIcon sx={{ fontSize: 40, color: '#cbd5e1', mb: 1 }} />
+                                    <Typography color="text.secondary">
+                                        Probation details not available yet.
+                                    </Typography>
+                                </Box>
                             )}
                         </Box>
                     )}
 
-                    {activeTab === 4 && (
-                        <List>
-                            {(onboarding.verifications || []).map((v: any) => (
-                                <ListItem key={v.id} divider sx={{ py: 2 }}>
-                                    <ListItemIcon>
-                                        {v.status === 'Verified' ? <VerificationIcon color="success" /> : <VerificationIcon color="disabled" />}
-                                    </ListItemIcon>
-                                    <ListItemText
-                                        primary={v.type}
-                                        secondary={v.notes || `Your verification is ${v.status.toLowerCase()}.`}
-                                        primaryTypographyProps={{ fontWeight: 600 }}
-                                    />
-                                    <Chip
-                                        label={v.status}
-                                        size="small"
-                                        color={v.status === 'Verified' ? 'success' : v.status === 'Failed' ? 'error' : 'warning'}
-                                    />
-                                </ListItem>
-                            ))}
+                    {/* ── 5: Verification ── */}
+                    {activeTab === 5 && (
+                        <>
                             {(onboarding.verifications || []).length === 0 && (
                                 <Box sx={{ py: 4, textAlign: 'center' }}>
-                                    <Typography color="text.secondary">No verification tasks assigned.</Typography>
+                                    <Typography color="text.secondary">No verification checks assigned yet.</Typography>
                                 </Box>
                             )}
-                        </List>
+                            <List disablePadding>
+                                {(onboarding.verifications || []).map((v: any) => (
+                                    <ListItem key={v.id} divider sx={{ py: 2 }}>
+                                        <ListItemIcon>
+                                            {v.status === 'Verified'
+                                                ? <VerificationIcon color="success" />
+                                                : v.status === 'Failed'
+                                                    ? <VerificationIcon color="error" />
+                                                    : <VerificationIcon color="disabled" />}
+                                        </ListItemIcon>
+                                        <ListItemText
+                                            primary={v.type}
+                                            secondary={v.notes || `Your ${v.type.toLowerCase()} check is ${v.status.toLowerCase()}.`}
+                                            primaryTypographyProps={{ fontWeight: 600 }}
+                                        />
+                                        <Chip
+                                            label={v.status}
+                                            size="small"
+                                            color={
+                                                v.status === 'Verified' ? 'success'
+                                                : v.status === 'Failed' ? 'error'
+                                                : 'warning'
+                                            }
+                                        />
+                                    </ListItem>
+                                ))}
+                            </List>
+                        </>
                     )}
+
                 </Box>
             </Paper>
         </Container>

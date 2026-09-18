@@ -113,14 +113,79 @@ const evaluationController = {
     const updated = await prisma.evaluationSession.update({
       where: { sessionID: parseInt(id) },
       data: {
-        type: status, // Using 'type' as status per current convention ('on'/'off')
+        type: status,
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
       }
     });
 
     res.json(updated);
-  })
+  }),
+
+  // ── Session Criteria management ────────────────────────────────────────
+
+  getSessionCriteria: asyncHandler(async (req, res) => {
+    const sessionId = parseInt(req.params.id);
+    const rows = await prisma.sessionCriteria.findMany({
+      where: { sessionID: sessionId },
+      include: { criteria: true },
+      orderBy: { id: 'asc' },
+    });
+    res.json(rows);
+  }),
+
+  assignCriteriaToSession: asyncHandler(async (req, res) => {
+    const sessionId = parseInt(req.params.id);
+    // body: { criteriaIds: number[], isRequired?: boolean, weight?: number }
+    // OR single: { criteriaId: number, isRequired?: boolean, weight?: number }
+    const { criteriaIds, criteriaId, isRequired = true, weight = 1.0 } = req.body;
+
+    const ids = criteriaIds || (criteriaId ? [criteriaId] : []);
+    if (!ids.length) {
+      return res.status(400).json({ error: 'criteriaIds array or criteriaId is required' });
+    }
+
+    // Verify session exists
+    const session = await prisma.evaluationSession.findUnique({ where: { sessionID: sessionId } });
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+
+    // Only allow authorized criteria
+    const validCriteria = await prisma.evaluationCriteria.findMany({
+      where: { criteriaID: { in: ids.map(Number) }, isAuthorized: true },
+      select: { criteriaID: true },
+    });
+    const validIds = validCriteria.map(c => c.criteriaID);
+    const skipped = ids.map(Number).filter(id => !validIds.includes(id));
+
+    const created = await Promise.allSettled(
+      validIds.map(cId =>
+        prisma.sessionCriteria.upsert({
+          where:  { sessionID_criteriaID: { sessionID: sessionId, criteriaID: cId } },
+          update: { isRequired, weight },
+          create: { sessionID: sessionId, criteriaID: cId, isRequired, weight },
+        })
+      )
+    );
+
+    res.json({
+      assigned: validIds.length,
+      skipped: skipped.length,
+      skippedIds: skipped,
+      message: skipped.length
+        ? `${validIds.length} criteria assigned. ${skipped.length} skipped (not authorized).`
+        : `${validIds.length} criteria assigned.`,
+    });
+  }),
+
+  removeCriteriaFromSession: asyncHandler(async (req, res) => {
+    const sessionId  = parseInt(req.params.id);
+    const criteriaId = parseInt(req.params.criteriaId);
+
+    await prisma.sessionCriteria.deleteMany({
+      where: { sessionID: sessionId, criteriaID: criteriaId },
+    });
+    res.json({ message: 'Criteria removed from session' });
+  }),
 };
 
 module.exports = evaluationController;

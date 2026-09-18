@@ -132,6 +132,7 @@ model EvaluationCriteria {
   authorizedBy   Int?               @map("AuthorizedBy")
   authorizedDate DateTime?          @map("AuthorizedDate")
   results        EvaluationResult[]
+  sessions       SessionCriteria[]  // sessions this criteria is assigned to
   creator        User?              @relation("creatorCriteria", fields: [createdBy], references: [id])
   authorizer     User?              @relation("authorizerCriteria", fields: [authorizedBy], references: [id])
 }
@@ -144,8 +145,24 @@ model EvaluationSession {
   activatedBy Int          @map("ActivatedBy")
   type        String       @default("") @map("type")
   department  String?      @map("Department")
+  passMark    Float?       @default(60) @map("PassMark")  // minimum % to pass
   evaluations Evaluation[]
+  criteria    SessionCriteria[]  // criteria assigned to this session
   user        User         @relation("userSessions", fields: [activatedBy], references: [id])
+}
+
+// Join table: which criteria are required for which session
+model SessionCriteria {
+  id          Int                @id @default(autoincrement())
+  sessionID   Int
+  criteriaID  Int
+  isRequired  Boolean            @default(true)   // must be scored to submit
+  weight      Float              @default(1.0)     // relative weight for weighted avg
+  session     EvaluationSession  @relation(fields: [sessionID], references: [sessionID], onDelete: Cascade)
+  criteria    EvaluationCriteria @relation(fields: [criteriaID], references: [criteriaID], onDelete: Cascade)
+
+  @@unique([sessionID, criteriaID])
+  @@map("SessionCriteria")
 }
 
 model EvaluationResult {
@@ -213,6 +230,7 @@ model Performance {
 
 model Employee {
   id              Int       @id @default(autoincrement())
+  employeeNumber  String?   @unique  // e.g. EMP-00123 — custom HR identifier
   firstName       String
   lastName        String
   email           String    @unique
@@ -222,9 +240,15 @@ model Employee {
   department      Department? @relation(fields: [departmentId], references: [id])
   position        Position?   @relation(fields: [positionId], references: [id])
   hireDate        DateTime?
+  terminationDate DateTime?   // actual exit date
+  contractType    String?     // Permanent, Contract, Part-time, Intern
+  employmentType  String?     // Full-time, Part-time, Remote, Hybrid
+  workLocation    String?     // Office name / city
   gender          String?
   age             Int?
   birthDate       DateTime?
+  nationality     String?
+  nationalId      String?     // National ID or Passport number
   profileImageUrl String?
   isActive        Boolean   @default(true)
   createdAt       DateTime  @default(now())
@@ -239,6 +263,7 @@ model Employee {
   country         String?
   emergencyName   String?
   emergencyPhone  String?
+  emergencyRelation String?  // e.g. Spouse, Parent, Sibling
   bankName        String?
   bankAccount     String?
   tinNumber       String?

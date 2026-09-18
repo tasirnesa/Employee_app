@@ -19,10 +19,28 @@ const probationController = {
   }),
 
   evaluate: asyncHandler(async (req, res) => {
-    const { status, feedback } = req.body;
-    const result = await probationService.evaluateProbation(req.params.id, status, feedback);
+    const { status, feedback, evaluation } = req.body;
+    // persist evaluation text if provided
+    const result = await probationService.evaluateProbation(req.params.id, status, feedback, evaluation);
     res.json(result);
-  })
+  }),
+
+  initProbation: asyncHandler(async (req, res) => {
+    const { onboardingId } = req.body;
+    if (!onboardingId) return res.status(400).json({ message: 'onboardingId is required' });
+
+    // Check it doesn't already exist
+    const existing = await probationService.getProbationByOnboardingId(onboardingId);
+    if (existing) return res.status(409).json({ message: 'Probation period already exists for this onboarding' });
+
+    // Default: 90-day probation from today
+    const startDate = new Date();
+    const endDate   = new Date();
+    endDate.setDate(endDate.getDate() + 90);
+
+    const result = await probationService.createProbation(onboardingId, { startDate, endDate, status: 'Active' });
+    res.status(201).json(result);
+  }),
 };
 
 module.exports = probationController;

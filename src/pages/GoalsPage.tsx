@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../lib/axios';
 import {
   Box,
   Card,
@@ -72,11 +72,7 @@ const GoalsPage: React.FC = () => {
     const goal = goals.find(g => g.gid === gid) || null;
     setDetailsGoal(goal);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token found');
-      const res = await axios.get(`http://localhost:5000/api/key-result-progress/${gid}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get(`/api/key-result-progress/${gid}`);
       setDetailsLogs(res.data.logs || []);
       setDetailsOpen(true);
     } catch (e) {
@@ -93,11 +89,7 @@ const GoalsPage: React.FC = () => {
   useEffect(() => {
     const fetchGoals = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('No authentication token found');
-        const response = await axios.get('http://localhost:5000/api/goals', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await api.get('/api/goals');
         setGoals(response.data);
       } catch (err) {
         setError('Failed to fetch goals. Please check your authentication or try again later.');
@@ -220,19 +212,13 @@ const GoalsPage: React.FC = () => {
   const saveProgress = async () => {
   if (!progressGoal || progressKeyIndex === null) return;
   try {
-    const token = localStorage.getItem('token');
-    if (!token) throw new Error('No authentication token found');
-    const userId = JSON.parse(localStorage.getItem('userProfile') || '{}').id; // Assuming userId is stored
-    await axios.post(
-      `http://localhost:5000/api/key-result-progress`,
-      {
-        goalId: progressGoal.gid,
-        keyIndex: progressKeyIndex,
-        progress: progressValue,
-        notedBy: userId,
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    const userId = JSON.parse(localStorage.getItem('userProfile') || '{}').id;
+    await api.post('/api/key-result-progress', {
+      goalId: progressGoal.gid,
+      keyIndex: progressKeyIndex,
+      progress: progressValue,
+      notedBy: userId,
+    });
     // Safely update local state
     setGoals(prev =>
       prev.map(g =>
@@ -280,11 +266,7 @@ const GoalsPage: React.FC = () => {
         duedate: editDueDate,
         category: editCategory,
       };
-      const res = await axios.put(
-        `http://localhost:5000/api/goals/${editGoal.gid}`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.put(`/api/goals/${editGoal.gid}`, payload);
       const updated = res.data as Goal;
       setGoals(prev => prev.map(g => g.gid === editGoal.gid ? { ...g, ...updated } : g));
       setEditDialogOpen(false);
@@ -298,11 +280,7 @@ const GoalsPage: React.FC = () => {
   const confirmDelete = async () => {
     if (!deleteGoal) return;
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token found');
-      await axios.delete(`http://localhost:5000/api/goals/${deleteGoal.gid}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.delete(`/api/goals/${deleteGoal.gid}`);
       setGoals(prev => prev.filter(g => g.gid !== deleteGoal.gid));
       setDeleteDialogOpen(false);
       setDeleteGoal(null);
@@ -323,18 +301,14 @@ const GoalsPage: React.FC = () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token found');
 
-      const response = await axios.post(
-        'http://localhost:5000/api/goals',
-        {
+      const response = await api.post('/api/goals', {
           objective: newObjective,
           keyResult: newKeyResults.filter(kr => kr.title.trim()),
           priority: 'Medium',
           status: 'Active',
           duedate: newDueDate,
           category: 'General',
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+        });
 
       setGoals([...goals, response.data]);
       setNewObjective('');

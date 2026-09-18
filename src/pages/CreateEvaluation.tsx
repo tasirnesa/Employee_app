@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/axios';
@@ -32,7 +32,7 @@ import {
   Score as ScoreIcon,
   Preview as PreviewIcon,
 } from '@mui/icons-material';
-import type { Evaluation, EvaluationCriteria, EvaluationResult, Employee, Goal } from '../types/interfaces';
+import type { EvaluationCriteria, Employee, Goal } from '../types/interfaces';
 import { listEmployees } from '../api/employeeApi';
 import { useUser } from '../context/UserContext';
 
@@ -57,7 +57,8 @@ const CreateEvaluation: React.FC = () => {
   });
 
   const [updatePerformance, setUpdatePerformance] = useState(true);
-  const pendingEvaluateeUserIdRef = useRef<number | null>(null);
+  // Use state (not ref) so the goals query key updates when evaluatee changes
+  const [pendingEvaluateeUserId, setPendingEvaluateeUserId] = useState<number | null>(null);
 
   // Queries
   const { data: employees, isLoading: employeesLoading } = useQuery({
@@ -66,11 +67,26 @@ const CreateEvaluation: React.FC = () => {
   });
 
   const { data: criteria, isLoading: criteriaLoading } = useQuery({
-    queryKey: ['criteria'],
+    queryKey: ['criteria', formData.sessionID],
     queryFn: async () => {
+      // If a session is selected and has assigned criteria, use those
+      // Otherwise fall back to all authorized criteria
+      if (formData.sessionID) {
+        const sessionCriteria = await api.get(`/api/sessions/${formData.sessionID}/criteria`);
+        if (sessionCriteria.data && sessionCriteria.data.length > 0) {
+          // Return the criteria objects from the session-criteria join
+          return sessionCriteria.data.map((sc: any) => ({
+            ...sc.criteria,
+            isRequired: sc.isRequired,
+            weight: sc.weight,
+          })) as EvaluationCriteria[];
+        }
+      }
+      // No session criteria assigned — show all authorized criteria
       const response = await api.get('/api/criteria');
-      return response.data as EvaluationCriteria[];
+      return (response.data as EvaluationCriteria[]).filter(c => c.isAuthorized);
     },
+    enabled: true,  // always load, updates when sessionID changes
   });
 
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
@@ -83,13 +99,13 @@ const CreateEvaluation: React.FC = () => {
 
   // Evaluatee Goals
   const { data: evaluateeGoals } = useQuery({
-    queryKey: ['goals', pendingEvaluateeUserIdRef.current],
+    queryKey: ['goals', pendingEvaluateeUserId],
     queryFn: async () => {
-      if (!pendingEvaluateeUserIdRef.current) return [] as Goal[];
-      const res = await api.get('/api/goals', { params: { userId: pendingEvaluateeUserIdRef.current } });
+      if (!pendingEvaluateeUserId) return [] as Goal[];
+      const res = await api.get('/api/goals', { params: { userId: pendingEvaluateeUserId } });
       return res.data as Goal[];
     },
-    enabled: pendingEvaluateeUserIdRef.current != null,
+    enabled: pendingEvaluateeUserId != null,
   });
 
   const createEvaluationMutation = useMutation({
@@ -100,13 +116,13 @@ const CreateEvaluation: React.FC = () => {
     onSuccess: async () => {
       try {
         queryClient.invalidateQueries({ queryKey: ['evaluations'] });
-        if (updatePerformance && pendingEvaluateeUserIdRef.current) {
-          await api.post('/api/performance/recalculate', { userId: pendingEvaluateeUserIdRef.current });
+        if (updatePerformance && pendingEvaluateeUserId) {
+          await api.post('/api/performance/recalculate', { userId: pendingEvaluateeUserId });
         }
       } catch (e) {
         console.error('Performance recalc error:', e);
       } finally {
-        setActiveStep(steps.length); // Move to success step
+        setActiveStep(steps.length);
       }
     },
     onError: (error: any) => {
@@ -134,18 +150,19 @@ const CreateEvaluation: React.FC = () => {
   const selectedSession = availableSessions.find((s) => s.sessionID === formData.sessionID);
 
   const availableEvaluatees = (employees || [])
-    .filter((e) => (e.userId || -1) !== currentUserId)
+    .filter((e) => Number(e.userId || 0) !== Number(currentUserId))  // exclude self — strict numeric comparison
     .filter((e) => {
       if (!selectedSession || !selectedSession.department) return true;
       const empDept = typeof e.department === 'object' ? (e.department as any)?.name : e.department;
       return String(empDept || '').trim().toLowerCase() === String(selectedSession.department).trim().toLowerCase();
     });
 
-  const selectedEvaluateeName = availableEvaluatees.find(
+  const selectedEvaluatee = availableEvaluatees.find(
     (e) => (e.userId || e.id) === formData.evaluateeID
-  )?.firstName + ' ' + availableEvaluatees.find(
-    (e) => (e.userId || e.id) === formData.evaluateeID
-  )?.lastName;
+  );
+  const selectedEvaluateeName = selectedEvaluatee
+    ? `${selectedEvaluatee.firstName || ''} ${selectedEvaluatee.lastName || ''}`.trim() || 'Employee'
+    : 'Employee';
 
   // Handlers
   const handleNext = () => {
@@ -155,11 +172,21 @@ const CreateEvaluation: React.FC = () => {
         setErrors('Evaluation Type, Session, and Evaluatee are required.');
         return;
       }
-      // Update pending evaluatee ref for goals query
+      // Update pending evaluatee for goals query
       const byEmp = employees?.find((e) => e.userId === formData.evaluateeID || e.id === formData.evaluateeID);
-      pendingEvaluateeUserIdRef.current = byEmp?.userId || formData.evaluateeID;
+      setPendingEvaluateeUserId(byEmp?.userId || formData.evaluateeID);
     }
     if (activeStep === 1) {
+      const requiredIds = (criteria || [])
+        .filter((c: any) => c.isRequired !== false)
+        .map((c: any) => c.criteriaID);
+      const unscoredRequired = requiredIds.filter(
+        (id: number) => !formData.criteriaScores[id] || formData.criteriaScores[id] === 0
+      );
+      if (unscoredRequired.length > 0) {
+        setErrors(`Please score all required criteria (${unscoredRequired.length} remaining) before continuing.`);
+        return;
+      }
       const hasScores = Object.values(formData.criteriaScores).some((s) => s > 0);
       if (!hasScores) {
         setErrors('Please score at least one criterion before continuing.');
@@ -176,10 +203,20 @@ const CreateEvaluation: React.FC = () => {
 
   const handleSubmit = () => {
     setErrors(null);
-    let evaluateeEmployeeId: number | undefined = undefined;
-    const byEmp = employees?.find((e) => e.userId === formData.evaluateeID || e.id === formData.evaluateeID);
-    if (byEmp) {
-      evaluateeEmployeeId = byEmp.id;
+
+    // Resolve the evaluatee's User ID and Employee ID cleanly
+    const byEmp = employees?.find(
+      (e) => e.userId === formData.evaluateeID || e.id === formData.evaluateeID
+    );
+
+    // Always send the User ID (not Employee ID) as evaluateeID
+    // If the employee has no userId, send null and let the backend auto-create one
+    const resolvedEvaluateeUserId = byEmp?.userId ?? null;
+    const evaluateeEmployeeId: number | undefined = byEmp?.id;
+
+    if (!resolvedEvaluateeUserId && !evaluateeEmployeeId) {
+      setErrors('Could not resolve evaluatee. Please re-select the evaluatee.');
+      return;
     }
 
     const goalsResults = (evaluateeGoals || []).map((g) => ({ gid: g.gid, progress: g.progress ?? 0 }));
@@ -187,7 +224,8 @@ const CreateEvaluation: React.FC = () => {
     const payload = {
       evaluation: {
         evaluatorID: Number(currentUserId),
-        evaluateeID: pendingEvaluateeUserIdRef.current,
+        // Send evaluateeID as the user ID if available, otherwise null (backend resolves via evaluateeEmployeeId)
+        evaluateeID: resolvedEvaluateeUserId,
         evaluateeEmployeeId,
         evaluationType: formData.evaluationType,
         sessionID: formData.sessionID,
@@ -215,15 +253,24 @@ const CreateEvaluation: React.FC = () => {
               </Typography>
             </Box>
 
-            <TextField label="Evaluator" value={currentFullName} fullWidth InputProps={{ readOnly: true }} />
+            <TextField label="Evaluator" value={currentFullName} fullWidth slotProps={{ input: { readOnly: true } }} />
 
-            <TextField
-              label="Evaluation Type"
-              fullWidth
-              placeholder="e.g. Annual Review, Mid-Year Check-in"
-              value={formData.evaluationType}
-              onChange={(e) => setFormData({ ...formData, evaluationType: e.target.value })}
-            />
+            <FormControl fullWidth>
+              <InputLabel>Evaluation Type</InputLabel>
+              <Select
+                value={formData.evaluationType}
+                label="Evaluation Type"
+                onChange={(e) => setFormData({ ...formData, evaluationType: e.target.value as string })}
+              >
+                <MenuItem value="Annual Review">Annual Review</MenuItem>
+                <MenuItem value="Mid-Year Check-in">Mid-Year Check-in</MenuItem>
+                <MenuItem value="Quarterly Review">Quarterly Review</MenuItem>
+                <MenuItem value="Probation Review">Probation Review</MenuItem>
+                <MenuItem value="Performance Improvement">Performance Improvement</MenuItem>
+                <MenuItem value="Peer Review">Peer Review</MenuItem>
+                <MenuItem value="360° Feedback">360° Feedback</MenuItem>
+              </Select>
+            </FormControl>
 
             <FormControl fullWidth>
               <InputLabel>Session</InputLabel>
@@ -231,7 +278,13 @@ const CreateEvaluation: React.FC = () => {
                 value={formData.sessionID}
                 label="Session"
                 onChange={(e) => {
-                  setFormData({ ...formData, sessionID: Number(e.target.value), evaluateeID: 0 }); // reset evaluatee on session change
+                  setFormData({
+                    ...formData,
+                    sessionID: Number(e.target.value),
+                    evaluateeID: 0,
+                    criteriaScores: {},    // reset scores — different session may have different criteria
+                    criteriaFeedback: {},
+                  });
                 }}
               >
                 <MenuItem value={0} disabled>Select Session</MenuItem>
@@ -274,38 +327,64 @@ const CreateEvaluation: React.FC = () => {
             </Typography>
 
             <Box sx={{ maxHeight: '420px', overflowY: 'auto', pr: 2 }}>
-              {criteria?.map((criterion) => (
-                <Paper key={criterion.criteriaID} variant="outlined" sx={{ p: 3, mb: 2, borderRadius: 2, bgcolor: '#f8fafc' }}>
-                  <FormLabel component="legend" sx={{ mb: 1.5, fontWeight: 700, color: '#1e293b' }}>
-                    {criterion.title}
-                  </FormLabel>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    {criterion.description || 'Rate this metric from 1 (Poor) to 5 (Excellent).'}
+              {(!criteria || criteria.length === 0) && (
+                <Box sx={{ p: 3, textAlign: 'center', border: '1px dashed #e2e8f0', borderRadius: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    No criteria found for this session. Ask an Admin to assign criteria to the selected session first.
                   </Typography>
-                  <RadioGroup
-                    row
-                    value={formData.criteriaScores[criterion.criteriaID] || ''}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      criteriaScores: { ...formData.criteriaScores, [criterion.criteriaID]: parseInt(e.target.value) }
-                    })}
-                  >
-                    {[1, 2, 3, 4, 5].map((val) => (
-                      <FormControlLabel key={val} value={val} control={<Radio />} label={val.toString()} />
-                    ))}
-                  </RadioGroup>
-                  <TextareaAutosize
-                    value={formData.criteriaFeedback[criterion.criteriaID] || ''}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      criteriaFeedback: { ...formData.criteriaFeedback, [criterion.criteriaID]: e.target.value }
-                    })}
-                    minRows={2}
-                    placeholder={`Provide optional feedback for ${criterion.title}...`}
-                    style={{ width: '100%', marginTop: '16px', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontFamily: 'inherit' }}
-                  />
-                </Paper>
-              ))}
+                </Box>
+              )}
+              {criteria?.map((criterion) => {
+                const isRequired = (criterion as any).isRequired !== false; // default true
+                return (
+                  <Paper key={criterion.criteriaID} variant="outlined"
+                    sx={{ p: 3, mb: 2, borderRadius: 2, bgcolor: '#f8fafc',
+                      borderColor: isRequired && !formData.criteriaScores[criterion.criteriaID]
+                        ? '#fca5a5' : undefined }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                      <FormLabel component="legend" sx={{ fontWeight: 700, color: '#1e293b' }}>
+                        {criterion.title}
+                      </FormLabel>
+                      {isRequired && (
+                        <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 700 }}>
+                          *required
+                        </Typography>
+                      )}
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      {criterion.description || 'Rate this metric from 1 (Poor) to 5 (Excellent).'}
+                    </Typography>
+                    <RadioGroup
+                      row
+                      value={formData.criteriaScores[criterion.criteriaID] || ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        criteriaScores: { ...formData.criteriaScores, [criterion.criteriaID]: parseInt(e.target.value) }
+                      })}
+                    >
+                      {[
+                        { val: 1, label: '1 — Poor' },
+                        { val: 2, label: '2 — Below Avg' },
+                        { val: 3, label: '3 — Average' },
+                        { val: 4, label: '4 — Good' },
+                        { val: 5, label: '5 — Excellent' },
+                      ].map(({ val, label }) => (
+                        <FormControlLabel key={val} value={val} control={<Radio />} label={label} />
+                      ))}
+                    </RadioGroup>
+                    <TextareaAutosize
+                      value={formData.criteriaFeedback[criterion.criteriaID] || ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        criteriaFeedback: { ...formData.criteriaFeedback, [criterion.criteriaID]: e.target.value }
+                      })}
+                      minRows={2}
+                      placeholder={`Optional feedback for ${criterion.title}…`}
+                      style={{ width: '100%', marginTop: '16px', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontFamily: 'inherit' }}
+                    />
+                  </Paper>
+                );
+              })}
             </Box>
           </Box>
         );

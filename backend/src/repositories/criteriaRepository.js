@@ -37,13 +37,9 @@ const criteriaRepository = {
   },
 
   countUsage: async (id) => {
-    return await prisma.evaluation.count({
-      where: {
-        OR: [
-          { criteriaID: parseInt(id) },
-          { criteriaIDs: { has: parseInt(id) } }
-        ]
-      }
+    // Criteria are linked through EvaluationResult, not directly on Evaluation
+    return await prisma.evaluationResult.count({
+      where: { criteriaID: parseInt(id) },
     });
   }
 };

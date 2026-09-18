@@ -65,7 +65,6 @@ app.use('/api/recruitment', authenticateToken, recruitmentRoutes);
 app.use('/api/criteria', authenticateToken, criteriaRoutes);
 app.use('/api/sessions', authenticateToken, sessionRoutes);
 app.use('/api/evaluations', authenticateToken, evaluationRoutes);
-app.use('/api/results', authenticateToken, evaluationRoutes); // Redirected to evaluation routes
 app.use('/api/goals', authenticateToken, goalRoutes);
 app.use('/api/key-result-progress', authenticateToken, keyResultProgressRoutes);
 app.use('/api/attendance', authenticateToken, attendanceRoutes);

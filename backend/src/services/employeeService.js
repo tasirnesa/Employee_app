@@ -33,6 +33,16 @@ const employeeService = {
     if (data.age) data.age = parseInt(data.age);
     if (data.userId) data.userId = parseInt(data.userId);
 
+    // Convert date strings to proper DateTime objects
+    if (data.hireDate)        data.hireDate        = new Date(data.hireDate);
+    if (data.birthDate)       data.birthDate       = new Date(data.birthDate);
+    if (data.terminationDate) data.terminationDate = new Date(data.terminationDate);
+
+    // Guard against invalid dates (empty strings become Invalid Date)
+    if (data.hireDate        instanceof Date && isNaN(data.hireDate))        delete data.hireDate;
+    if (data.birthDate       instanceof Date && isNaN(data.birthDate))       delete data.birthDate;
+    if (data.terminationDate instanceof Date && isNaN(data.terminationDate)) delete data.terminationDate;
+
     // Remove string fields that conflict with relation names
     delete data.department;
     delete data.position;

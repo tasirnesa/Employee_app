@@ -113,6 +113,8 @@ const OnboardingManagement: React.FC = () => {
     const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
     const [isTrainingDialogOpen, setIsTrainingDialogOpen] = useState(false);
     const [isAssetDialogOpen, setIsAssetDialogOpen] = useState(false);
+    const [isProbationEvalOpen, setIsProbationEvalOpen] = useState(false);
+    const [probationEvalForm, setProbationEvalForm] = useState({ status: '', feedback: '', evaluation: '' });
     const [newTask, setNewTask] = useState({ title: '', description: '' });
     const [newTraining, setNewTraining] = useState({ trainingName: '' });
     const [newAsset, setNewAsset] = useState({ assetType: '', brand: '', serialNumber: '' });
@@ -145,8 +147,24 @@ const OnboardingManagement: React.FC = () => {
     });
 
     const evaluateProbationMutation = useMutation({
-        mutationFn: async ({ id, status, feedback }: { id: number; status: string; feedback: string }) => 
-            await api.post(`/api/probation/${id}/evaluate`, { status, feedback }),
+        mutationFn: async ({ id, status, feedback, evaluation }: { id: number; status: string; feedback: string; evaluation?: string }) => 
+            await api.post(`/api/probation/${id}/evaluate`, { status, feedback, evaluation }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['onboarding', selectedEmployeeId] });
+            setIsProbationEvalOpen(false);
+            setProbationEvalForm({ status: '', feedback: '', evaluation: '' });
+        },
+    });
+
+    const initProbationMutation = useMutation({
+        mutationFn: async (onboardingId: number) =>
+            await api.post(`/api/probation`, { onboardingId }),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['onboarding', selectedEmployeeId] }),
+    });
+
+    const updateTrainingStatusMutation = useMutation({
+        mutationFn: async ({ trainingId, status }: { trainingId: number; status: string }) =>
+            await api.patch(`/api/onboarding/trainings/${trainingId}`, { status }),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['onboarding', selectedEmployeeId] }),
     });
     const { data: onboardings = [], isLoading } = useQuery<OnboardingRecord[]>({
@@ -269,7 +287,7 @@ const OnboardingManagement: React.FC = () => {
                                 <Button
                                     variant="outlined"
                                     size="small"
-                                    onClick={() => navigate('/evaluations/create')}
+                                    onClick={() => navigate(`/evaluations/create?evaluateeId=${detail.employee.id}`)}
                                 >
                                     Start Evaluation
                                 </Button>
@@ -444,11 +462,25 @@ const OnboardingManagement: React.FC = () => {
                                                 primary={training.trainingName} 
                                                 secondary={`Status: ${training.status}`}
                                             />
-                                            <ListItemSecondaryAction>
+                                            <ListItemSecondaryAction sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                {training.status === 'Assigned' && (
+                                                    <Button size="small" variant="outlined"
+                                                        disabled={updateTrainingStatusMutation.isPending}
+                                                        onClick={() => updateTrainingStatusMutation.mutate({ trainingId: training.id, status: 'InProgress' })}>
+                                                        Start
+                                                    </Button>
+                                                )}
+                                                {training.status === 'InProgress' && (
+                                                    <Button size="small" variant="contained" color="success"
+                                                        disabled={updateTrainingStatusMutation.isPending}
+                                                        onClick={() => updateTrainingStatusMutation.mutate({ trainingId: training.id, status: 'Completed' })}>
+                                                        Mark Done
+                                                    </Button>
+                                                )}
                                                 <Chip 
                                                     label={training.status} 
                                                     size="small" 
-                                                    color={training.status === 'Completed' ? 'success' : 'warning'} 
+                                                    color={training.status === 'Completed' ? 'success' : training.status === 'InProgress' ? 'warning' : 'default'} 
                                                 />
                                             </ListItemSecondaryAction>
                                         </ListItem>
@@ -497,44 +529,68 @@ const OnboardingManagement: React.FC = () => {
                         {activeTab === 4 && (
                             <Box>
                                 {detail.probation ? (
-                                    <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2 }}>
-                                        <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                                            Probation Status: <Chip label={detail.probation.status} size="small" color="primary" />
-                                        </Typography>
-                                        <Typography variant="body2">
-                                            Period: {format(new Date(detail.probation.startDate), 'MMM dd, yyyy')} - {format(new Date(detail.probation.endDate), 'MMM dd, yyyy')}
-                                        </Typography>
-                                        
-                                        <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-                                            <Button 
-                                                variant="contained" 
-                                                color="success"
-                                                onClick={() => evaluateProbationMutation.mutate({ id: detail.probation!.id, status: 'Passed', feedback: 'Employee has successfully met all onboarding goals.' })}
-                                            >
-                                                Pass Probation
-                                            </Button>
-                                            <Button 
-                                                variant="outlined" 
-                                                color="error"
-                                                onClick={() => {
-                                                    const feedback = prompt('Please enter feedback for failure:');
-                                                    if (feedback) evaluateProbationMutation.mutate({ id: detail.probation!.id, status: 'Failed', feedback });
-                                                }}
-                                            >
-                                                Fail Probation
-                                            </Button>
+                                    <Box sx={{ p: 2.5, bgcolor: '#f8fafc', borderRadius: 2 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                            <Typography variant="subtitle1" fontWeight={700}>
+                                                Probation Period
+                                            </Typography>
+                                            <Chip label={detail.probation.status} size="small"
+                                                color={detail.probation.status === 'Passed' ? 'success' : detail.probation.status === 'Failed' ? 'error' : detail.probation.status === 'Extended' ? 'warning' : 'primary'} />
                                         </Box>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {format(new Date(detail.probation.startDate), 'MMM dd, yyyy')} → {format(new Date(detail.probation.endDate), 'MMM dd, yyyy')}
+                                        </Typography>
 
+                                        {detail.probation.feedback && (
+                                            <Alert severity="info" sx={{ mt: 2 }} icon={false}>
+                                                <Typography variant="caption" fontWeight={700} display="block" gutterBottom>FEEDBACK</Typography>
+                                                {detail.probation.feedback}
+                                            </Alert>
+                                        )}
                                         {detail.probation.evaluation && (
-                                            <Alert severity="info" sx={{ mt: 2 }}>
+                                            <Alert severity="success" sx={{ mt: 1 }} icon={false}>
+                                                <Typography variant="caption" fontWeight={700} display="block" gutterBottom>EVALUATION</Typography>
                                                 {detail.probation.evaluation}
                                             </Alert>
                                         )}
+
+                                        {detail.probation.status === 'Active' && (
+                                            <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+                                                <Button variant="contained" color="success"
+                                                    onClick={() => {
+                                                        setProbationEvalForm({ status: 'Passed', feedback: '', evaluation: '' });
+                                                        setIsProbationEvalOpen(true);
+                                                    }}>
+                                                    Pass Probation
+                                                </Button>
+                                                <Button variant="outlined" color="error"
+                                                    onClick={() => {
+                                                        setProbationEvalForm({ status: 'Failed', feedback: '', evaluation: '' });
+                                                        setIsProbationEvalOpen(true);
+                                                    }}>
+                                                    Fail Probation
+                                                </Button>
+                                                <Button variant="outlined" color="warning"
+                                                    onClick={() => {
+                                                        setProbationEvalForm({ status: 'Extended', feedback: '', evaluation: '' });
+                                                        setIsProbationEvalOpen(true);
+                                                    }}>
+                                                    Extend
+                                                </Button>
+                                            </Box>
+                                        )}
                                     </Box>
                                 ) : (
-                                    <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
-                                        No probation period initialized for this onboarding.
-                                    </Typography>
+                                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                            No probation period has been created for this onboarding yet.
+                                        </Typography>
+                                        <Button variant="contained"
+                                            disabled={initProbationMutation.isPending}
+                                            onClick={() => initProbationMutation.mutate(detail.id)}>
+                                            {initProbationMutation.isPending ? 'Creating…' : 'Initialize Probation Period'}
+                                        </Button>
+                                    </Box>
                                 )}
                             </Box>
                         )}
@@ -681,6 +737,53 @@ const OnboardingManagement: React.FC = () => {
                             onClick={() => addAssetMutation.mutate(newAsset)}
                         >
                             Assign
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Probation Evaluation Dialog */}
+                <Dialog open={isProbationEvalOpen} onClose={() => setIsProbationEvalOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+                    <DialogTitle sx={{ fontWeight: 800 }}>
+                        {probationEvalForm.status === 'Passed' ? '✅ Pass Probation'
+                            : probationEvalForm.status === 'Failed' ? '❌ Fail Probation'
+                            : '⏳ Extend Probation'}
+                    </DialogTitle>
+                    <DialogContent>
+                        <TextField
+                            fullWidth
+                            label="Evaluation Summary"
+                            multiline
+                            rows={3}
+                            margin="normal"
+                            placeholder="Summary of performance during the probation period…"
+                            value={probationEvalForm.evaluation}
+                            onChange={(e) => setProbationEvalForm({ ...probationEvalForm, evaluation: e.target.value })}
+                        />
+                        <TextField
+                            fullWidth
+                            label="Feedback for Employee"
+                            multiline
+                            rows={3}
+                            margin="normal"
+                            placeholder="Constructive feedback visible to the employee…"
+                            value={probationEvalForm.feedback}
+                            onChange={(e) => setProbationEvalForm({ ...probationEvalForm, feedback: e.target.value })}
+                        />
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, pb: 2 }}>
+                        <Button onClick={() => setIsProbationEvalOpen(false)}>Cancel</Button>
+                        <Button
+                            variant="contained"
+                            color={probationEvalForm.status === 'Passed' ? 'success' : probationEvalForm.status === 'Failed' ? 'error' : 'warning'}
+                            disabled={evaluateProbationMutation.isPending}
+                            onClick={() => detail?.probation && evaluateProbationMutation.mutate({
+                                id: detail.probation.id,
+                                status: probationEvalForm.status,
+                                feedback: probationEvalForm.feedback,
+                                evaluation: probationEvalForm.evaluation,
+                            })}
+                        >
+                            {evaluateProbationMutation.isPending ? 'Saving…' : 'Submit'}
                         </Button>
                     </DialogActions>
                 </Dialog>

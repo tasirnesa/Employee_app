@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Formik, Form, Field } from 'formik';
 import * as Yup from 'yup';
-import axios from 'axios';
+import api from '../lib/axios';
 import {
   Container,
   Typography,
@@ -21,32 +21,15 @@ const Settings: React.FC = () => {
 
   const { data: currentUser, isLoading, error } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token');
-      const response = await axios.get('http://localhost:5000/api/users/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      console.log('Fetched current user:', response.data);
-      return response.data as User;
-    },
+    queryFn: async () => (await api.get('/api/users/me')).data as User,
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: async (userData: Partial<User>) => {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token');
-      const response = await axios.put('http://localhost:5000/api/users/me', userData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    mutationFn: async (userData: Partial<User>) =>
+      (await api.put('/api/users/me', userData)).data,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       navigate('/dashboard');
-    },
-    onError: (error: any) => {
-      console.error('Update user error:', error.response?.data || error.message);
     },
   });
 

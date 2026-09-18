@@ -7,6 +7,7 @@ const { PERMISSIONS } = require('../constants/permissions');
 
 router.get('/', authenticateToken, authorize(PERMISSIONS.ONBOARDING_VIEW), probationController.getAllProbations);
 router.get('/:onboardingId', authenticateToken, authorize(PERMISSIONS.ONBOARDING_VIEW), probationController.getProbationDetail);
+router.post('/', authenticateToken, authorize(PERMISSIONS.ONBOARDING_MANAGE), probationController.initProbation);
 router.patch('/:id', authenticateToken, authorize(PERMISSIONS.ONBOARDING_MANAGE), probationController.updateProbation);
 router.post('/:id/evaluate', authenticateToken, authorize(PERMISSIONS.ONBOARDING_MANAGE), probationController.evaluate);
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../lib/axios';
 import {
   Container,
   Typography,
@@ -37,55 +37,17 @@ const UserManagement: React.FC = () => {
 
   const { data: users, isLoading, error } = useQuery({
     queryKey: ['users'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      console.log('Token:', token);
-      if (!token) throw new Error('No authentication token');
-      try {
-        const response = await axios.get('http://localhost:5000/api/users', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        console.log('Fetched users:', response.data);
-        return response.data as User[];
-      } catch (err: any) {
-        console.error('Fetch users error:', err.response?.data || err.message);
-        throw err;
-      }
-    },
+    queryFn: async () => (await api.get('/api/users')).data as User[],
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (userId: number) => {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token');
-      await axios.delete(`http://localhost:5000/api/users/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      setOpenDeleteDialog(false);
-    },
-    onError: (error: any) => {
-      console.error('Delete error:', error.response?.data || error.message);
-    },
+    mutationFn: async (userId: number) => { await api.delete(`/api/users/${userId}`); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['users'] }); setOpenDeleteDialog(false); },
   });
 
   const authorizeMutation = useMutation({
-    mutationFn: async (userId: number) => {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token');
-      await axios.put(`http://localhost:5000/api/users/${userId}/authorize`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      setOpenAuthorizeDialog(false);
-    },
-    onError: (error: any) => {
-      console.error('Authorize error:', error.response?.data || error.message);
-    },
+    mutationFn: async (userId: number) => { await api.put(`/api/users/${userId}/authorize`, {}); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['users'] }); setOpenAuthorizeDialog(false); },
   });
 
   const handleEditOpen = (user: User) => {
@@ -108,12 +70,8 @@ const UserManagement: React.FC = () => {
 
   const handleEditSubmit = async () => {
     if (!selectedUser) return;
-    const token = localStorage.getItem('token');
-    if (!token) throw new Error('No authentication token');
     try {
-      await axios.put(`http://localhost:5000/api/users/${selectedUser.id}`, editForm, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.put(`/api/users/${selectedUser.id}`, editForm);
       queryClient.invalidateQueries({ queryKey: ['users'] });
       handleEditClose();
     } catch (error: any) {

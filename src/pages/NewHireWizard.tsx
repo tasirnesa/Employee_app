@@ -44,6 +44,7 @@ const NewHireWizard: React.FC = () => {
 
     const [activeStep, setActiveStep] = useState(0);
     const [errors, setErrors] = useState<string | null>(null);
+    const [emailError, setEmailError] = useState<string | null>(null);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -126,7 +127,17 @@ const NewHireWizard: React.FC = () => {
             setActiveStep(steps.length);
         },
         onError: (err: any) => {
-            setErrors(err.response?.data?.error || err.message);
+            const msg: string = err.response?.data?.error || err.message || 'Something went wrong';
+            setErrors(msg);
+
+            // If the error is about the email, jump back to step 1 so the user
+            // can see the highlighted email field immediately
+            if (msg.toLowerCase().includes('email')) {
+                setActiveStep(1);
+                setEmailError(msg);
+            } else if (msg.toLowerCase().includes('username')) {
+                setActiveStep(0);
+            }
         }
     });
 
@@ -144,6 +155,7 @@ const NewHireWizard: React.FC = () => {
             }
         }
         setErrors(null);
+        setEmailError(null);
         setActiveStep((prev) => prev + 1);
     };
 
@@ -250,7 +262,13 @@ const NewHireWizard: React.FC = () => {
                             label="Work Email"
                             type="email"
                             value={formData.employeeData.email}
-                            onChange={(e) => setFormData({ ...formData, employeeData: { ...formData.employeeData, email: e.target.value } })}
+                            error={!!emailError}
+                            helperText={emailError || undefined}
+                            onChange={(e) => {
+                                setEmailError(null);
+                                setErrors(null);
+                                setFormData({ ...formData, employeeData: { ...formData.employeeData, email: e.target.value } });
+                            }}
                         />
                         <TextField
                             fullWidth

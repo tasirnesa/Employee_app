@@ -49,6 +49,13 @@ const Timesheets: React.FC = () => {
   const [timesheetDialogOpen, setTimesheetDialogOpen] = useState(false);
   const [selectedTimesheet, setSelectedTimesheet] = useState<Timesheet | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [pageError, setPageError]     = useState<string | null>(null);
+  const [pageSuccess, setPageSuccess] = useState<string | null>(null);
+
+  const flash = (msg: string, type: 'error' | 'success' = 'success') => {
+    if (type === 'error') setPageError(msg); else setPageSuccess(msg);
+    setTimeout(() => { setPageError(null); setPageSuccess(null); }, 4000);
+  };
 
   // Check user role for access control
   const userRole = JSON.parse(localStorage.getItem('userProfile') || '{}').role;
@@ -69,28 +76,14 @@ const Timesheets: React.FC = () => {
   // Fetch timesheets data
   const { data: timesheets, isLoading: timesheetsLoading, error: timesheetsError } = useQuery({
     queryKey: ['timesheets'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/timesheets', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    queryFn: async () => (await api.get('/api/timesheets')).data,
   });
 
-  // Fetch projects for dropdown
   const { data: projects } = useQuery({
     queryKey: ['projects'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/projects', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    queryFn: async () => (await api.get('/api/projects')).data,
   });
 
-  // Filter projects based on selected employee (e.g., projects managed by that user)
   const filteredProjects = React.useMemo(() => {
     const list = projects || [];
     const empId = parseInt(timesheetForm.employeeId || '');
@@ -109,13 +102,7 @@ const Timesheets: React.FC = () => {
   // Fetch users for dropdown
   const { data: employees } = useQuery({
     queryKey: ['users'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/users', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    queryFn: async () => (await api.get('/api/users')).data,
   });
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {

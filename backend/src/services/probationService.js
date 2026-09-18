@@ -40,16 +40,16 @@ const probationService = {
     });
   },
 
-  evaluateProbation: async (id, status, feedback) => {
+  evaluateProbation: async (id, status, feedback, evaluation) => {
     return await prisma.probationPeriod.update({
       where: { id: parseInt(id) },
       data: {
         status,
-        feedback,
-        evaluation: `Evaluated as ${status} on ${new Date().toLocaleDateString()}`
+        feedback: feedback || null,
+        evaluation: evaluation || `Evaluated as ${status} on ${new Date().toLocaleDateString()}`,
       }
     });
-  }
+  },
 };
 
 module.exports = probationService;

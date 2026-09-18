@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../lib/axios';
 import {
   Box,
   Typography,
@@ -43,11 +43,7 @@ const EvaluationDetails: React.FC = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['evaluationDetails', id],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token');
-      const res = await axios.get(`http://localhost:5000/api/evaluations/${id}/details`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get(`/api/evaluations/${id}/details`);
       return res.data as any;
     },
     enabled: !!id,
@@ -261,9 +257,13 @@ const EvaluationDetails: React.FC = () => {
                       color="success"
                       fullWidth
                       startIcon={<StarIcon />}
-                      onClick={() => navigate(`/users/${evalData?.evaluateeID}`)}
+                      onClick={() => {
+                        // Navigate to the evaluatee's 360° employee profile
+                        // We need to find the employee record from the evaluatee user ID
+                        navigate(`/users/${evalData?.evaluateeID}`);
+                      }}
                     >
-                      Recommend Promotion / Role Update
+                      View Profile / Recommend Promotion
                     </Button>
                   )}
                   {Number(averageScore) < 3.0 && (

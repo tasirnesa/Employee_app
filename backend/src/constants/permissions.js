@@ -34,6 +34,7 @@ const PERMISSIONS = {
 };
 
 const ROLE_PERMISSIONS = {
+  SuperAdmin: Object.values(PERMISSIONS),   // full access — same as Admin
   [ROLES.ADMIN]: Object.values(PERMISSIONS),
   [ROLES.MANAGER]: [
     PERMISSIONS.EMPLOYEE_VIEW,
@@ -51,7 +52,8 @@ const ROLE_PERMISSIONS = {
   ],
   [ROLES.EMPLOYEE]: [
     PERMISSIONS.EMPLOYEE_VIEW,
-    PERMISSIONS.USER_VIEW
+    PERMISSIONS.USER_VIEW,
+    PERMISSIONS.ONBOARDING_VIEW,
   ]
 };
 
