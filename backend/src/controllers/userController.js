@@ -7,6 +7,11 @@ const userController = {
     res.json(users);
   }),
 
+  createUser: asyncHandler(async (req, res) => {
+    const created = await userService.createUser(req.body, req.user?.id);
+    res.status(201).json(created);
+  }),
+
   getUser: asyncHandler(async (req, res) => {
     const user = await userService.getUserById(req.params.id);
     res.json(user);

@@ -12,7 +12,7 @@ import {
   CircularProgress,
   Box,
 } from '@mui/material';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getEmployee, updateEmployee, activateEmployee, deactivateEmployee } from '../api/employeeApi';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../lib/axios';
@@ -22,6 +22,8 @@ const EditEmployee: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const employeeId = Number(id);
+
+  const queryClient = useQueryClient();
 
   const [form, setForm] = useState({
     firstName: '',
@@ -84,8 +86,17 @@ const EditEmployee: React.FC = () => {
         lastName: employee.lastName || '',
         email: employee.email || '',
         phone: employee.phone || '',
-        departmentId: employee.department ? String(employee.department) : '',
-        positionId: employee.position ? String(employee.position) : '',
+        // department/position may be an object or a raw id — always extract numeric id
+        departmentId: employee.departmentId
+          ? String(employee.departmentId)
+          : employee.department && typeof employee.department === 'object'
+            ? String((employee.department as any).id || '')
+            : '',
+        positionId: employee.positionId
+          ? String(employee.positionId)
+          : employee.position && typeof employee.position === 'object'
+            ? String((employee.position as any).id || '')
+            : '',
         hireDate: employee.hireDate ? employee.hireDate.substring(0, 10) : '',
         gender: employee.gender || '',
         age: employee.age != null ? String(employee.age) : '',
@@ -123,12 +134,18 @@ const EditEmployee: React.FC = () => {
 
   const activate = useMutation({
     mutationFn: () => activateEmployee(employeeId),
-    onSuccess: () => window.location.reload(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee', employeeId] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+    },
   });
 
   const deactivate = useMutation({
     mutationFn: () => deactivateEmployee(employeeId),
-    onSuccess: () => window.location.reload(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employee', employeeId] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+    },
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

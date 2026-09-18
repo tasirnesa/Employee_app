@@ -83,7 +83,7 @@ const ViewEmployees: React.FC = () => {
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Documents">
-                    <IconButton color="primary" onClick={() => navigate('/document-management')}>
+                    <IconButton color="primary" onClick={() => navigate(`/document-management?employeeId=${e.id}`)}>
                       <DescriptionIcon />
                     </IconButton>
                   </Tooltip>
@@ -93,12 +93,12 @@ const ViewEmployees: React.FC = () => {
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Payroll">
-                    <IconButton color="primary" onClick={() => navigate('/payroll')}>
+                    <IconButton color="primary" onClick={() => navigate(e.userId ? `/payroll?userId=${e.userId}` : '/payroll')}>
                       <PaidIcon />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Attendance">
-                    <IconButton color="primary" onClick={() => navigate('/attendance')}>
+                    <IconButton color="primary" onClick={() => navigate(e.userId ? `/attendance?userId=${e.userId}` : '/attendance')}>
                       <AccessTimeIcon />
                     </IconButton>
                   </Tooltip>

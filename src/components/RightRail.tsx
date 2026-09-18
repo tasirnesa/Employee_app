@@ -112,12 +112,15 @@ const RightRail: React.FC = () => {
 
 	useEffect(() => {
 		const handleOpenChatEvent = (event: any) => {
-			const { user } = event.detail;
+			const user = event.detail?.user ?? null;
 			if (user) {
-				console.log('Opening chat via event for:', user.fullName, 'ID:', user.userId || user.id);
 				setChatWith({ ...user, userId: user.userId || user.id });
 				setChatInput('');
 				setChatOpen(true);
+			} else {
+				// Opened from header with no specific user — just open the rail panel
+				setChatOpen(false); // close any open conversation
+				// The RightRail itself is always visible; nothing more needed
 			}
 		};
 		window.addEventListener('open-chat', handleOpenChatEvent);

@@ -150,6 +150,8 @@ const dashboardController = {
       openCandidates: 0,
       headcountGrowthPercent: 0,
       headcountByDepartment: [],
+      headcountTrend: [],        // 6-month monthly headcount
+      turnoverTrend: [],         // 6-month monthly departures
       newHiresThisMonth: 0,
       unreadNotifications: 0,
     };
@@ -208,11 +210,14 @@ const dashboardController = {
       stats.newHiresThisMonth = await prisma.user.count({
         where: { ...ACTIVE_USER_FILTER, createdDate: { gte: startOfMonth } },
       });
-      stats.headcountGrowthPercent = priorHires
-        ? Math.round(((recentHires - priorHires) / priorHires) * 100)
-        : recentHires > 0
-          ? 100
-          : 0;
+      if (priorHires >= 3) {
+        stats.headcountGrowthPercent = Math.round(((recentHires - priorHires) / priorHires) * 100);
+      } else if (recentHires > 0) {
+        stats.headcountGrowthPercent = recentHires - priorHires;
+        stats.headcountGrowthRaw = true;
+      } else {
+        stats.headcountGrowthPercent = 0;
+      }
 
       // Department breakdown
       const departments = await prisma.department.findMany({
@@ -229,6 +234,45 @@ const dashboardController = {
       stats.unreadNotifications = await prisma.notification.count({
         where: { userId, isRead: false },
       });
+
+      // ── 6-month headcount + turnover trend (Admin/Manager only) ──────────
+      if (isAdminRole(userRole) || isManagerRole(userRole)) {
+        const months = [];
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          months.push({
+            label: d.toLocaleString('en-US', { month: 'short', year: '2-digit' }),
+            start: new Date(d.getFullYear(), d.getMonth(), 1),
+            end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999),
+          });
+        }
+
+        const trendResults = await Promise.all(
+          months.map(async (m) => {
+            const hires = await prisma.user.count({
+              where: { ...ACTIVE_USER_FILTER, createdDate: { gte: m.start, lte: m.end } },
+            });
+            // Approximate departures: inactive/terminated users created in this month window
+            // (User model has no updatedAt — createdDate is the only date field available)
+            const departures = await prisma.user.count({
+              where: {
+                OR: [
+                  { activeStatus: 'false' },
+                  { activeStatus: 'inactive' },
+                  { activeStatus: 'Inactive' },
+                  { activeStatus: 'Terminated' },
+                  { activeStatus: 'terminated' },
+                ],
+                createdDate: { gte: m.start, lte: m.end },
+              },
+            });
+            return { label: m.label, hires, departures };
+          })
+        );
+
+        stats.headcountTrend = trendResults.map((r) => ({ label: r.label, value: r.hires }));
+        stats.turnoverTrend = trendResults.map((r) => ({ label: r.label, value: r.departures }));
+      }
 
       if (isAdminRole(userRole)) {
         stats.totalEmployees = await prisma.user.count({ where: ACTIVE_USER_FILTER });
@@ -262,24 +306,153 @@ const dashboardController = {
           },
         });
       } else {
+        // Employee — fetch detailed goal data for narrative
         const myGoals = await prisma.goal.findMany({
           where: { activatedBy: userId, status: { not: 'Completed' } },
-          select: { progress: true },
+          select: { progress: true, status: true, duedate: true, objective: true },
+          orderBy: { duedate: 'asc' },
         });
         stats.myGoalsCount = myGoals.length;
         stats.myGoalsAvgProgress = myGoals.length
           ? Math.round(myGoals.reduce((s, g) => s + (g.progress || 0), 0) / myGoals.length)
           : 0;
+        stats.myGoalsOnTrack = myGoals.filter((g) => (g.progress || 0) >= 50).length;
+        stats.myGoalsOverdue = myGoals.filter(
+          (g) => g.duedate && new Date(g.duedate) < now && g.status !== 'Completed'
+        ).length;
         stats.myPendingLeaves = await prisma.leave.count({
           where: { employeeId: userId, status: 'Pending' },
         });
         stats.pendingLeaves = stats.myPendingLeaves;
+
+        // Next evaluation session the employee participates in
+        try {
+          const nextSession = await prisma.evaluationSession.findFirst({
+            where: { endDate: { gte: now } },
+            orderBy: { startDate: 'asc' },
+            select: { title: true, endDate: true },
+          });
+          if (nextSession) {
+            stats.nextEvaluationTitle = nextSession.title;
+            stats.nextEvaluationDate = nextSession.endDate;
+          }
+        } catch (_) {}
       }
     } catch (error) {
       console.error('[Dashboard API] Error fetching stats:', error.message);
     }
 
     res.json(stats);
+  }),
+
+  getPeopleEvents: asyncHandler(async (req, res) => {
+    // Returns birthdays & work anniversaries in the next 30 days
+    const now = new Date();
+    const events = [];
+
+    try {
+      const employees = await prisma.employee.findMany({
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          birthDate: true,
+          hireDate: true,
+        },
+      });
+
+      for (const emp of employees) {
+        const fullName = [emp.firstName, emp.lastName].filter(Boolean).join(' ') || 'Unknown';
+        const avatar = null;
+
+        // Birthday check
+        if (emp.birthDate) {
+          const dob = new Date(emp.birthDate);
+          const thisYearBday = new Date(now.getFullYear(), dob.getMonth(), dob.getDate());
+          if (thisYearBday < now) thisYearBday.setFullYear(now.getFullYear() + 1);
+          const daysUntil = Math.round((thisYearBday - now) / (1000 * 60 * 60 * 24));
+          if (daysUntil <= 30) {
+            events.push({
+              type: 'birthday',
+              name: fullName,
+              avatar,
+              date: thisYearBday,
+              daysUntil,
+              label: daysUntil === 0 ? '🎂 Today!' : daysUntil === 1 ? 'Tomorrow' : `In ${daysUntil} days`,
+            });
+          }
+        }
+
+        // Work anniversary check
+        if (emp.hireDate) {
+          const hire = new Date(emp.hireDate);
+          const yearsWorked = now.getFullYear() - hire.getFullYear();
+          if (yearsWorked > 0) {
+            const thisYearAnniv = new Date(now.getFullYear(), hire.getMonth(), hire.getDate());
+            if (thisYearAnniv < now) thisYearAnniv.setFullYear(now.getFullYear() + 1);
+            const daysUntil = Math.round((thisYearAnniv - now) / (1000 * 60 * 60 * 24));
+            const years = thisYearAnniv.getFullYear() - hire.getFullYear();
+            if (daysUntil <= 30) {
+              events.push({
+                type: 'anniversary',
+                name: fullName,
+                avatar,
+                date: thisYearAnniv,
+                daysUntil,
+                years,
+                label: daysUntil === 0 ? `🏅 ${years}yr today!` : daysUntil === 1 ? `${years}yr tomorrow` : `${years}yr in ${daysUntil} days`,
+              });
+            }
+          }
+        }
+      }
+
+      events.sort((a, b) => a.daysUntil - b.daysUntil);
+    } catch (error) {
+      console.error('[Dashboard API] Error fetching people events:', error.message);
+    }
+
+    res.json(events.slice(0, 10));
+  }),
+
+  getTodayAttendance: asyncHandler(async (req, res) => {
+    const userRole = req.user.role;
+    const userId = parseInt(req.user.id);
+
+    if (!isAdminRole(userRole) && !isManagerRole(userRole)) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    let employeeFilter = {};
+    if (isManagerRole(userRole)) {
+      const teamMembers = await prisma.user.findMany({
+        where: { managerId: userId },
+        select: { id: true },
+      });
+      const teamIds = teamMembers.map((m) => m.id);
+      employeeFilter = { employeeId: { in: teamIds.length ? teamIds : [-1] } };
+    }
+
+    const records = await prisma.attendance.findMany({
+      where: { date: { gte: todayStart, lte: todayEnd }, ...employeeFilter },
+      select: { status: true, employee: { select: { fullName: true } } },
+    });
+
+    const presentStatuses = ['Present', 'present', 'On Time', 'Late', 'late'];
+    const absentStatuses = ['Absent', 'absent'];
+    const leaveStatuses = ['On Leave', 'on leave', 'Leave'];
+
+    const present = records.filter((r) => presentStatuses.includes(r.status)).length;
+    const absent = records.filter((r) => absentStatuses.includes(r.status)).length;
+    const onLeave = records.filter((r) => leaveStatuses.includes(r.status)).length;
+    const total = records.length;
+
+    res.json({ present, absent, onLeave, total, date: todayStart });
   }),
 };
 

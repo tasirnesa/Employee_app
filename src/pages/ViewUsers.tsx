@@ -13,6 +13,7 @@ import {
   TableRow,
   Paper,
   Button,
+  Box,
   Dialog,
   DialogActions,
   DialogContent,
@@ -134,6 +135,11 @@ const ViewUsers: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         View Users
       </Typography>
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+        <Button variant="contained" onClick={() => navigate('/users/create')}>
+          Create User
+        </Button>
+      </Box>
       {users && users.length > 0 ? (
         <TableContainer component={Paper} className="users-table-container">
           <Table stickyHeader className="users-table">

@@ -58,8 +58,8 @@ const NewHireWizard: React.FC = () => {
         employeeData: {
             email: '',
             phone: '',
-            department: '',
-            position: '',
+            departmentId: '',   // send ID not name
+            positionId: '',     // send ID not name
             hireDate: new Date().toISOString().split('T')[0],
         },
         goals: [] as { objective: string; priority: string; duedate: string }[],
@@ -122,7 +122,7 @@ const NewHireWizard: React.FC = () => {
             });
             return response.data;
         },
-        onSuccess: (data) => {
+        onSuccess: () => {
             setActiveStep(steps.length);
         },
         onError: (err: any) => {
@@ -138,7 +138,7 @@ const NewHireWizard: React.FC = () => {
             }
         }
         if (activeStep === 1) {
-            if (!formData.employeeData.email || !formData.employeeData.position) {
+            if (!formData.employeeData.email || !formData.employeeData.positionId) {
                 setErrors('Email and Position are required');
                 return;
             }
@@ -261,24 +261,24 @@ const NewHireWizard: React.FC = () => {
                         <FormControl fullWidth>
                             <InputLabel>Department</InputLabel>
                             <Select
-                                value={formData.employeeData.department}
+                                value={formData.employeeData.departmentId}
                                 label="Department"
-                                onChange={(e) => setFormData({ ...formData, employeeData: { ...formData.employeeData, department: e.target.value } })}
+                                onChange={(e) => setFormData({ ...formData, employeeData: { ...formData.employeeData, departmentId: e.target.value } })}
                             >
                                 {departments.map((d: any) => (
-                                    <MenuItem key={d.id} value={d.name}>{d.name}</MenuItem>
+                                    <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
                         <FormControl fullWidth>
                             <InputLabel>Position</InputLabel>
                             <Select
-                                value={formData.employeeData.position}
+                                value={formData.employeeData.positionId}
                                 label="Position"
-                                onChange={(e) => setFormData({ ...formData, employeeData: { ...formData.employeeData, position: e.target.value } })}
+                                onChange={(e) => setFormData({ ...formData, employeeData: { ...formData.employeeData, positionId: e.target.value } })}
                             >
                                 {positions.map((p: any) => (
-                                    <MenuItem key={p.id} value={p.name}>{p.name}</MenuItem>
+                                    <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
@@ -390,9 +390,14 @@ const NewHireWizard: React.FC = () => {
                             The new hire has been successfully added to the system.
                             An account was created, their profile is active, and onboarding goals have been assigned.
                         </Typography>
-                        <Button variant="contained" onClick={() => navigate('/users/view')} size="large">
-                            View All Users
-                        </Button>
+                        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                            <Button variant="outlined" onClick={() => navigate('/employees/view')} size="large">
+                                View Employees
+                            </Button>
+                            <Button variant="contained" onClick={() => navigate('/onboarding')} size="large">
+                                Go to Onboarding
+                            </Button>
+                        </Box>
                     </Box>
                 ) : (
                     <Box>

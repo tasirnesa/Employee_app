@@ -20,7 +20,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Skeleton,
+  Alert,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import type { Employee } from '../types/interfaces';
 import { listEmployees } from '../api/employeeApi';
@@ -34,10 +37,16 @@ import {
   ArrowForward as ArrowIcon,
   Notifications as NotifIcon,
   SupportAgent as SupportIcon,
+  CheckCircle as PresentIcon,
+  Cancel as AbsentIcon,
+  BeachAccess as OnLeaveIcon,
+  Cake as CakeIcon,
+  WorkspacePremium as AnnivIcon,
 } from '@mui/icons-material';
 import HrStats from '../components/HrStats';
 import DashboardWorklets from '../components/DashboardWorklets';
 import DashboardCharts from '../components/DashboardCharts';
+import DashboardQuickActions from '../components/DashboardQuickActions';
 
 interface DashboardAction {
   id: number;
@@ -78,7 +87,32 @@ const Dashboard: React.FC = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: actions } = useQuery({
+  const { data: todayAttendance } = useQuery({
+    queryKey: ['today-attendance'],
+    queryFn: async () => {
+      const res = await api.get('/api/dashboard/today-attendance');
+      return res.data;
+    },
+    enabled: showOrgAnalytics,
+  });
+
+  const { data: peopleEvents = [] } = useQuery({
+    queryKey: ['people-events'],
+    queryFn: async () => {
+      const res = await api.get('/api/dashboard/people-events');
+      return res.data as Array<{
+        type: 'birthday' | 'anniversary';
+        name: string;
+        avatar?: string;
+        daysUntil: number;
+        years?: number;
+        label: string;
+      }>;
+    },
+    staleTime: 60 * 60 * 1000, // re-fetch once an hour
+  });
+
+  const { data: actions, isLoading: actionsLoading, isError: actionsError } = useQuery({
     queryKey: ['dashboard-actions'],
     queryFn: async () => {
       const response = await api.get('/api/dashboard/actions');
@@ -86,12 +120,13 @@ const Dashboard: React.FC = () => {
     },
   });
 
-  const { data: dashboardStats } = useQuery({
+  const { data: dashboardStats, isLoading: statsLoading, isError: statsError } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
       const response = await api.get('/api/dashboard/stats');
       return response.data;
     },
+    refetchInterval: 60 * 1000, // auto-refresh every 60s
   });
 
   const employeeCacheKey = currentUser?.id ? `meEmployee_${currentUser.id}` : undefined;
@@ -215,26 +250,58 @@ const Dashboard: React.FC = () => {
   return (
     <Container disableGutters maxWidth={false} sx={{ mt: 0, px: 0, width: '100%', minHeight: '100vh', bgcolor: '#f8faff' }}>
       <Box sx={{ p: 4 }}>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" fontWeight={800} color="#1e293b" sx={{ mb: 0.5 }}>
-            {dashboardTitle}
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            {greeting}
-          </Typography>
+        <Box sx={{ mb: 3, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+          <Box>
+            <Typography variant="h4" fontWeight={800} color="#1e293b" sx={{ mb: 0.5 }}>
+              {dashboardTitle}
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              {greeting}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#10b981', boxShadow: '0 0 0 2px rgba(16,185,129,0.2)', animation: 'pulse 2s infinite' }} />
+            <Typography variant="caption" color="text.secondary" fontWeight={500}>
+              Live · {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Typography>
+          </Box>
         </Box>
 
         <DashboardWorklets role={role} />
-        <HrStats stats={dashboardStats} />
+        <DashboardQuickActions role={role} />
+
+        {statsError && (
+          <Alert severity="error" sx={{ mb: 3, borderRadius: 3 }}>
+            Failed to load dashboard stats. Please refresh the page.
+          </Alert>
+        )}
+        {statsLoading ? (
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 3, mb: 4 }}>
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} variant="rounded" height={120} sx={{ borderRadius: 4 }} />
+            ))}
+          </Box>
+        ) : (
+          <HrStats stats={dashboardStats} />
+        )}
 
         {showOrgAnalytics && (
-          <DashboardCharts
-            headcountByDepartment={dashboardStats?.headcountByDepartment}
-            evaluationCompletionRate={dashboardStats?.evaluationCompletionRate}
-            attendanceRate={dashboardStats?.attendanceRate}
-            openCandidates={dashboardStats?.openCandidates}
-            showOrgAnalytics={showOrgAnalytics}
-          />
+          statsLoading ? (
+            <Box sx={{ display: 'grid', gridTemplateColumns: '7fr 5fr', gap: 3, mb: 3 }}>
+              <Skeleton variant="rounded" height={300} sx={{ borderRadius: 4 }} />
+              <Skeleton variant="rounded" height={300} sx={{ borderRadius: 4 }} />
+            </Box>
+          ) : (
+            <DashboardCharts
+              headcountByDepartment={dashboardStats?.headcountByDepartment}
+              evaluationCompletionRate={dashboardStats?.evaluationCompletionRate}
+              attendanceRate={dashboardStats?.attendanceRate}
+              openCandidates={dashboardStats?.openCandidates}
+              showOrgAnalytics={showOrgAnalytics}
+              headcountTrend={dashboardStats?.headcountTrend}
+              turnoverTrend={dashboardStats?.turnoverTrend}
+            />
+          )
         )}
 
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 3 }}>
@@ -265,7 +332,23 @@ const Dashboard: React.FC = () => {
                   </Button>
                 </Box>
 
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 3 }}>
+                {actionsError && (
+                  <Alert severity="warning" sx={{ mb: 2, borderRadius: 3 }}>
+                    Could not load action items. Please try refreshing.
+                  </Alert>
+                )}
+                {actionsLoading ? (
+                  <Box sx={{ display: 'flex', gap: 3 }}>
+                    {[...Array(3)].map((_, i) => (
+                      <Box key={i} sx={{ flex: 1 }}>
+                        <Skeleton variant="text" width="60%" sx={{ mb: 1 }} />
+                        <Skeleton variant="rounded" height={60} sx={{ borderRadius: 3, mb: 1 }} />
+                        <Skeleton variant="rounded" height={60} sx={{ borderRadius: 3 }} />
+                      </Box>
+                    ))}
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 3 }}>
                   <Box>
                     <Typography variant="subtitle2" color="primary" fontWeight={700} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                       <LeaveIcon fontSize="small" />
@@ -328,6 +411,7 @@ const Dashboard: React.FC = () => {
                     </List>
                   </Box>
                 </Box>
+                )}
               </CardContent>
             </Card>
 
@@ -404,7 +488,7 @@ const Dashboard: React.FC = () => {
               <Card sx={{ borderRadius: 4, border: '1px solid #eef2ff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                    <Typography variant="h6" fontWeight={800} sx={{ color: '#1e293b' }}>Upcoming Events</Typography>
+                    <Typography variant="h6" fontWeight={800} sx={{ color: '#1e293b' }}>Upcoming Evaluations</Typography>
                     <Button size="small" onClick={() => navigate('/schedule')}>Calendar</Button>
                   </Box>
                   <List sx={{ maxHeight: 320, overflow: 'auto' }}>
@@ -426,7 +510,7 @@ const Dashboard: React.FC = () => {
                     ))}
                     {(!sessionsList || !sessionsList.length) && (
                       <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
-                        No upcoming events.
+                        No upcoming evaluations.
                       </Typography>
                     )}
                   </List>
@@ -436,6 +520,58 @@ const Dashboard: React.FC = () => {
           </Box>
 
           <Box sx={{ gridColumn: { xs: 'span 12', lg: 'span 4' }, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {showOrgAnalytics && (
+              <Card sx={{ borderRadius: 4, border: '1px solid #eef2ff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                <CardContent sx={{ p: 3 }}>
+                  <Typography variant="h6" fontWeight={800} sx={{ color: '#1e293b', mb: 1 }}>
+                    Today's Attendance
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </Typography>
+                  {todayAttendance ? (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1.5, borderRadius: 2, bgcolor: '#f0fdf4' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <PresentIcon sx={{ color: '#10b981', fontSize: 20 }} />
+                          <Typography variant="body2" fontWeight={600} color="#166534">Present</Typography>
+                        </Box>
+                        <Typography variant="subtitle1" fontWeight={800} color="#166534">{todayAttendance.present}</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1.5, borderRadius: 2, bgcolor: '#fef2f2' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <AbsentIcon sx={{ color: '#ef4444', fontSize: 20 }} />
+                          <Typography variant="body2" fontWeight={600} color="#991b1b">Absent</Typography>
+                        </Box>
+                        <Typography variant="subtitle1" fontWeight={800} color="#991b1b">{todayAttendance.absent}</Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 1.5, borderRadius: 2, bgcolor: '#fffbeb' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <OnLeaveIcon sx={{ color: '#f59e0b', fontSize: 20 }} />
+                          <Typography variant="body2" fontWeight={600} color="#92400e">On Leave</Typography>
+                        </Box>
+                        <Typography variant="subtitle1" fontWeight={800} color="#92400e">{todayAttendance.onLeave}</Typography>
+                      </Box>
+                      {todayAttendance.total === 0 && (
+                        <Typography variant="caption" color="text.disabled" sx={{ textAlign: 'center', display: 'block', mt: 1 }}>
+                          No attendance records for today yet
+                        </Typography>
+                      )}
+                    </Box>
+                  ) : (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      <Skeleton variant="rounded" height={48} sx={{ borderRadius: 2 }} />
+                      <Skeleton variant="rounded" height={48} sx={{ borderRadius: 2 }} />
+                      <Skeleton variant="rounded" height={48} sx={{ borderRadius: 2 }} />
+                    </Box>
+                  )}
+                  <Button fullWidth variant="outlined" size="small" sx={{ mt: 2, borderRadius: 2 }} onClick={() => navigate('/attendance')}>
+                    View Full Report
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             <Card sx={{ borderRadius: 4, bgcolor: 'background.paper', border: '1px solid #eef2ff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
               <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
@@ -478,6 +614,60 @@ const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
 
+            <Card sx={{ borderRadius: 4, border: '1px solid #eef2ff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                  <CakeIcon sx={{ color: '#ec4899' }} />
+                  <Typography variant="h6" fontWeight={800} sx={{ color: '#1e293b' }}>
+                    Birthdays & Anniversaries
+                  </Typography>
+                </Box>
+                {peopleEvents.length === 0 ? (
+                  <Box sx={{ py: 3, textAlign: 'center', border: '1px dashed #e2e8f0', borderRadius: 3 }}>
+                    <Typography variant="body2" color="text.disabled">None in the next 30 days</Typography>
+                  </Box>
+                ) : (
+                  <List dense disablePadding sx={{ maxHeight: 220, overflow: 'auto' }}>
+                    {peopleEvents.map((ev, i) => (
+                      <ListItem key={i} sx={{ px: 0, py: 1 }}>
+                        <ListItemAvatar sx={{ minWidth: 40 }}>
+                          <Avatar
+                            src={ev.avatar || undefined}
+                            sx={{
+                              width: 32,
+                              height: 32,
+                              bgcolor: ev.type === 'birthday' ? alpha('#ec4899', 0.15) : alpha('#6366f1', 0.15),
+                              color: ev.type === 'birthday' ? '#ec4899' : '#6366f1',
+                              fontSize: 13,
+                              fontWeight: 700,
+                            }}
+                          >
+                            {!ev.avatar && ev.name.charAt(0)}
+                          </Avatar>
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={
+                            <Typography variant="body2" fontWeight={700} noWrap>{ev.name}</Typography>
+                          }
+                          secondary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              {ev.type === 'birthday'
+                                ? <CakeIcon sx={{ fontSize: 12, color: '#ec4899' }} />
+                                : <AnnivIcon sx={{ fontSize: 12, color: '#6366f1' }} />
+                              }
+                              <Typography variant="caption" sx={{ color: ev.daysUntil === 0 ? 'success.main' : 'text.secondary', fontWeight: ev.daysUntil === 0 ? 700 : 400 }}>
+                                {ev.label}
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+              </CardContent>
+            </Card>
+
             <Card sx={{ borderRadius: 4, bgcolor: '#1e293b', color: 'white' }}>
               <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -507,8 +697,8 @@ const Dashboard: React.FC = () => {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Our HR team is available Monday–Friday, 9 AM – 5 PM.
           </Typography>
-          <Typography variant="body2"><strong>Email:</strong>segni2191@gmail.com</Typography>
-          <Typography variant="body2"><strong>Phone:</strong> +1 (555) 010-HRHR</Typography>
+          <Typography variant="body2"><strong>Email:</strong> hr@company.com</Typography>
+          <Typography variant="body2"><strong>Phone:</strong> +1 (555) 010-4747</Typography>
           <Typography variant="body2" sx={{ mt: 2 }}>
             For urgent matters, use the internal chat to reach an HR administrator directly.
           </Typography>

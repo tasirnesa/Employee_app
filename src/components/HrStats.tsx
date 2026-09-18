@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Paper, Typography, Grid, alpha } from '@mui/material';
+import { Box, Paper, Typography, Grid, alpha, Tooltip } from '@mui/material';
 import {
   People as PeopleIcon,
   EmojiEvents as EvalIcon,
@@ -11,6 +11,9 @@ import {
   Flag as GoalIcon,
   Work as WorkIcon,
   Notifications as NotifIcon,
+  CheckCircle as OnTrackIcon,
+  Warning as OverdueIcon,
+  CalendarToday as CalIcon,
 } from '@mui/icons-material';
 
 interface StatCardProps {
@@ -88,14 +91,21 @@ export interface DashboardStats {
   pendingLeaves?: number;
   monthlyPayroll?: string;
   headcountGrowthPercent?: number;
+  headcountGrowthRaw?: boolean;
   evaluationCompletionRate?: number;
   attendanceRate?: number;
   openCandidates?: number;
   myGoalsCount?: number;
   myGoalsAvgProgress?: number;
+  myGoalsOnTrack?: number;
+  myGoalsOverdue?: number;
   myPendingLeaves?: number;
   unreadNotifications?: number;
   newHiresThisMonth?: number;
+  nextEvaluationTitle?: string;
+  nextEvaluationDate?: string;
+  headcountTrend?: { label: string; value: number }[];
+  turnoverTrend?: { label: string; value: number }[];
 }
 
 interface HrStatsProps {
@@ -108,7 +118,9 @@ const HrStats: React.FC<HrStatsProps> = ({ stats }) => {
   const isManager = role === 'Manager';
 
   const growth = stats?.headcountGrowthPercent ?? 0;
-  const growthLabel = growth > 0 ? `+${growth}%` : growth < 0 ? `${growth}%` : 'No change';
+  const growthLabel = stats?.headcountGrowthRaw
+    ? growth > 0 ? `+${growth} new hires` : growth < 0 ? `${growth} hires` : 'No new hires'
+    : growth > 0 ? `+${growth}%` : growth < 0 ? `${growth}%` : 'No change';
   const evalTrend = stats?.evaluationCompletionRate != null
     ? `${stats.evaluationCompletionRate}% complete`
     : undefined;
@@ -147,7 +159,7 @@ const HrStats: React.FC<HrStatsProps> = ({ stats }) => {
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
-            title="Monthly Payroll"
+            title="Total Active Compensation"
             value={stats?.monthlyPayroll ?? '$0.00'}
             icon={<PayrollIcon />}
             trend={`${stats?.attendanceRate ?? 0}% attendance`}
@@ -203,17 +215,68 @@ const HrStats: React.FC<HrStatsProps> = ({ stats }) => {
   }
 
   // Employee view
+  const goalsCount = stats?.myGoalsCount ?? 0;
+  const onTrack = stats?.myGoalsOnTrack ?? 0;
+  const overdue = stats?.myGoalsOverdue ?? 0;
+  const avgProgress = stats?.myGoalsAvgProgress ?? 0;
+
+  // Build a one-line narrative
+  const goalNarrative = (() => {
+    if (goalsCount === 0) return 'No active goals';
+    const parts: string[] = [];
+    if (onTrack > 0) parts.push(`${onTrack} on track`);
+    if (overdue > 0) parts.push(`${overdue} overdue`);
+    if (parts.length === 0) parts.push(`${avgProgress}% avg`);
+    return parts.join(' · ');
+  })();
+
+  const nextEvalLabel = stats?.nextEvaluationDate
+    ? `Next: ${new Date(stats.nextEvaluationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+    : undefined;
+
   return (
     <Grid container spacing={3} sx={{ mb: 4 }}>
+      {/* Goals — narrative card */}
       <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-        <StatCard
-          title="Goals In Progress"
-          value={stats?.myGoalsCount ?? 0}
-          icon={<GoalIcon />}
-          trend={stats?.myGoalsAvgProgress != null ? `${stats.myGoalsAvgProgress}% avg progress` : undefined}
-          color="#6366f1"
-        />
+        <Paper
+          sx={{
+            p: 3,
+            borderRadius: 4,
+            height: '100%',
+            background: 'linear-gradient(135deg, #ffffff 0%, #f8faff 100%)',
+            border: '1px solid #eef2ff',
+            transition: 'all 0.3s ease',
+            '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 12px 24px rgba(0,0,0,0.06)' },
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Box sx={{ p: 1.5, borderRadius: 3, bgcolor: alpha('#6366f1', 0.1), color: '#6366f1', display: 'flex' }}>
+              <GoalIcon />
+            </Box>
+            {overdue > 0 ? (
+              <Tooltip title={`${overdue} goal${overdue > 1 ? 's' : ''} past due date`}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'error.main' }}>
+                  <OverdueIcon sx={{ fontSize: 16 }} />
+                  <Typography variant="caption" fontWeight={700}>{overdue} overdue</Typography>
+                </Box>
+              </Tooltip>
+            ) : onTrack > 0 ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'success.main' }}>
+                <OnTrackIcon sx={{ fontSize: 16 }} />
+                <Typography variant="caption" fontWeight={700}>On track</Typography>
+              </Box>
+            ) : null}
+          </Box>
+          <Box sx={{ mt: 1 }}>
+            <Typography variant="h4" fontWeight={800} sx={{ color: '#1e293b' }}>{goalsCount}</Typography>
+            <Typography variant="body2" color="text.secondary" fontWeight={500}>Goals In Progress</Typography>
+            <Typography variant="caption" sx={{ color: overdue > 0 ? 'error.main' : '#64748b', fontWeight: 600, mt: 0.5, display: 'block' }}>
+              {goalNarrative}
+            </Typography>
+          </Box>
+        </Paper>
       </Grid>
+
       <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard
           title="Pending Requests"
@@ -223,15 +286,45 @@ const HrStats: React.FC<HrStatsProps> = ({ stats }) => {
           color="#f59e0b"
         />
       </Grid>
+
+      {/* Evaluations — show next review date */}
       <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-        <StatCard
-          title="Active Evaluations"
-          value={stats?.activeEvaluations ?? 0}
-          icon={<EvalIcon />}
-          trend={evalTrend}
-          color="#ec4899"
-        />
+        <Paper
+          sx={{
+            p: 3,
+            borderRadius: 4,
+            height: '100%',
+            background: 'linear-gradient(135deg, #ffffff 0%, #f8faff 100%)',
+            border: '1px solid #eef2ff',
+            transition: 'all 0.3s ease',
+            '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 12px 24px rgba(0,0,0,0.06)' },
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Box sx={{ p: 1.5, borderRadius: 3, bgcolor: alpha('#ec4899', 0.1), color: '#ec4899', display: 'flex' }}>
+              <EvalIcon />
+            </Box>
+            {nextEvalLabel && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
+                <CalIcon sx={{ fontSize: 14 }} />
+                <Typography variant="caption" fontWeight={700}>{nextEvalLabel}</Typography>
+              </Box>
+            )}
+          </Box>
+          <Box sx={{ mt: 1 }}>
+            <Typography variant="h4" fontWeight={800} sx={{ color: '#1e293b' }}>
+              {stats?.activeEvaluations ?? 0}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" fontWeight={500}>Active Evaluations</Typography>
+            {evalTrend && (
+              <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, mt: 0.5, display: 'block' }}>
+                {evalTrend}
+              </Typography>
+            )}
+          </Box>
+        </Paper>
       </Grid>
+
       <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard
           title="Notifications"

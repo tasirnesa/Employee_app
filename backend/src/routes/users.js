@@ -13,6 +13,9 @@ router.put('/me', authenticateToken, userController.updateMe);
 // GET /api/users
 router.get('/', authenticateToken, authorize(PERMISSIONS.USER_VIEW), userController.getUsers);
 
+// POST /api/users
+router.post('/', authenticateToken, authorize(PERMISSIONS.USER_UPDATE), userController.createUser);
+
 // GET /api/users/:id
 router.get('/:id', authenticateToken, authorize(PERMISSIONS.USER_VIEW), userController.getUser);
 

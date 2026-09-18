@@ -185,7 +185,40 @@ const userService = {
       resetTokenExpiry: null,
       isFirstLogin: 'false'
     });
-  }
+  },
+
+  createUser: async (data, createdById) => {
+    const { fullName, userName, password, role, gender, age, departmentId, positionId, email } = data;
+
+    if (!fullName || !userName || !password || !role) {
+      throw new Error('fullName, userName, password, and role are required');
+    }
+
+    // Check for duplicate username
+    const existing = await userRepository.findByUsername(userName);
+    if (existing) throw new Error('Username already taken');
+
+    const hashed = await bcrypt.hash(String(password), 10);
+    return await prisma.user.create({
+      data: {
+        fullName,
+        userName,
+        password: hashed,
+        role,
+        gender: gender || null,
+        age: age ? parseInt(age) : null,
+        email: email || null,
+        departmentId: departmentId ? parseInt(departmentId) : null,
+        positionId: positionId ? parseInt(positionId) : null,
+        status: 'true',
+        locked: 'false',
+        isFirstLogin: 'true',
+        activeStatus: 'Active',
+        createdDate: new Date(),
+        createdBy: createdById || 1,
+      },
+    });
+  },
 };
 
 module.exports = userService;

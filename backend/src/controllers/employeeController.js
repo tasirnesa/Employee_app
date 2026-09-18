@@ -14,22 +14,19 @@ const employeeController = {
   }),
 
   createEmployee: asyncHandler(async (req, res) => {
-    console.log('DEBUG: createEmployee headers:', req.headers['content-type']);
-    console.log('DEBUG: createEmployee body:', req.body);
-    
     if (!req.body || Object.keys(req.body).length === 0) {
-      const error = new Error('Request body is empty. Ensure Content-Type is correct (application/json or multipart/form-data).');
+      const error = new Error('Request body is empty. Ensure Content-Type is correct.');
       error.statusCode = 400;
       throw error;
     }
 
     const uploadedFile = (req.files && req.files.profileImage) ? req.files.profileImage[0] : null;
-    
+
     const data = { ...req.body };
     for (const key in data) {
       if (Array.isArray(data[key])) data[key] = data[key][0];
     }
-    
+
     if (uploadedFile) {
       data.profileImage = uploadedFile.path;
     }

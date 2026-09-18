@@ -28,56 +28,30 @@ const CreateEmployee: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch Departments
   const { data: departments = [], isLoading: isLoadingDepartments, error: departmentsError } = useQuery<Department[]>({
     queryKey: ['departments'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No token found in localStorage');
-        throw new Error('No authentication token');
-      }
-      console.log('Fetching departments with token:', token.substring(0, 10) + '...');
-      const response = await api.get('/api/departments', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      console.log('Departments response data:', response.data);
-      if (!Array.isArray(response.data)) {
-        throw new Error('Invalid departments data format');
-      }
+      const response = await api.get('/api/departments');
+      if (!Array.isArray(response.data)) throw new Error('Invalid departments data format');
       return response.data;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch Positions
   const { data: positions = [], isLoading: isLoadingPositions, error: positionsError } = useQuery<Position[]>({
     queryKey: ['positions'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No token found in localStorage');
-        throw new Error('No authentication token');
-      }
-      console.log('Fetching positions with token:', token.substring(0, 10) + '...');
-      const response = await api.get('/api/positions', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      console.log('Positions response data:', response.data);
-      if (!Array.isArray(response.data)) {
-        throw new Error('Invalid positions data format');
-      }
+      const response = await api.get('/api/positions');
+      if (!Array.isArray(response.data)) throw new Error('Invalid positions data format');
       return response.data;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch payroll scales
   const { data: scales = [] } = useQuery({
     queryKey: ['payroll-scales'],
     queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const res = await api.get('/api/payroll/scale-config', { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const res = await api.get('/api/payroll/scale-config');
       const cfg = res.data || {};
       return Object.keys(cfg).map((k) => ({ key: k, label: cfg[k]?.label || k }));
     },

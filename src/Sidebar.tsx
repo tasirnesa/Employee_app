@@ -6,552 +6,472 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Menu,
-  MenuItem,
-  Button,
   Collapse,
   Divider,
   Typography,
   Box,
+  Tooltip,
+  Avatar,
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from './context/UserContext';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import PeopleIcon from '@mui/icons-material/People';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import RateReviewIcon from '@mui/icons-material/RateReview';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import SettingsIcon from '@mui/icons-material/Settings';
-import InboxIcon from '@mui/icons-material/Inbox';
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
-import WorkIcon from '@mui/icons-material/Work';
+
+// Icons
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import PeopleIcon from '@mui/icons-material/People';
+import BadgeIcon from '@mui/icons-material/Badge';
+import RateReviewIcon from '@mui/icons-material/RateReview';
+import FlagIcon from '@mui/icons-material/Flag';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import PaidIcon from '@mui/icons-material/Paid';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import GroupAddIcon from '@mui/icons-material/GroupAdd';
 import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
-import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
-import FlagIcon from '@mui/icons-material/Flag';
-import AssessmentIcon from '@mui/icons-material/Assessment';
-import EventIcon from '@mui/icons-material/Event';
-import BadgeIcon from '@mui/icons-material/Badge';
-import ChecklistIcon from '@mui/icons-material/Checklist';
 import DescriptionIcon from '@mui/icons-material/Description';
 import DevicesIcon from '@mui/icons-material/Devices';
-// removed toggle icons in favor of text label "EES"
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import SettingsIcon from '@mui/icons-material/Settings';
+import InboxIcon from '@mui/icons-material/Inbox';
+import WorkIcon from '@mui/icons-material/Work';
+import EventIcon from '@mui/icons-material/Event';
+import ChecklistIcon from '@mui/icons-material/Checklist';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import RuleIcon from '@mui/icons-material/Rule';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+
+const DRAWER_WIDTH = 240;
+const COLLAPSED_WIDTH = 72;
 
 interface SidebarProps {
   collapsed?: boolean;
   onToggle?: () => void;
 }
 
-const drawerWidth = 240; // Define drawerWidth as a constant
+// ── Types ────────────────────────────────────────────────────────────────────
+interface NavItem {
+  label: string;
+  path: string;
+  icon?: React.ReactNode;
+  adminOnly?: boolean;
+  employeeOnly?: boolean;
+  matchStart?: boolean;
+}
 
+interface NavGroup {
+  label: string;
+  icon: React.ReactNode;
+  items: NavItem[];
+  adminOnly?: boolean;       // entire group hidden from employees
+  employeeVisible?: boolean; // group shown to all roles (default: shown to all)
+}
+
+// ── Navigation structure ─────────────────────────────────────────────────────
+const buildNav = (isEmployee: boolean, isAdmin: boolean): NavGroup[] => [
+  // ── People ────────────────────────────────────────────────────────────────
+  {
+    label: 'People',
+    icon: <PeopleIcon />,
+    items: [
+      // Admin/Manager only
+      ...(!isEmployee ? [
+        { label: 'Users', path: '/users/view', matchStart: true },
+        { label: 'Create User', path: '/users/create' },
+        { label: 'Employees', path: '/employees/view', matchStart: true },
+        { label: 'Create Employee', path: '/employees/create' },
+        { label: 'Departments', path: '/departments' },
+        { label: 'Positions', path: '/positions' },
+      ] : [
+        // Employee only
+        { label: 'My Profile', path: '/employees/view' },
+        { label: 'My Onboarding', path: '/onboarding/me' },
+      ]),
+    ],
+  },
+
+  // ── Lifecycle (admin/manager only) ────────────────────────────────────────
+  ...(!isEmployee ? [{
+    label: 'Lifecycle',
+    icon: <BadgeIcon />,
+    items: [
+      { label: 'New Hire Wizard', path: '/onboarding/wizard' },
+      { label: 'Onboarding', path: '/onboarding' },
+      { label: 'Probation Reviews', path: '/probation' },
+      { label: 'Offboarding', path: '/offboarding' },
+    ],
+  }] : []),
+
+  // ── Evaluation ────────────────────────────────────────────────────────────
+  {
+    label: 'Evaluation',
+    icon: <RateReviewIcon />,
+    items: [
+      ...(!isEmployee ? [{ label: 'Create Session', path: '/evaluations/create' }] : []),
+      { label: 'View Evaluations', path: '/evaluations/view', matchStart: true },
+      ...(!isEmployee ? [{ label: 'Criteria', path: '/criteria/view', matchStart: true }] : []),
+      ...(!isEmployee ? [{ label: 'Create Criteria', path: '/criteria/create' }] : []),
+    ],
+  },
+
+  // ── Performance & Goals ───────────────────────────────────────────────────
+  {
+    label: 'Performance',
+    icon: <AssessmentIcon />,
+    items: [
+      { label: 'Goals & OKRs', path: '/goals', icon: <FlagIcon /> },
+      { label: 'Performance Analytics', path: '/analytics-performance', icon: <AssessmentIcon /> },
+      { label: 'Schedule', path: '/schedule', icon: <EventIcon /> },
+      ...(!isEmployee ? [{ label: 'Projects', path: '/projects', icon: <WorkIcon /> }] : []),
+    ],
+  },
+
+  // ── Time & Attendance ─────────────────────────────────────────────────────
+  {
+    label: 'Time & Attendance',
+    icon: <AccessTimeIcon />,
+    items: [
+      { label: 'Attendance', path: '/attendance' },
+      { label: 'Timesheets', path: '/timesheets' },
+      { label: 'Leave Management', path: '/leave-management' },
+    ],
+  },
+
+  // ── Compensation ──────────────────────────────────────────────────────────
+  {
+    label: 'Compensation',
+    icon: <PaidIcon />,
+    items: [
+      { label: 'Payroll', path: '/payroll' },
+      { label: 'Benefits & Perks', path: '/benefits' },
+    ],
+  },
+
+  // ── Recruitment (admin/manager only) ──────────────────────────────────────
+  ...(!isEmployee ? [{
+    label: 'Recruitment',
+    icon: <GroupAddIcon />,
+    items: [
+      { label: 'Candidates', path: '/recruitment' },
+    ],
+  }] : []),
+
+  // ── Work ─────────────────────────────────────────────────────────────────
+  {
+    label: 'Work',
+    icon: <InboxIcon />,
+    items: [
+      { label: 'My Tasks', path: '/inbox' },
+      { label: 'Todo List', path: '/todo' },
+    ],
+  },
+
+  // ── Documents ─────────────────────────────────────────────────────────────
+  {
+    label: 'Documents',
+    icon: <DescriptionIcon />,
+    items: [
+      { label: 'Documents', path: '/document-management' },
+      ...(!isEmployee ? [{ label: 'Assets', path: '/asset-management', icon: <DevicesIcon /> }] : []),
+    ],
+  },
+
+  // ── Analytics (admin/manager only) ────────────────────────────────────────
+  ...(!isEmployee ? [{
+    label: 'Analytics',
+    icon: <BarChartIcon />,
+    items: [
+      { label: 'Reports', path: '/reports' },
+    ],
+  }] : []),
+];
+
+// ── Flat top-level items (always visible) ────────────────────────────────────
+const TOP_ITEMS = [
+  { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
+  { label: 'Notifications', path: '/notifications', icon: <NotificationsIcon /> },
+];
+
+// ── Bottom settings items ─────────────────────────────────────────────────────
+const SETTINGS_ITEMS = [
+  { label: 'Change Password', path: '/change-password', icon: <VpnKeyIcon /> },
+  { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
+];
+
+// ── NavItem component ─────────────────────────────────────────────────────────
+const NavItemButton: React.FC<{
+  label: string;
+  path: string;
+  icon?: React.ReactNode;
+  indent?: boolean;
+  collapsed?: boolean;
+  onClick: () => void;
+  selected: boolean;
+}> = ({ label, path, icon, indent, collapsed, onClick, selected }) => {
+  const btn = (
+    <ListItemButton
+      selected={selected}
+      onClick={onClick}
+      sx={{
+        borderRadius: 2,
+        mx: 1,
+        my: 0.25,
+        pl: indent ? (collapsed ? 1 : 4) : 1,
+        minHeight: 40,
+        '&.Mui-selected': {
+          bgcolor: 'primary.main',
+          color: 'white',
+          '& .MuiListItemIcon-root': { color: 'white' },
+          '&:hover': { bgcolor: 'primary.dark' },
+        },
+        '&:hover': { bgcolor: 'action.hover' },
+      }}
+    >
+      {icon && (
+        <ListItemIcon sx={{ minWidth: 36, color: 'inherit' }}>
+          {icon}
+        </ListItemIcon>
+      )}
+      {!collapsed && <ListItemText primary={label} primaryTypographyProps={{ fontSize: 13, fontWeight: selected ? 700 : 500 }} />}
+    </ListItemButton>
+  );
+
+  return collapsed ? (
+    <Tooltip title={label} placement="right">
+      <ListItem disablePadding>{btn}</ListItem>
+    </Tooltip>
+  ) : (
+    <ListItem disablePadding>{btn}</ListItem>
+  );
+};
+
+// ── Main component ────────────────────────────────────────────────────────────
 const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  // Legacy menu anchor states removed in favor of collapsible groups
   const { user } = useUser();
-  // const userManagementOpen = false;
-  // const criteriaManagementOpen = false;
-  // const evaluationsOpen = false;
-  const userRole = JSON.parse(localStorage.getItem('userProfile') || '{}').role;
+
+  const userRole = (() => {
+    try { return JSON.parse(localStorage.getItem('userProfile') || '{}').role || ''; } catch { return ''; }
+  })();
 
   const isEmployee = userRole === 'Employee';
+  const isAdmin = userRole === 'Admin' || userRole === 'SuperAdmin';
 
-  const menuItems = [
-    { text: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
-    { text: 'Notifications', path: '/notifications', icon: <NotificationsIcon /> },
-    !isEmployee && { text: 'User Management', path: '/users', icon: <PeopleIcon /> },
-    { text: 'Evaluations', path: '/evaluations/view', icon: <AssignmentIcon /> },
-    !isEmployee && { text: 'Create Evaluation', path: '/evaluations/create', icon: <AssignmentIcon /> },
-    { text: 'Criteria Management', path: '/criteria/view', icon: <SettingsIcon /> },
-    !isEmployee && { text: 'Create Criteria', path: '/criteria/create', icon: <SettingsIcon /> },
-    { text: 'Goals', path: '/goals', icon: <FlagIcon /> },
-    { text: 'Performance', path: '/analytics-performance', icon: <AssessmentIcon /> },
-    { text: 'Schedule', path: '/schedule', icon: <EventIcon /> },
-    { text: 'Reports', path: '/reports', icon: <BarChartIcon /> },
-    { text: 'Settings', path: '/settings', icon: <SettingsIcon /> },
-  ].filter(Boolean);
-  // Recent actions (last 3)
+  // Recent actions
   const [recent, setRecent] = useState<Array<{ label: string; path: string }>>([]);
-
   useEffect(() => {
-    const r = localStorage.getItem('recentActions');
-    if (r) setRecent(JSON.parse(r));
+    try { setRecent(JSON.parse(localStorage.getItem('recentActions') || '[]')); } catch { /* ignore */ }
   }, []);
 
-  const recordRecent = (label: string, path: string) => {
+  const go = (label: string, path: string) => {
+    navigate(path);
     const next = [{ label, path }, ...recent.filter((x) => x.path !== path)].slice(0, 3);
     setRecent(next);
     localStorage.setItem('recentActions', JSON.stringify(next));
   };
 
-  // Legacy MUI Menus removed
+  const isSelected = (path: string, matchStart?: boolean) =>
+    matchStart ? location.pathname.startsWith(path) : location.pathname === path;
 
-  const handleCreateUser = () => {
-    console.log('Navigating to create user');
-    navigate('/users/create');
-    recordRecent('Create User', '/users/create');
-  };
+  // Track which groups are open — default only the most-used ones open
+  const navGroups = buildNav(isEmployee, isAdmin);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const defaults: Record<string, boolean> = {};
+    navGroups.forEach((g) => { defaults[g.label] = false; });
+    // Open the active group by default
+    return defaults;
+  });
 
-  const handleViewUsers = () => {
-    console.log('Navigating to view users');
-    navigate('/users/view');
-    recordRecent('View Users', '/users/view');
-  };
+  // Auto-open the group containing the current route on mount
+  useEffect(() => {
+    const next = { ...openGroups };
+    navGroups.forEach((group) => {
+      if (group.items.some((item) => isSelected(item.path, item.matchStart))) {
+        next[group.label] = true;
+      }
+    });
+    setOpenGroups(next);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
-  const handleCreateCriteria = () => {
-    console.log('Navigating to create criteria');
-    navigate('/criteria/create');
-    recordRecent('Create Criteria', '/criteria/create');
-  };
-
-  const handleViewCriteria = () => {
-    console.log('Navigating to view criteria');
-    navigate('/criteria/view');
-    recordRecent('View Criteria', '/criteria/view');
-  };
-
-  const handleCreateEvaluation = () => {
-    console.log('Navigating to create evaluation');
-    navigate('/evaluations/create');
-    recordRecent('Create Evaluation', '/evaluations/create');
-  };
-
-  const handleViewEvaluations = () => {
-    console.log('Navigating to view evaluations');
-    navigate('/evaluations/view');
-    recordRecent('View Evaluations', '/evaluations/view');
-  };
-
-  const handleGoals = () => {
-    console.log('Navigating to goals');
-    navigate('/goals');
-    recordRecent('Goals', '/goals');
-  };
-
-  const handleAnalyticsPerformance = () => {
-    console.log('Navigating to analytics performance');
-    navigate('/analytics-performance');
-    recordRecent('Performance', '/analytics-performance');
-  };
-
-  const handleSchedule = () => {
-    console.log('Navigating to schedule');
-    navigate('/schedule');
-    recordRecent('Schedule', '/schedule');
-  };
-
-  const handleTodoList = () => {
-    console.log('Navigating to todo list');
-    navigate('/todo');
-    recordRecent('Todo List', '/todo');
-  };
-
-  const handleAttendance = () => {
-    console.log('Navigating to attendance');
-    navigate('/attendance');
-    recordRecent('Attendance', '/attendance');
-  };
-
-  // Collapsible groups state
-  const [openUserMgmt, setOpenUserMgmt] = useState<boolean>(true);
-  const [openEmployeeMgmt, setOpenEmployeeMgmt] = useState<boolean>(true);
-  const [openPayroll, setOpenPayroll] = useState<boolean>(false);
-  const [openAttendance, setOpenAttendance] = useState<boolean>(false);
-  const [openRecruitment, setOpenRecruitment] = useState<boolean>(false);
-  const [openBenefit, setOpenBenefit] = useState<boolean>(false);
-  const [openTaskProject, setOpenTaskProject] = useState<boolean>(false);
-  const [openEvaluation, setOpenEvaluation] = useState<boolean>(true);
-  const [openSettings, setOpenSettings] = useState<boolean>(false);
-  const [openDocuments, setOpenDocuments] = useState<boolean>(false);
-  const [openOffboarding, setOpenOffboarding] = useState<boolean>(false);
-
-
-  const handleToggle = () => {
-    console.log('Toggling sidebar');
-    if (onToggle) onToggle();
+  const toggleGroup = (label: string) => {
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
   return (
-    <>
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: collapsed ? 72 : drawerWidth,
-          flexShrink: 0,
+    <Drawer
+      variant="permanent"
+      sx={{
+        width: collapsed ? COLLAPSED_WIDTH : DRAWER_WIDTH,
+        flexShrink: 0,
+        transition: 'width 0.3s',
+        [`& .MuiDrawer-paper`]: {
+          width: collapsed ? COLLAPSED_WIDTH : DRAWER_WIDTH,
+          boxSizing: 'border-box',
           transition: 'width 0.3s',
-          [`& .MuiDrawer-paper`]: {
-            width: collapsed ? 72 : drawerWidth,
-            boxSizing: 'border-box',
-            transition: 'width 0.3s',
-            overflowX: 'hidden',
-            background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)',
-            borderRight: '1px solid',
-            borderColor: 'divider',
-            pr: 0,
-            mr: 0,
-          },
+          overflowX: 'hidden',
+          background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)',
+          borderRight: '1px solid',
+          borderColor: 'divider',
+          display: 'flex',
+          flexDirection: 'column',
+        },
+      }}
+    >
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5,
+          px: 2,
+          py: 2,
+          cursor: 'pointer',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          minHeight: 64,
         }}
+        onClick={onToggle}
       >
-        <List>
-          {!collapsed && (
-            <ListItem disablePadding sx={{ justifyContent: collapsed ? 'center' : 'flex-start', py: 1 }}>
-              <ListItemText
-                primary={`Logged in as: ${user?.userName || 'Unknown User'}`}
-                sx={{ pl: collapsed ? 0 : 2, opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }}
-              />
-            </ListItem>
-          )}
-          <ListItem disablePadding sx={{ justifyContent: 'center', py: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Box
-                component="img"
-                src="/images/sidebar.jpeg"
-                alt="Sidebar"
-                sx={{ width: 100, height: 80, borderRadius: '50%', objectFit: 'cover' }}
-              />
-              <Button
-                onClick={handleToggle}
-                color="inherit"
-                aria-label={collapsed ? 'Open sidebar' : 'Collapse sidebar'}
-                sx={{ fontWeight: 700, letterSpacing: 1, minWidth: 0, p: 0.5 }}
-              >
-                EES
-              </Button>
-            </Box>
-          </ListItem>
+        <Box
+          component="img"
+          src="/images/sidebar.jpeg"
+          alt="EES"
+          sx={{ width: 36, height: 36, borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }}
+        />
+        {!collapsed && (
+          <Box>
+            <Typography variant="subtitle2" fontWeight={800} color="#1e293b" lineHeight={1.2}>
+              EES
+            </Typography>
+            <Typography variant="caption" color="text.secondary" noWrap>
+              {user?.userName || 'HR System'}
+            </Typography>
+          </Box>
+        )}
+      </Box>
 
-          <ListItem disablePadding>
-            <ListItemButton
-              selected={location.pathname === '/dashboard'}
-              onClick={() => { navigate('/dashboard'); recordRecent('Dashboard', '/dashboard'); }}
-              sx={{ justifyContent: 'flex-start', borderRadius: 2, mx: 1, my: 0.5 }}
-            >
-              <ListItemIcon sx={{ minWidth: 56, justifyContent: 'center' }}>
-                <DashboardIcon />
-              </ListItemIcon>
-              <ListItemText primary="Dashboard" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
-            </ListItemButton>
-          </ListItem>
+      {/* ── Scrollable nav body ─────────────────────────────────── */}
+      <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', py: 1 }}>
+        <List disablePadding>
 
-          <ListItem disablePadding>
-            <ListItemButton
-              selected={location.pathname === '/inbox'}
-              onClick={() => { navigate('/inbox'); recordRecent('My Tasks', '/inbox'); }}
-              sx={{ justifyContent: 'flex-start', borderRadius: 2, mx: 1, my: 0.5 }}
-            >
-              <ListItemIcon sx={{ minWidth: 56, justifyContent: 'center' }}>
-                <InboxIcon />
-              </ListItemIcon>
-              <ListItemText primary="My Tasks" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
-            </ListItemButton>
-          </ListItem>
+          {/* Top flat items: Dashboard + Notifications */}
+          {TOP_ITEMS.map((item) => (
+            <NavItemButton
+              key={item.path}
+              label={item.label}
+              path={item.path}
+              icon={item.icon}
+              collapsed={collapsed}
+              selected={isSelected(item.path)}
+              onClick={() => go(item.label, item.path)}
+            />
+          ))}
 
-          {/* User Management */}
-          {!isEmployee && (
-            <>
-              <ListItem disablePadding>
-                <ListItemButton onClick={() => setOpenUserMgmt(!openUserMgmt)} sx={{ justifyContent: 'flex-start' }}>
-                  <ListItemIcon sx={{ minWidth: 56, justifyContent: 'center' }}>
-                    <PeopleIcon />
-                  </ListItemIcon>
-                  <ListItemText primary="User Management" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
-                  {!collapsed && (openUserMgmt ? <ExpandLess /> : <ExpandMore />)}
-                </ListItemButton>
-              </ListItem>
-              <Collapse in={openUserMgmt} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={handleCreateUser} selected={location.pathname === '/users/create'}>
-                    <ListItemText primary="Create User" />
+          <Divider sx={{ my: 1, mx: 2 }} />
+
+          {/* Grouped nav sections */}
+          {navGroups.map((group) => (
+            <React.Fragment key={group.label}>
+              {/* Group header */}
+              <Tooltip title={collapsed ? group.label : ''} placement="right">
+                <ListItem disablePadding>
+                  <ListItemButton
+                    onClick={() => toggleGroup(group.label)}
+                    sx={{
+                      borderRadius: 2,
+                      mx: 1,
+                      my: 0.25,
+                      minHeight: 40,
+                      '&:hover': { bgcolor: 'action.hover' },
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 36, color: 'text.secondary' }}>
+                      {group.icon}
+                    </ListItemIcon>
+                    {!collapsed && (
+                      <>
+                        <ListItemText
+                          primary={group.label}
+                          primaryTypographyProps={{ fontSize: 13, fontWeight: 700, color: 'text.secondary' }}
+                        />
+                        {openGroups[group.label] ? (
+                          <ExpandLess sx={{ fontSize: 18, color: 'text.disabled' }} />
+                        ) : (
+                          <ExpandMore sx={{ fontSize: 18, color: 'text.disabled' }} />
+                        )}
+                      </>
+                    )}
                   </ListItemButton>
-                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={handleViewUsers} selected={location.pathname.startsWith('/users/view')}>
-                    <ListItemText primary="View Users" />
-                  </ListItemButton>
+                </ListItem>
+              </Tooltip>
+
+              {/* Group items */}
+              <Collapse in={!collapsed && openGroups[group.label]} timeout="auto" unmountOnExit>
+                <List disablePadding>
+                  {group.items.map((item) => (
+                    <NavItemButton
+                      key={item.path}
+                      label={item.label}
+                      path={item.path}
+                      icon={item.icon}
+                      indent
+                      collapsed={false}
+                      selected={isSelected(item.path, item.matchStart)}
+                      onClick={() => go(item.label, item.path)}
+                    />
+                  ))}
                 </List>
               </Collapse>
-            </>)}
+            </React.Fragment>
+          ))}
 
-          {/* Employee Management */}
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => setOpenEmployeeMgmt(!openEmployeeMgmt)} sx={{ justifyContent: 'flex-start' }}>
-              <ListItemIcon sx={{ minWidth: 56, justifyContent: 'center' }}>
-                <BadgeIcon />
-              </ListItemIcon>
-              <ListItemText primary="Employee Management" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
-              {!collapsed && (openEmployeeMgmt ? <ExpandLess /> : <ExpandMore />)}
-            </ListItemButton>
-          </ListItem>
-          <Collapse in={openEmployeeMgmt} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/employees/view'); recordRecent('View Employees', '/employees/view'); }} selected={location.pathname.startsWith('/employees/view')}>
-                <ListItemText primary="View Employees" />
-              </ListItemButton>
-              {isEmployee && (
-                <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/onboarding/me'); recordRecent('My Onboarding', '/onboarding/me'); }} selected={location.pathname === '/onboarding/me'}>
-                  <ListItemText primary="My Onboarding" sx={{ fontWeight: 600, color: 'primary.main' }} />
-                </ListItemButton>
-              )}
-              {!isEmployee && (
-                <>
-                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/employees/create'); recordRecent('Create Employee', '/employees/create'); }} selected={location.pathname === '/employees/create'}>
-                    <ListItemText primary="Create Employee" />
-                  </ListItemButton>
-                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/departments'); recordRecent('Departments', '/departments'); }} selected={location.pathname === '/departments'}>
-                    <ListItemText primary="Departments" />
-                  </ListItemButton>
-                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/positions'); recordRecent('Positions', '/positions'); }} selected={location.pathname === '/positions'}>
-                    <ListItemText primary="Positions" />
-                  </ListItemButton>
-                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/onboarding/wizard'); recordRecent('New Hire Wizard', '/onboarding/wizard'); }} selected={location.pathname === '/onboarding/wizard'}>
-                    <ListItemText primary="Add New Hire (Wizard)" sx={{ fontWeight: 600, color: 'primary.main' }} />
-                  </ListItemButton>
-                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/onboarding'); recordRecent('Onboarding', '/onboarding'); }} selected={location.pathname === '/onboarding'}>
-                    <ListItemText primary="Manage Onboarding" sx={{ fontWeight: 600, color: 'success.main' }} />
-                  </ListItemButton>
-                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/probation'); recordRecent('Probation', '/probation'); }} selected={location.pathname === '/probation'}>
-                    <ListItemText primary="Probation Reviews" />
-                  </ListItemButton>
-                  <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/offboarding'); recordRecent('Offboarding', '/offboarding'); }} selected={location.pathname === '/offboarding'}>
-                    <ListItemText primary="Offboarding" sx={{ color: 'error.main' }} />
-                  </ListItemButton>
-                </>
-              )}
-            </List>
-          </Collapse>
-
-          {/* Evaluation */}
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => setOpenEvaluation(!openEvaluation)} sx={{ justifyContent: 'flex-start' }}>
-              <ListItemIcon sx={{ minWidth: 56, justifyContent: 'center' }}>
-                <RateReviewIcon />
-              </ListItemIcon>
-              <ListItemText primary="Evaluation" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
-              {!collapsed && (openEvaluation ? <ExpandLess /> : <ExpandMore />)}
-            </ListItemButton>
-          </ListItem>
-          <Collapse in={openEvaluation} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding>
-              {!isEmployee && (
-                <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={handleCreateEvaluation} selected={location.pathname === '/evaluations/create'}>
-                  <ListItemText primary="Create Evaluation" />
-                </ListItemButton>
-              )}
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={handleViewEvaluations} selected={location.pathname.startsWith('/evaluations/view')}>
-                <ListItemText primary="View Evaluations" />
-              </ListItemButton>
-            </List>
-          </Collapse>
-
-          {/* Payroll */}
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => setOpenPayroll(!openPayroll)} sx={{ justifyContent: 'flex-start' }}>
-              <ListItemIcon sx={{ minWidth: 56, justifyContent: 'center' }}>
-                <PaidIcon />
-              </ListItemIcon>
-              <ListItemText primary="Payroll" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
-              {!collapsed && (openPayroll ? <ExpandLess /> : <ExpandMore />)}
-            </ListItemButton>
-          </ListItem>
-          <Collapse in={openPayroll} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/payroll'); recordRecent('Payroll', '/payroll'); }} selected={location.pathname === '/payroll'}>
-                <ListItemText primary="Payroll Management" />
-              </ListItemButton>
-            </List>
-          </Collapse>
-
-          {/* Attendance */}
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => setOpenAttendance(!openAttendance)} sx={{ justifyContent: 'flex-start' }}>
-              <ListItemIcon sx={{ minWidth: 56, justifyContent: 'center' }}>
-                <AccessTimeIcon />
-              </ListItemIcon>
-              <ListItemText primary="Attendance" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
-              {!collapsed && (openAttendance ? <ExpandLess /> : <ExpandMore />)}
-            </ListItemButton>
-          </ListItem>
-          <Collapse in={openAttendance} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding>
-              <ListItemButton
-                sx={{ pl: collapsed ? 2 : 7 }}
-                onClick={handleAttendance}
-                selected={location.pathname === '/attendance'}
-              >
-                <ListItemText primary="Attendance Records" />
-              </ListItemButton>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/timesheets'); recordRecent('Timesheets', '/timesheets'); }} selected={location.pathname === '/timesheets'}>
-                <ListItemText primary="Timesheets" />
-              </ListItemButton>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/leave-management'); recordRecent('Leave Management', '/leave-management'); }} selected={location.pathname === '/leave-management'}>
-                <ListItemText primary="Leave Management" />
-              </ListItemButton>
-            </List>
-          </Collapse>
-
-          {/* Recruitment */}
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => setOpenRecruitment(!openRecruitment)} sx={{ justifyContent: 'flex-start' }}>
-              <ListItemIcon sx={{ minWidth: 56, justifyContent: 'center' }}>
-                <GroupAddIcon />
-              </ListItemIcon>
-              <ListItemText primary="Recruitment" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
-              {!collapsed && (openRecruitment ? <ExpandLess /> : <ExpandMore />)}
-            </ListItemButton>
-          </ListItem>
-          <Collapse in={openRecruitment} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/recruitment'); recordRecent('Recruitment', '/recruitment'); }} selected={location.pathname === '/recruitment'}>
-                <ListItemText primary="Candidates Management" />
-              </ListItemButton>
-            </List>
-          </Collapse>
-
-          {/* Benefit */}
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => setOpenBenefit(!openBenefit)} sx={{ justifyContent: 'flex-start' }}>
-              <ListItemIcon sx={{ minWidth: 56, justifyContent: 'center' }}>
-                <CardGiftcardIcon />
-              </ListItemIcon>
-              <ListItemText primary="Benefit" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
-              {!collapsed && (openBenefit ? <ExpandLess /> : <ExpandMore />)}
-            </ListItemButton>
-          </ListItem>
-          <Collapse in={openBenefit} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/benefits'); recordRecent('Benefits', '/benefits'); }} selected={location.pathname === '/benefits'}>
-                <ListItemText primary="Benefits & Perks" />
-              </ListItemButton>
-            </List>
-          </Collapse>
-
-          {/* Documents */}
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => setOpenDocuments(!openDocuments)} sx={{ justifyContent: 'flex-start' }}>
-              <ListItemIcon sx={{ minWidth: 56, justifyContent: 'center' }}>
-                <DescriptionIcon />
-              </ListItemIcon>
-              <ListItemText primary="Documents" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
-              {!collapsed && (openDocuments ? <ExpandLess /> : <ExpandMore />)}
-            </ListItemButton>
-          </ListItem>
-          <Collapse in={openDocuments} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/document-management'); recordRecent('Documents', '/document-management'); }} selected={location.pathname === '/document-management'}>
-                <ListItemText primary="Document Management" />
-              </ListItemButton>
-              {!isEmployee && (
-                <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/asset-management'); recordRecent('Assets', '/asset-management'); }} selected={location.pathname === '/asset-management'}>
-                  <ListItemIcon sx={{ minWidth: 36 }}><DevicesIcon fontSize="small" /></ListItemIcon>
-                  <ListItemText primary="Asset Management" />
-                </ListItemButton>
-              )}
-            </List>
-          </Collapse>
-
-          {/* Task & Project */}
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => setOpenTaskProject(!openTaskProject)} sx={{ justifyContent: 'flex-start' }}>
-              <ListItemIcon sx={{ minWidth: 56, justifyContent: 'center' }}>
-                <AssignmentTurnedInIcon />
-              </ListItemIcon>
-              <ListItemText primary="Task & Project" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
-              {!collapsed && (openTaskProject ? <ExpandLess /> : <ExpandMore />)}
-            </ListItemButton>
-          </ListItem>
-          <Collapse in={openTaskProject} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={handleGoals} selected={location.pathname === '/goals'}>
-                <ListItemText primary="Goals & OKRs" />
-              </ListItemButton>
-              {!isEmployee && (
-                <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => { navigate('/projects'); recordRecent('Projects', '/projects'); }} selected={location.pathname === '/projects'}>
-                  <ListItemText primary="Projects" />
-                </ListItemButton>
-              )}
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={handleAnalyticsPerformance} selected={location.pathname === '/analytics-performance'}>
-                <ListItemText primary="Performance" />
-              </ListItemButton>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={handleSchedule} selected={location.pathname === '/schedule'}>
-                <ListItemText primary="Schedule" />
-              </ListItemButton>
-              <ListItemButton
-                sx={{ pl: collapsed ? 2 : 7 }}
-                onClick={handleTodoList}
-                selected={location.pathname === '/todo'}
-              >
-                <ListItemText primary="Todo List" />
-              </ListItemButton>
-            </List>
-          </Collapse>
-
-          <Divider sx={{ my: 1 }} />
-
-          {/* Recent Actions */}
-          <Box sx={{ px: collapsed ? 0 : 2, pb: 1, opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }}>
-            {!collapsed && <Typography variant="caption" color="text.secondary">Recent</Typography>}
-            <List dense>
-              {recent.map((r) => (
-                <ListItemButton key={r.path} sx={{ borderRadius: 2 }} onClick={() => navigate(r.path)}>
-                  <ListItemText primary={r.label} />
-                </ListItemButton>
-              ))}
-            </List>
-          </Box>
-
-          <Divider sx={{ my: 1 }} />
-
-          {/* Settings (Tabs in settings page) */}
-          <ListItem disablePadding>
-            <ListItemButton onClick={() => setOpenSettings(!openSettings)} sx={{ justifyContent: 'flex-start' }}>
-              <ListItemIcon sx={{ minWidth: 56, justifyContent: 'center' }}>
-                <SettingsIcon />
-              </ListItemIcon>
-              <ListItemText primary="Settings" sx={{ opacity: collapsed ? 0 : 1, transition: 'opacity 0.3s' }} />
-              {!collapsed && (openSettings ? <ExpandLess /> : <ExpandMore />)}
-            </ListItemButton>
-          </ListItem>
-          <Collapse in={openSettings} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => navigate('/criteria/view')} selected={location.pathname.startsWith('/criteria')}>
-                <ListItemText primary="Criteria Management" />
-              </ListItemButton>
-              {/* <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => navigate('/goals')} selected={location.pathname === '/goals'}>
-                <ListItemText primary="Goals" />
-              </ListItemButton>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => navigate('/analytics-performance')} selected={location.pathname === '/analytics-performance'}>
-                <ListItemText primary="Performance" />
-              </ListItemButton>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => navigate('/schedule')} selected={location.pathname === '/schedule'}>
-                <ListItemText primary="Schedule" />
-              </ListItemButton>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={handleTodoList} selected={location.pathname === '/todo'}>
-                <ListItemText primary="Todo List" />
-              </ListItemButton> */}
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => navigate('/reports')} selected={location.pathname === '/reports'}>
-                <ListItemText primary="Reports" />
-              </ListItemButton>
-              <ListItemButton sx={{ pl: collapsed ? 2 : 7 }} onClick={() => navigate('/change-password')} selected={location.pathname === '/change-password'}>
-                <ListItemText primary="Change Password" />
-              </ListItemButton>
-            </List>
-          </Collapse>
-
-
-
-
-
-
-
-
-
+          {/* Recent actions */}
+          {recent.length > 0 && !collapsed && (
+            <>
+              <Divider sx={{ my: 1, mx: 2 }} />
+              <Box sx={{ px: 2, pb: 0.5 }}>
+                <Typography variant="caption" color="text.disabled" fontWeight={700} sx={{ letterSpacing: 0.5 }}>
+                  RECENT
+                </Typography>
+              </Box>
+              <List disablePadding>
+                {recent.map((r) => (
+                  <NavItemButton
+                    key={r.path}
+                    label={r.label}
+                    path={r.path}
+                    indent
+                    collapsed={false}
+                    selected={isSelected(r.path)}
+                    onClick={() => go(r.label, r.path)}
+                  />
+                ))}
+              </List>
+            </>
+          )}
         </List>
-      </Drawer>
+      </Box>
 
-    </>
+      {/* ── Bottom: Settings items ──────────────────────────────── */}
+      <Box sx={{ borderTop: '1px solid', borderColor: 'divider', py: 1 }}>
+        <List disablePadding>
+          {SETTINGS_ITEMS.map((item) => (
+            <NavItemButton
+              key={item.path}
+              label={item.label}
+              path={item.path}
+              icon={item.icon}
+              collapsed={collapsed}
+              selected={isSelected(item.path)}
+              onClick={() => go(item.label, item.path)}
+            />
+          ))}
+        </List>
+      </Box>
+    </Drawer>
   );
 };
 

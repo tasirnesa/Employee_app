@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Formik, Form, Field } from 'formik';
 import * as Yup from 'yup';
-import axios from 'axios';
 import {
   Container,
   Typography,
@@ -15,281 +14,220 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Paper,
+  Stack,
 } from '@mui/material';
-import type { User, Department, Position } from '../types/interfaces';
+import type { Department, Position } from '../types/interfaces';
+import api from '../lib/axios';
+import { useUser } from '../context/UserContext';
+
+const ROLES = ['Admin', 'SuperAdmin', 'Manager', 'Employee', 'Maker', 'Checker'];
+
+const validationSchema = Yup.object({
+  fullName: Yup.string().required('Full name is required'),
+  userName: Yup.string().required('Username is required'),
+  password: Yup.string().min(6, 'Minimum 6 characters').required('Password is required'),
+  role: Yup.string().required('Role is required').oneOf(ROLES, 'Select a valid role'),
+  gender: Yup.string().oneOf(['Male', 'Female', ''], 'Select a valid gender'),
+  age: Yup.number().nullable().min(18, 'Must be at least 18'),
+  email: Yup.string().email('Invalid email').nullable(),
+  departmentId: Yup.number().nullable(),
+  positionId: Yup.number().nullable(),
+});
 
 const CreateUser: React.FC = () => {
-  console.log('CreateUser rendering');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user: currentUser } = useUser();
 
-  // Fetch Departments
-  const { data: departments = [], isLoading: isLoadingDepartments, error: departmentsError } = useQuery<Department[]>({
+  const { data: departments = [], isLoading: loadingDepts } = useQuery<Department[]>({
     queryKey: ['departments'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No token found in localStorage');
-        throw new Error('No authentication token');
-      }
-      console.log('Fetching departments with token:', token.substring(0, 10) + '...');
-      const response = await axios.get('http://localhost:5000/api/departments', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      console.log('Departments response data:', response.data);
-      if (!Array.isArray(response.data)) {
-        throw new Error('Invalid departments data format');
-      }
-      return response.data;
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryFn: async () => (await api.get('/api/departments')).data,
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch Positions
-  const { data: positions = [], isLoading: isLoadingPositions, error: positionsError } = useQuery<Position[]>({
+  const { data: positions = [], isLoading: loadingPos } = useQuery<Position[]>({
     queryKey: ['positions'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No token found in localStorage');
-        throw new Error('No authentication token');
-      }
-      console.log('Fetching positions with token:', token.substring(0, 10) + '...');
-      const response = await axios.get('http://localhost:5000/api/positions', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      console.log('Positions response data:', response.data);
-      if (!Array.isArray(response.data)) {
-        throw new Error('Invalid positions data format');
-      }
-      return response.data;
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryFn: async () => (await api.get('/api/positions')).data,
+    staleTime: 5 * 60 * 1000,
   });
 
-  const createUserMutation = useMutation({
-    mutationFn: async (userData: Partial<User>) => {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token');
-      const response = await axios.post('http://localhost:5000/api/users', {
-        ...userData,
-        age: userData.age ? parseInt(userData.age as unknown as string) : undefined,
-        createdBy: 1, // Assume current user ID is 1; replace with actual logic
-        departmentId: userData.departmentId ? parseInt(userData.departmentId as unknown as string) : undefined,
-        positionId: userData.positionId ? parseInt(userData.positionId as unknown as string) : undefined,
-      }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
+  const createMutation = useMutation({
+    mutationFn: async (values: any) => {
+      const payload = {
+        ...values,
+        age: values.age ? parseInt(values.age) : null,
+        departmentId: values.departmentId ? parseInt(values.departmentId) : null,
+        positionId: values.positionId ? parseInt(values.positionId) : null,
+        email: values.email || null,
+        gender: values.gender || null,
+        createdBy: currentUser?.id ?? 1,
+      };
+      const res = await api.post('/api/users', payload);
+      return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       navigate('/users/view');
     },
-    onError: (error: any) => {
-      console.error('Create user error:', error.response?.data || error.message);
-    },
-  });
-
-  const validationSchema = Yup.object({
-    fullName: Yup.string().required('Full Name is required'),
-    userName: Yup.string().required('Username is required'),
-    password: Yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
-    role: Yup.string().required('Role is required').oneOf(['Admin', 'SuperAdmin', 'Maker', 'Checker'], 'Please select a valid role'),
-    gender: Yup.string().required('Gender is required').oneOf(['Male', 'Female'], 'Please select a valid gender'),
-    age: Yup.number().nullable().min(18, 'Age must be at least 18'),
-    departmentId: Yup.number().nullable().notRequired(), // Optional field
-    positionId: Yup.number().nullable().notRequired(),  // Optional field
   });
 
   return (
-    <Container sx={{ mt: 8 }}>
-      <Typography variant="h4" gutterBottom>
-        Create User
-      </Typography>
-      <Formik
-        initialValues={{
-          fullName: '',
-          userName: '',
-          password: '',
-          gender: '', // Default to empty string
-          age: '', // String to match TextField input
-          role: '',  // Default to empty string
-          departmentId: '', // String to match Select input
-          positionId: '',   // String to match Select input
-        }}
-        validationSchema={validationSchema}
-        onSubmit={(values, { setSubmitting }) => {
-          // Convert string values to numbers where expected by User type
-          const processedValues: Partial<User> = {
-            ...values,
-            age: values.age ? parseInt(values.age, 10) : undefined,
-            departmentId: values.departmentId ? parseInt(values.departmentId, 10) : undefined,
-            positionId: values.positionId ? parseInt(values.positionId, 10) : undefined,
-          };
-          createUserMutation.mutate(processedValues);
-          setSubmitting(false);
-        }}
-      >
-        {({ errors, touched, isSubmitting, setFieldValue, values }) => (
-          <Form>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Field
-                as={TextField}
-                name="fullName"
-                label="Full Name"
-                fullWidth
-                error={touched.fullName && !!errors.fullName}
-                helperText={touched.fullName && errors.fullName}
-              />
-              <Field
-                as={TextField}
-                name="userName"
-                label="Username"
-                fullWidth
-                error={touched.userName && !!errors.userName}
-                helperText={touched.userName && errors.userName}
-              />
-              <Field
-                as={TextField}
-                name="password"
-                label="Password"
-                type="password"
-                fullWidth
-                error={touched.password && !!errors.password}
-                helperText={touched.password && errors.password}
-              />
-              <Field
-                as={FormControl}
-                fullWidth
-                error={touched.gender && !!errors.gender}
-              >
-                <InputLabel id="gender-label">Gender</InputLabel>
-                <Select
-                  name="gender"
-                  labelId="gender-label"
-                  label="Gender"
-                  value={values.gender || ''}
-                  onChange={(e) => setFieldValue('gender', e.target.value)}
-                >
-                  <MenuItem value="Male">Male</MenuItem>
-                  <MenuItem value="Female">Female</MenuItem>
-                </Select>
-                {touched.gender && errors.gender && (
-                  <Typography color="error" variant="caption">{errors.gender}</Typography>
+    <Container maxWidth="sm" sx={{ mt: 4, mb: 4 }}>
+      <Paper sx={{ p: 4, borderRadius: 3, border: '1px solid #eef2ff' }}>
+        <Typography variant="h5" fontWeight={800} sx={{ mb: 3, color: '#1e293b' }}>
+          Create User
+        </Typography>
+
+        <Formik
+          initialValues={{
+            fullName: '', userName: '', password: '', role: '',
+            gender: '', age: '', email: '', departmentId: '', positionId: '',
+          }}
+          validationSchema={validationSchema}
+          onSubmit={(values, { setSubmitting }) => {
+            createMutation.mutate(values);
+            setSubmitting(false);
+          }}
+        >
+          {({ errors, touched, values, setFieldValue, isSubmitting }) => (
+            <Form>
+              <Stack spacing={2.5}>
+                <Field
+                  as={TextField}
+                  name="fullName"
+                  label="Full Name"
+                  fullWidth
+                  error={touched.fullName && !!errors.fullName}
+                  helperText={touched.fullName && errors.fullName}
+                />
+
+                <Stack direction="row" spacing={2}>
+                  <Field
+                    as={TextField}
+                    name="userName"
+                    label="Username"
+                    fullWidth
+                    error={touched.userName && !!errors.userName}
+                    helperText={touched.userName && errors.userName}
+                  />
+                  <Field
+                    as={TextField}
+                    name="password"
+                    label="Password"
+                    type="password"
+                    fullWidth
+                    error={touched.password && !!errors.password}
+                    helperText={touched.password && errors.password}
+                  />
+                </Stack>
+
+                <Field
+                  as={TextField}
+                  name="email"
+                  label="Email (optional)"
+                  type="email"
+                  fullWidth
+                  error={touched.email && !!errors.email}
+                  helperText={touched.email && errors.email}
+                />
+
+                <Stack direction="row" spacing={2}>
+                  <FormControl fullWidth error={touched.role && !!errors.role}>
+                    <InputLabel>Role</InputLabel>
+                    <Select
+                      name="role"
+                      label="Role"
+                      value={values.role}
+                      onChange={(e) => setFieldValue('role', e.target.value)}
+                    >
+                      {ROLES.map((r) => <MenuItem key={r} value={r}>{r}</MenuItem>)}
+                    </Select>
+                    {touched.role && errors.role && (
+                      <Typography variant="caption" color="error">{errors.role}</Typography>
+                    )}
+                  </FormControl>
+
+                  <FormControl fullWidth>
+                    <InputLabel>Gender</InputLabel>
+                    <Select
+                      name="gender"
+                      label="Gender"
+                      value={values.gender}
+                      onChange={(e) => setFieldValue('gender', e.target.value)}
+                    >
+                      <MenuItem value="">Select</MenuItem>
+                      <MenuItem value="Male">Male</MenuItem>
+                      <MenuItem value="Female">Female</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Stack>
+
+                <Stack direction="row" spacing={2}>
+                  <Field
+                    as={TextField}
+                    name="age"
+                    label="Age"
+                    type="number"
+                    fullWidth
+                    error={touched.age && !!errors.age}
+                    helperText={touched.age && errors.age}
+                  />
+
+                  <FormControl fullWidth disabled={loadingDepts}>
+                    <InputLabel>Department</InputLabel>
+                    <Select
+                      name="departmentId"
+                      label="Department"
+                      value={values.departmentId}
+                      onChange={(e) => setFieldValue('departmentId', e.target.value)}
+                    >
+                      <MenuItem value="">None</MenuItem>
+                      {departments.map((d) => (
+                        <MenuItem key={d.id} value={String(d.id)}>{d.name}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <FormControl fullWidth disabled={loadingPos}>
+                    <InputLabel>Position</InputLabel>
+                    <Select
+                      name="positionId"
+                      label="Position"
+                      value={values.positionId}
+                      onChange={(e) => setFieldValue('positionId', e.target.value)}
+                    >
+                      <MenuItem value="">None</MenuItem>
+                      {positions.map((p) => (
+                        <MenuItem key={p.id} value={String(p.id)}>{p.name}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Stack>
+
+                {createMutation.isError && (
+                  <Alert severity="error">
+                    {(createMutation.error as any)?.response?.data?.message
+                      || (createMutation.error as any)?.message
+                      || 'Failed to create user'}
+                  </Alert>
                 )}
-              </Field>
-              <Field
-                as={TextField}
-                name="age"
-                label="Age"
-                type="number"
-                fullWidth
-                error={touched.age && !!errors.age}
-                helperText={touched.age && errors.age}
-              />
-              <Field
-                as={FormControl}
-                fullWidth
-                error={touched.role && !!errors.role}
-              >
-                <InputLabel id="role-label">Role</InputLabel>
-                <Select
-                  name="role"
-                  labelId="role-label"
-                  label="Role"
-                  value={values.role || ''}
-                  onChange={(e) => setFieldValue('role', e.target.value)}
-                >
-                  <MenuItem value="Admin">Admin</MenuItem>
-                  <MenuItem value="SuperAdmin">SuperAdmin</MenuItem>
-                  <MenuItem value="Maker">Maker</MenuItem>
-                  <MenuItem value="Checker">Checker</MenuItem>
-                </Select>
-                {touched.role && errors.role && (
-                  <Typography color="error" variant="caption">{errors.role}</Typography>
-                )}
-              </Field>
-              <Field
-                as={FormControl}
-                fullWidth
-                error={touched.departmentId && !!errors.departmentId}
-              >
-                <InputLabel id="department-label">Department</InputLabel>
-                <Select
-                  name="departmentId"
-                  labelId="department-label"
-                  label="Department"
-                  value={values.departmentId || ''}
-                  onChange={(e) => setFieldValue('departmentId', e.target.value)}
-                  disabled={isLoadingDepartments}
-                >
-                  {departments.length === 0 && !isLoadingDepartments && !departmentsError && (
-                    <MenuItem disabled value="">No departments available</MenuItem>
-                  )}
-                  {departments.map((dept) => (
-                    <MenuItem key={dept.id} value={dept.id.toString()}>{dept.name}</MenuItem> // Convert to string for Select
-                  ))}
-                </Select>
-                {departmentsError && (
-                  <Typography color="error" variant="caption">Error loading departments: {departmentsError.message}</Typography>
-                )}
-                {touched.departmentId && errors.departmentId && (
-                  <Typography color="error" variant="caption">{errors.departmentId}</Typography>
-                )}
-              </Field>
-              <Field
-                as={FormControl}
-                fullWidth
-                error={touched.positionId && !!errors.positionId}
-              >
-                <InputLabel id="position-label">Position</InputLabel>
-                <Select
-                  name="positionId"
-                  labelId="position-label"
-                  label="Position"
-                  value={values.positionId || ''}
-                  onChange={(e) => setFieldValue('positionId', e.target.value)}
-                  disabled={isLoadingPositions}
-                >
-                  {positions.length === 0 && !isLoadingPositions && !positionsError && (
-                    <MenuItem disabled value="">No positions available</MenuItem>
-                  )}
-                  {positions.map((pos) => (
-                    <MenuItem key={pos.id} value={pos.id.toString()}>{pos.name}</MenuItem> // Convert to string for Select
-                  ))}
-                </Select>
-                {positionsError && (
-                  <Typography color="error" variant="caption">Error loading positions: {positionsError.message}</Typography>
-                )}
-                {touched.positionId && errors.positionId && (
-                  <Typography color="error" variant="caption">{errors.positionId}</Typography>
-                )}
-              </Field>
-              {createUserMutation.isError && (
-                <Alert severity="error">
-                  Error creating user: {createUserMutation.error?.message || 'Unknown error'}
-                </Alert>
-              )}
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={isSubmitting || isLoadingDepartments || isLoadingPositions}
-                >
-                  Create
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => navigate('/users/view')}
-                >
-                  Cancel
-                </Button>
-              </Box>
-            </Box>
-          </Form>
-        )}
-      </Formik>
+
+                <Stack direction="row" spacing={2} justifyContent="flex-end">
+                  <Button variant="outlined" onClick={() => navigate('/users/view')}>Cancel</Button>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={isSubmitting || createMutation.isPending}
+                  >
+                    {createMutation.isPending ? 'Creating...' : 'Create User'}
+                  </Button>
+                </Stack>
+              </Stack>
+            </Form>
+          )}
+        </Formik>
+      </Paper>
     </Container>
   );
 };
