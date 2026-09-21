@@ -26,6 +26,7 @@ const DocumentManagement: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<number | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Form State
   const [uploadData, setUploadData] = useState({

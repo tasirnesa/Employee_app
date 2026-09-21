@@ -114,14 +114,32 @@ const userService = {
   },
 
   updateMe: async (userId, data) => {
-    const { fullName, userName, password } = data;
-    if (!fullName || !userName) throw new Error('FullName and userName are required');
+    const { fullName, userName, email, gender, currentPassword, password } = data;
 
-    const updateData = { fullName, userName };
-    if (password) {
-      updateData.password = await bcrypt.hash(password, 10);
+    // Build update payload from whatever was supplied
+    const updateData = {};
+    if (fullName)  updateData.fullName = fullName;
+    if (userName)  updateData.userName = userName;
+    if (email !== undefined) updateData.email = email || null;
+    if (gender !== undefined) updateData.gender = gender || null;
+
+    if (Object.keys(updateData).length === 0 && !password) {
+      throw new Error('Nothing to update');
     }
-    return await userRepository.update(userId, updateData);
+
+    // If password change is requested, validate via changePassword
+    if (password) {
+      if (!currentPassword) throw new Error('Current password is required to set a new password');
+      // delegate – this validates, hashes, and saves
+      await userService.changePassword(userId, currentPassword, password);
+    }
+
+    // Persist any profile-field changes
+    if (Object.keys(updateData).length > 0) {
+      return await userRepository.update(userId, updateData);
+    }
+
+    return await userRepository.findById(userId);
   },
 
   forgotPassword: async (email) => {

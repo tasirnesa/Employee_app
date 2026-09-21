@@ -1,6 +1,7 @@
 const benefitRepository = require('../repositories/benefitRepository');
 const communicationService = require('./communicationService');
 const employeeRepository = require('../repositories/employeeRepository');
+const hrIntegrationService = require('./hrIntegrationService');
 
 const benefitService = {
   // --- Benefits logic ---
@@ -12,6 +13,10 @@ const benefitService = {
   },
 
   createBenefit: async (data) => {
+    const minRating = data.minPerformanceRating != null && data.minPerformanceRating !== ''
+      ? parseFloat(data.minPerformanceRating)
+      : null;
+
     const benefit = await benefitRepository.createBenefit({
       ...data,
       employeeId: parseInt(data.employeeId),
@@ -20,8 +25,19 @@ const benefitService = {
       companyContribution: parseFloat(data.companyContribution),
       effectiveDate: new Date(data.effectiveDate),
       expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
-      status: data.status || 'Active'
+      status: data.status || 'Active',
+      eligibilityTier: data.eligibilityTier || 'Standard',
+      minPerformanceRating: minRating,
     });
+
+    try {
+      const rating = await hrIntegrationService.getLatestRating(data.employeeId);
+      if (rating > 0) {
+        await hrIntegrationService.syncBenefitsPerksEligibility(parseInt(data.employeeId), rating);
+      }
+    } catch (e) {
+      console.warn('Benefit eligibility sync failed:', e.message);
+    }
 
     // Notify Employee
     try {
@@ -63,14 +79,29 @@ const benefitService = {
   },
 
   createPerk: async (data) => {
+    const minRating = data.minPerformanceRating != null && data.minPerformanceRating !== ''
+      ? parseFloat(data.minPerformanceRating)
+      : null;
+
     const perk = await benefitRepository.createPerk({
       ...data,
       employeeId: parseInt(data.employeeId),
       value: parseFloat(data.value) || 0,
       startDate: new Date(data.startDate),
       endDate: data.endDate ? new Date(data.endDate) : null,
-      status: data.status || 'Active'
+      status: data.status || 'Active',
+      eligibilityTier: data.eligibilityTier || 'Standard',
+      minPerformanceRating: minRating,
     });
+
+    try {
+      const rating = await hrIntegrationService.getLatestRating(data.employeeId);
+      if (rating > 0) {
+        await hrIntegrationService.syncBenefitsPerksEligibility(parseInt(data.employeeId), rating);
+      }
+    } catch (e) {
+      console.warn('Perk eligibility sync failed:', e.message);
+    }
 
     // Notify Employee
     try {

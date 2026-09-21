@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/axios';
@@ -19,6 +19,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogContentText,
   DialogActions,
   TextField,
   Card,
@@ -30,6 +31,9 @@ import {
   InputLabel,
   Select,
   Tooltip,
+  Alert,
+  Snackbar,
+  Stack,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -39,11 +43,19 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import EmailIcon from '@mui/icons-material/Email';
 import SendIcon from '@mui/icons-material/Send';
+import MeritProposalsPanel from '../components/MeritProposalsPanel';
 
 const Payroll: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'payslips' | 'compensation' | 'positionDefaults' | 'scaleDefaults' | 'runPayroll'>('payslips');
+  const [activeTab, setActiveTab] = useState<
+    'payslips' | 'compensation' | 'merit' | 'positionDefaults' | 'scaleDefaults' | 'runPayroll'
+  >('payslips');
+
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab === 'merit') setActiveTab('merit');
+  }, []);
   const [payslipDialogOpen, setPayslipDialogOpen] = useState(false);
   const [compensationDialogOpen, setCompensationDialogOpen] = useState(false);
   const [selectedPayslip, setSelectedPayslip] = useState<Payslip | null>(null);
@@ -60,6 +72,9 @@ const Payroll: React.FC = () => {
     lateDeduction: '0',
     attendanceBonus: '0',
     attendancePenalty: '0',
+    performanceBonus: '0',
+    perksAllowance: '0',
+    benefitsDeduction: '0',
     deductions: '',
     netSalary: ''
   });
@@ -83,6 +98,11 @@ const Payroll: React.FC = () => {
     qualifications: '',
   });
   const [runPeriod, setRunPeriod] = useState<string>(''); // YYYY-MM
+  const [payNotify, setPayNotify] = useState<{ msg: string; severity: 'success' | 'error' | 'info' } | null>(null);
+  const payFlash = (msg: string, severity: 'success' | 'error' | 'info' = 'success') => {
+    setPayNotify({ msg, severity });
+    setTimeout(() => setPayNotify(null), 4500);
+  };
   // Scale defaults configuration (admin)
   const [scaleKeyEditing, setScaleKeyEditing] = useState<string>('');
   const [scaleConfig, setScaleConfig] = useState({
@@ -98,62 +118,33 @@ const Payroll: React.FC = () => {
   const userRole = JSON.parse(localStorage.getItem('userProfile') || '{}').role;
   const isEmployee = userRole === 'Employee';
   const isAdmin = userRole === 'Admin' || userRole === 'SuperAdmin';
+  const canReviewMerit = isAdmin || userRole === 'Manager' || userRole === 'SuperAdmin';
 
   // Fetch payslips data
   const { data: payslips, isLoading: payslipsLoading, error: payslipsError } = useQuery({
     queryKey: ['payslips'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/payroll/payslips', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    queryFn: async () => (await api.get('/api/payroll/payslips')).data,
   });
 
-  // Fetch compensations data
   const { data: compensations, isLoading: compensationsLoading, error: compensationsError } = useQuery({
     queryKey: ['compensations'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/payroll/compensations', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    queryFn: async () => (await api.get('/api/payroll/compensations')).data,
   });
 
-  // Fetch users for dropdown (payslips reference User model, not Employee model)
   const { data: employees } = useQuery({
     queryKey: ['users'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/users', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    queryFn: async () => (await api.get('/api/users')).data,
   });
 
-  // Fetch positions for configuring defaults
   const { data: positions } = useQuery({
     queryKey: ['positions-for-payroll'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const res = await api.get('/api/positions', { headers: { Authorization: `Bearer ${token}` } });
-      return res.data as Array<{ id: number; name: string }>;
-    },
+    queryFn: async () => (await api.get('/api/positions')).data as Array<{ id: number; name: string }>,
     enabled: isAdmin,
   });
 
-  // Load all scales for admin
   const { data: allScales, refetch: refetchAllScales } = useQuery({
     queryKey: ['payroll-scales-all'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const res = await api.get('/api/payroll/scale-config', { headers: token ? { Authorization: `Bearer ${token}` } : {} });
-      return res.data as Record<string, any>;
-    },
+    queryFn: async () => (await api.get('/api/payroll/scale-config')).data as Record<string, any>,
     enabled: isAdmin,
   });
 
@@ -162,8 +153,7 @@ const Payroll: React.FC = () => {
     queryKey: ['scale-config', scaleKeyEditing],
     queryFn: async () => {
       if (!scaleKeyEditing) return null;
-      const token = localStorage.getItem('token');
-      const res = await api.get(`/api/payroll/scale-config/${scaleKeyEditing}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const res = await api.get(`/api/payroll/scale-config/${scaleKeyEditing}`);
       const cfg = res.data || {};
       setScaleConfig({
         name: cfg.name || cfg.label || '',
@@ -178,11 +168,9 @@ const Payroll: React.FC = () => {
     enabled: isAdmin && !!scaleKeyEditing,
   });
 
-  // Save scale config
   const saveScaleCfg = useMutation({
     mutationFn: async () => {
       if (!scaleKeyEditing) throw new Error('Scale key is required');
-      const token = localStorage.getItem('token');
       const payload = {
         ...scaleConfig,
         name: scaleConfig.name || scaleKeyEditing,
@@ -192,23 +180,17 @@ const Payroll: React.FC = () => {
         housingPct: Number(scaleConfig.housingPct || 0),
         transportPct: Number(scaleConfig.transportPct || 0),
       } as any;
-      const res = await api.put(`/api/payroll/scale-config/${scaleKeyEditing}`, payload, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
-      return res.data;
+      return (await api.put(`/api/payroll/scale-config/${scaleKeyEditing}`, payload)).data;
     },
-    onSuccess: () => {
-      alert('Scale saved');
-      refetchAllScales();
-    },
-    onError: (e: any) => alert(e?.response?.data?.error || e.message),
+    onSuccess: () => { payFlash('Scale saved'); refetchAllScales(); },
+    onError: (e: any) => payFlash(e?.response?.data?.error || e.message, 'error'),
   });
 
-  // Load a position config when selection changes
   const { refetch: refetchPosConfig } = useQuery({
     queryKey: ['position-config', selectedPositionId],
     queryFn: async () => {
       if (!selectedPositionId) return null;
-      const token = localStorage.getItem('token');
-      const res = await api.get(`/api/payroll/position-config/${selectedPositionId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await api.get(`/api/payroll/position-config/${selectedPositionId}`);
       const cfg = res.data || {};
       setPositionConfig({
         positionName: cfg.name || cfg.positionName || '',
@@ -222,10 +204,8 @@ const Payroll: React.FC = () => {
     enabled: isAdmin && !!selectedPositionId,
   });
 
-  // Save position config
   const savePosCfg = useMutation({
     mutationFn: async () => {
-      const token = localStorage.getItem('token');
       const payload = {
         ...positionConfig,
         positionName: positionConfig.positionName,
@@ -234,171 +214,92 @@ const Payroll: React.FC = () => {
         fuelAllowance: Number(positionConfig.fuelAllowance || 0),
         qualifications: positionConfig.qualifications,
       } as any;
-      const res = await api.put(`/api/payroll/position-config/${selectedPositionId}`, payload, { headers: { Authorization: `Bearer ${token}` } });
-      return res.data;
+      return (await api.put(`/api/payroll/position-config/${selectedPositionId}`, payload)).data;
     },
-    onSuccess: () => {
-      alert('Position defaults saved');
-    },
-    onError: (e: any) => alert(e?.response?.data?.error || e.message),
+    onSuccess: () => { payFlash('Position defaults saved'); },
+    onError: (e: any) => payFlash(e?.response?.data?.error || e.message, 'error'),
   });
 
-  // Run payroll
   const runPayroll = useMutation({
-    mutationFn: async () => {
-      const token = localStorage.getItem('token');
-      const res = await api.post('/api/payroll/run', { period: runPeriod || undefined }, { headers: { Authorization: `Bearer ${token}` } });
-      return res.data;
-    },
+    mutationFn: async () => (await api.post('/api/payroll/run', { period: runPeriod || undefined })).data,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['payslips'] });
-      alert(`Payroll run complete for ${data.period}. Payslips generated/updated: ${data.count}`);
+      payFlash(`Payroll run complete for ${data.period}. ${data.count} payslips generated.`);
     },
-    onError: (e: any) => alert(e?.response?.data?.error || e.message),
+    onError: (e: any) => payFlash(e?.response?.data?.error || e.message, 'error'),
   });
 
-  // Create payslip mutation
   const createPayslipMutation = useMutation({
-    mutationFn: async (payslipData: any) => {
-      const token = localStorage.getItem('token');
-      console.log('Creating payslip with data:', payslipData);
-      const response = await api.post('/api/payroll/payslips', payslipData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    mutationFn: async (payslipData: any) => (await api.post('/api/payroll/payslips', payslipData)).data,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payslips'] });
       setPayslipDialogOpen(false);
-      setPayslipForm({
-        employeeId: '',
-        period: '',
-        basicSalary: '',
-        allowances: '',
-        overtimePay: '0',
-        lateDeduction: '0',
-        attendanceBonus: '0',
-        attendancePenalty: '0',
-        deductions: '',
-        netSalary: ''
-      });
+      payFlash('Payslip created successfully');
+      setPayslipForm({ employeeId:'',period:'',basicSalary:'',allowances:'',
+        overtimePay:'0',lateDeduction:'0',attendanceBonus:'0',attendancePenalty:'0',
+        performanceBonus:'0',perksAllowance:'0',benefitsDeduction:'0',deductions:'',netSalary:'' });
     },
-    onError: (error: any) => {
-      console.error('Error creating payslip:', error);
-      console.error('Error response:', error.response);
-      console.error('Error response data:', error.response?.data);
-      console.error('Error status:', error.response?.status);
-      alert('Error creating payslip: ' + (error.response?.data?.error || error.message));
-    },
+    onError: (error: any) => payFlash(error.response?.data?.error || error.message, 'error'),
   });
 
-  // Create compensation mutation
   const createCompensationMutation = useMutation({
-    mutationFn: async (compensationData: any) => {
-      const token = localStorage.getItem('token');
-      const response = await api.post('/api/payroll/compensations', compensationData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    mutationFn: async (compensationData: any) => (await api.post('/api/payroll/compensations', compensationData)).data,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['compensations'] });
       setCompensationDialogOpen(false);
-      setCompensationForm({
-        employeeId: '',
-        position: '',
-        basicSalary: '',
-        allowances: '',
-        bonus: '',
-        effectiveDate: ''
-      });
+      setCompensationForm({ employeeId:'',position:'',basicSalary:'',allowances:'',bonus:'',effectiveDate:'' });
       setSelectedCompensation(null);
+      payFlash('Compensation created successfully');
     },
-    onError: (error: any) => {
-      alert('Error creating compensation: ' + (error.response?.data?.error || error.message));
-    },
+    onError: (error: any) => payFlash(error.response?.data?.error || error.message, 'error'),
   });
 
-  // Update mutations
   const updatePayslipMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const token = localStorage.getItem('token');
-      const response = await api.put(`/api/payroll/payslips/${selectedPayslip?.id}`, data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    mutationFn: async (data: any) => (await api.put(`/api/payroll/payslips/${selectedPayslip?.id}`, data)).data,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payslips'] });
       setPayslipDialogOpen(false);
       setSelectedPayslip(null);
-      alert('Payslip updated successfully');
+      payFlash('Payslip updated');
     },
-    onError: (e: any) => alert(e.response?.data?.error || e.message),
+    onError: (e: any) => payFlash(e.response?.data?.error || e.message, 'error'),
   });
 
   const updateCompensationMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const token = localStorage.getItem('token');
-      const response = await api.put(`/api/payroll/compensations/${selectedCompensation?.id}`, data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    mutationFn: async (data: any) => (await api.put(`/api/payroll/compensations/${selectedCompensation?.id}`, data)).data,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['compensations'] });
       setCompensationDialogOpen(false);
       setSelectedCompensation(null);
-      alert('Compensation updated successfully');
+      payFlash('Compensation updated');
     },
-    onError: (e: any) => alert(e.response?.data?.error || e.message),
+    onError: (e: any) => payFlash(e.response?.data?.error || e.message, 'error'),
   });
 
-  // Delete mutations
   const deletePayslipMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const token = localStorage.getItem('token');
-      await api.delete(`/api/payroll/payslips/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    },
+    mutationFn: async (id: number) => { await api.delete(`/api/payroll/payslips/${id}`); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payslips'] });
       handleMenuClose();
-      alert('Payslip deleted successfully');
+      payFlash('Payslip deleted');
     },
-    onError: (e: any) => alert(e.response?.data?.error || e.message),
+    onError: (e: any) => payFlash(e.response?.data?.error || e.message, 'error'),
   });
 
   const deleteCompensationMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const token = localStorage.getItem('token');
-      await api.delete(`/api/payroll/compensations/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    },
+    mutationFn: async (id: number) => { await api.delete(`/api/payroll/compensations/${id}`); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['compensations'] });
       handleMenuClose();
-      alert('Compensation deleted successfully');
+      payFlash('Compensation deleted');
     },
-    onError: (e: any) => alert(e.response?.data?.error || e.message),
+    onError: (e: any) => payFlash(e.response?.data?.error || e.message, 'error'),
   });
 
   const distributePayslips = useMutation({
-    mutationFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.post('/api/payroll/distribute', { period: runPeriod }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
-    onSuccess: (data: any) => {
-      alert(`Successfully queued ${data.count} payslips for email distribution.`);
-    },
-    onError: (err: any) => {
-      alert(`Error distributing payslips: ${err.response?.data?.message || err.message}`);
-    }
+    mutationFn: async () => (await api.post('/api/payroll/distribute', { period: runPeriod })).data,
+    onSuccess: (data: any) => payFlash(`Queued ${data.count} payslips for email distribution`),
+    onError: (err: any) => payFlash(err.response?.data?.message || err.message, 'error'),
   });
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, item: any, type: 'payslip' | 'compensation') => {
@@ -428,6 +329,9 @@ const Payroll: React.FC = () => {
         lateDeduction: String(selectedPayslip.lateDeduction || 0),
         attendanceBonus: String(selectedPayslip.attendanceBonus || 0),
         attendancePenalty: String(selectedPayslip.attendancePenalty || 0),
+        performanceBonus: String(selectedPayslip.performanceBonus || 0),
+        perksAllowance: String(selectedPayslip.perksAllowance || 0),
+        benefitsDeduction: String(selectedPayslip.benefitsDeduction || 0),
         deductions: String(selectedPayslip.deductions),
         netSalary: String(selectedPayslip.netSalary)
       });
@@ -446,33 +350,42 @@ const Payroll: React.FC = () => {
     handleMenuClose();
   };
 
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [distributeConfirm, setDistributeConfirm] = useState(false);
+
   const handleDelete = () => {
+    setDeleteConfirm(true);
+    handleMenuClose();
+  };
+
+  const confirmDelete = () => {
     if (activeTab === 'payslips' && selectedPayslip) {
-      if (window.confirm('Are you sure you want to delete this payslip?')) {
-        deletePayslipMutation.mutate(selectedPayslip.id);
-      }
+      deletePayslipMutation.mutate(selectedPayslip.id);
     } else if (activeTab === 'compensation' && selectedCompensation) {
-      if (window.confirm('Are you sure you want to delete this compensation record?')) {
-        deleteCompensationMutation.mutate(Number(selectedCompensation.id));
-      }
+      deleteCompensationMutation.mutate(Number(selectedCompensation.id));
     }
+    setDeleteConfirm(false);
   };
 
   // Form handlers
   const handlePayslipFormChange = (field: string, value: string) => {
     setPayslipForm(prev => {
       const updated = { ...prev, [field]: value };
-      if (field === 'basicSalary' || field === 'allowances' || field === 'deductions' || field === 'overtimePay' || field === 'lateDeduction' || field === 'attendanceBonus' || field === 'attendancePenalty') {
+      if (['basicSalary', 'allowances', 'deductions', 'overtimePay', 'lateDeduction', 'attendanceBonus', 'attendancePenalty', 'performanceBonus', 'perksAllowance', 'benefitsDeduction'].includes(field)) {
         const basicSalary = parseFloat(updated.basicSalary) || 0;
         const allowances = parseFloat(updated.allowances) || 0;
         const overtimePay = parseFloat(updated.overtimePay) || 0;
         const attendanceBonus = parseFloat(updated.attendanceBonus) || 0;
+        const performanceBonus = parseFloat(updated.performanceBonus) || 0;
+        const perksAllowance = parseFloat(updated.perksAllowance) || 0;
         const lateDeduction = parseFloat(updated.lateDeduction) || 0;
         const attendancePenalty = parseFloat(updated.attendancePenalty) || 0;
+        const benefitsDeduction = parseFloat(updated.benefitsDeduction) || 0;
         const deductions = parseFloat(updated.deductions) || 0;
 
-        // Net = (Basic + Allowances + OT + Bonus) - (Deductions + Late + Penalty)
-        updated.netSalary = (basicSalary + allowances + overtimePay + attendanceBonus - deductions - lateDeduction - attendancePenalty).toString();
+        const gross = basicSalary + allowances + overtimePay + attendanceBonus + performanceBonus + perksAllowance;
+        const totalDeductions = deductions + lateDeduction + attendancePenalty + benefitsDeduction;
+        updated.netSalary = (gross - totalDeductions).toString();
       }
       return updated;
     });
@@ -484,7 +397,7 @@ const Payroll: React.FC = () => {
 
   const handlePayslipSubmit = () => {
     if (!payslipForm.employeeId || !payslipForm.period || !payslipForm.basicSalary || !payslipForm.allowances || !payslipForm.deductions) {
-      alert('Please fill in all required fields');
+      payFlash('Please fill in all required fields', 'error');
       return;
     }
     const payslipData = {
@@ -496,6 +409,9 @@ const Payroll: React.FC = () => {
       lateDeduction: parseFloat(payslipForm.lateDeduction),
       attendanceBonus: parseFloat(payslipForm.attendanceBonus),
       attendancePenalty: parseFloat(payslipForm.attendancePenalty),
+      performanceBonus: parseFloat(payslipForm.performanceBonus),
+      perksAllowance: parseFloat(payslipForm.perksAllowance),
+      benefitsDeduction: parseFloat(payslipForm.benefitsDeduction),
       deductions: parseFloat(payslipForm.deductions),
       netSalary: parseFloat(payslipForm.netSalary),
       status: 'Generated'
@@ -549,6 +465,49 @@ const Payroll: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 8, bgcolor: 'background.paper', p: 4, borderRadius: 2, boxShadow: 3 }}>
+
+      {/* ── Feedback ── */}
+      <Snackbar open={!!payNotify && payNotify.severity !== 'error'}
+        autoHideDuration={4000} onClose={() => setPayNotify(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert severity={payNotify?.severity || 'success'} onClose={() => setPayNotify(null)} sx={{ borderRadius: 2 }}>
+          {payNotify?.msg}
+        </Alert>
+      </Snackbar>
+      {payNotify?.severity === 'error' && (
+        <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setPayNotify(null)}>
+          {payNotify.msg}
+        </Alert>
+      )}
+
+      {/* ── Delete confirm dialog ── */}
+      <Dialog open={deleteConfirm} onClose={() => setDeleteConfirm(false)} maxWidth="xs" fullWidth>
+        <DialogTitle fontWeight={800}>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this {activeTab === 'payslips' ? 'payslip' : 'compensation record'}? This cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDeleteConfirm(false)} variant="outlined" sx={{ borderRadius: 2 }}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={confirmDelete} sx={{ borderRadius: 2, fontWeight: 700 }}>Delete</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Distribute confirm dialog ── */}
+      <Dialog open={distributeConfirm} onClose={() => setDistributeConfirm(false)} maxWidth="xs" fullWidth>
+        <DialogTitle fontWeight={800}>Email Payslips</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Send all payslips for <strong>{runPeriod}</strong> to employees via email?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDistributeConfirm(false)} variant="outlined" sx={{ borderRadius: 2 }}>Cancel</Button>
+          <Button variant="contained" onClick={() => { distributePayslips.mutate(); setDistributeConfirm(false); }}
+            sx={{ borderRadius: 2, fontWeight: 700 }}>Send</Button>
+        </DialogActions>
+      </Dialog>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" gutterBottom>
           Payroll Management
@@ -579,6 +538,9 @@ const Payroll: React.FC = () => {
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
         <Button variant={activeTab === 'payslips' ? 'contained' : 'text'} onClick={() => setActiveTab('payslips')} sx={{ mr: 1 }}>Payslips</Button>
         <Button variant={activeTab === 'compensation' ? 'contained' : 'text'} onClick={() => setActiveTab('compensation')} sx={{ mr: 1 }}>Compensation</Button>
+        {canReviewMerit && (
+          <Button variant={activeTab === 'merit' ? 'contained' : 'text'} onClick={() => setActiveTab('merit')} sx={{ mr: 1 }}>Merit Proposals</Button>
+        )}
         {!isEmployee && (
           <>
             <Button variant={activeTab === 'positionDefaults' ? 'contained' : 'text'} onClick={() => setActiveTab('positionDefaults')} sx={{ mr: 1 }}>Position Defaults</Button>
@@ -614,7 +576,10 @@ const Payroll: React.FC = () => {
               <TextField label="Qualifications" value={positionConfig.qualifications || ''} onChange={(e) => setPositionConfig({ ...positionConfig, qualifications: e.target.value })} />
             </Box>
             <Box sx={{ mt: 2 }}>
-              <Button variant="contained" onClick={() => { if (!selectedPositionId) { alert('Select a position first'); return; } savePosCfg.mutate(); }}>Save Defaults</Button>
+              <Button variant="contained" onClick={() => {
+                if (!selectedPositionId) { payFlash('Select a position first', 'error'); return; }
+                savePosCfg.mutate();
+              }}>Save Defaults</Button>
             </Box>
           </CardContent>
         </Card>
@@ -644,7 +609,10 @@ const Payroll: React.FC = () => {
               <TextField label="Transport %" type="number" value={scaleConfig.transportPct || ''} onChange={(e) => setScaleConfig({ ...scaleConfig, transportPct: e.target.value })} />
             </Box>
             <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-              <Button variant="contained" onClick={() => { if (!scaleKeyEditing) { alert('Enter a scale key'); return; } saveScaleCfg.mutate(); }}>Save Scale</Button>
+              <Button variant="contained" onClick={() => {
+                if (!scaleKeyEditing) { payFlash('Enter a scale key first', 'error'); return; }
+                saveScaleCfg.mutate();
+              }}>Save Scale</Button>
               <Button variant="text" onClick={() => { if (!scaleKeyEditing) return; refetchScale(); }}>Reload</Button>
             </Box>
           </CardContent>
@@ -671,9 +639,8 @@ const Payroll: React.FC = () => {
                   variant="outlined"
                   color="secondary"
                   onClick={() => {
-                    if (window.confirm(`Are you sure you want to email all payslips for ${runPeriod}?`)) {
-                      distributePayslips.mutate();
-                    }
+                    if (!runPeriod) { payFlash('Select a period first', 'error'); return; }
+                    setDistributeConfirm(true);
                   }}
                   disabled={distributePayslips.isPending || !runPeriod}
                   startIcon={<EmailIcon />}
@@ -687,9 +654,7 @@ const Payroll: React.FC = () => {
                   color="info"
                   onClick={async () => {
                     try {
-                      const token = localStorage.getItem('token');
                       const response = await api.get(`/api/payroll/export/${runPeriod}`, {
-                        headers: { Authorization: `Bearer ${token}` },
                         responseType: 'blob'
                       });
                       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -700,7 +665,7 @@ const Payroll: React.FC = () => {
                       link.click();
                       document.body.removeChild(link);
                     } catch (e: any) {
-                      alert('Error exporting: ' + e?.response?.data?.error || e.message);
+                      payFlash(e?.response?.data?.error || e.message || 'Export failed', 'error');
                     }
                   }}
                   disabled={!runPeriod}
@@ -714,7 +679,9 @@ const Payroll: React.FC = () => {
         </Card>
       )}
 
-      {/* Content Tabs below */}
+      {canReviewMerit && activeTab === 'merit' && (
+        <MeritProposalsPanel isAdmin={canReviewMerit} />
+      )}
 
       {/* Payslips Table */}
       {activeTab === 'payslips' && (
@@ -760,6 +727,12 @@ const Payroll: React.FC = () => {
                       <Typography variant="body2" color="success.main">OT: {formatCurrency(payslip.overtimePay)}</Typography>
                       {Number(payslip.attendanceBonus) > 0 && (
                         <Typography variant="caption" color="success.main" display="block">Bon: {formatCurrency(payslip.attendanceBonus)}</Typography>
+                      )}
+                      {Number(payslip.performanceBonus) > 0 && (
+                        <Typography variant="caption" color="secondary.main" display="block">
+                          Perf: {formatCurrency(payslip.performanceBonus)}
+                          {payslip.meritTier ? ` (${payslip.meritTier})` : ''}
+                        </Typography>
                       )}
                     </Box>
                   </TableCell>

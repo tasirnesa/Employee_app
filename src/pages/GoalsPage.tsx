@@ -249,15 +249,13 @@ const GoalsPage: React.FC = () => {
     setProgressKeyIndex(null);
   } catch (err) {
     console.error('Failed to update key result progress', err);
-    alert('Failed to update progress.');
+    setError('Failed to update progress. Please try again.');
   }
 };
 
   const saveEdit = async () => {
     if (!editGoal) return;
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token found');
       const payload = {
         objective: editObjective,
         keyResult: editKeyResults.filter(kr => kr.title.trim()),
@@ -273,7 +271,7 @@ const GoalsPage: React.FC = () => {
       setEditGoal(null);
     } catch (err) {
       console.error('Failed to update goal', err);
-      alert('Failed to update goal.');
+      setError('Failed to update goal. Please try again.');
     }
   };
 
@@ -286,7 +284,7 @@ const GoalsPage: React.FC = () => {
       setDeleteGoal(null);
     } catch (err) {
       console.error('Failed to delete goal', err);
-      alert('Failed to delete goal.');
+      setError('Failed to delete goal. Please try again.');
     }
   };
 
@@ -298,9 +296,6 @@ const GoalsPage: React.FC = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token found');
-
       const response = await api.post('/api/goals', {
           objective: newObjective,
           keyResult: newKeyResults.filter(kr => kr.title.trim()),

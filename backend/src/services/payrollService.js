@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const emailService = require('./emailService');
 const communicationService = require('./communicationService');
+const hrIntegrationService = require('./hrIntegrationService');
 
 // Config paths (relative to this service file, but pointing to backend root as before)
 const CONFIG_FILE = path.join(__dirname, '..', '..', 'payroll.position.config.json');
@@ -19,30 +20,50 @@ const payrollService = {
   },
 
   createManualPayslip: async (data) => {
-    const { employeeId, period, basicSalary, allowances, deductions, status } = data;
+    const { employeeId, period, basicSalary, allowances, deductions, status, overtimePay, lateDeduction, attendanceBonus, attendancePenalty, performanceBonus, perksAllowance, benefitsDeduction } = data;
     const employee = await userRepository.findById(employeeId);
     if (!employee) throw new Error('Employee not found');
 
-    const netSalary = parseFloat(basicSalary) + parseFloat(allowances) - parseFloat(deductions);
+    const gross = parseFloat(basicSalary || 0) + parseFloat(allowances || 0) + parseFloat(overtimePay || 0) + parseFloat(attendanceBonus || 0) + parseFloat(performanceBonus || 0) + parseFloat(perksAllowance || 0);
+    const totalDeductions = parseFloat(deductions || 0) + parseFloat(lateDeduction || 0) + parseFloat(attendancePenalty || 0) + parseFloat(benefitsDeduction || 0);
+    const netSalary = gross - totalDeductions;
+
     return await payrollRepository.createPayslip({
       employeeId: parseInt(employeeId),
       period,
-      basicSalary: parseFloat(basicSalary),
-      allowances: parseFloat(allowances),
-      deductions: parseFloat(deductions),
+      basicSalary: parseFloat(basicSalary || 0),
+      allowances: parseFloat(allowances || 0),
+      overtimePay: parseFloat(overtimePay || 0),
+      lateDeduction: parseFloat(lateDeduction || 0),
+      attendanceBonus: parseFloat(attendanceBonus || 0),
+      attendancePenalty: parseFloat(attendancePenalty || 0),
+      performanceBonus: parseFloat(performanceBonus || 0),
+      perksAllowance: parseFloat(perksAllowance || 0),
+      benefitsDeduction: parseFloat(benefitsDeduction || 0),
+      deductions: parseFloat(deductions || 0),
       netSalary,
       status: status || 'Generated'
     });
   },
 
   updatePayslip: async (id, data) => {
-    const { basicSalary, allowances, deductions } = data;
     const current = await payrollRepository.findPayslipById(id);
     if (!current) throw new Error('Payslip not found');
 
-    const netSalary = parseFloat(basicSalary ?? current.basicSalary) +
-      parseFloat(allowances ?? current.allowances) -
-      parseFloat(deductions ?? current.deductions);
+    const basicSalary = data.basicSalary ?? current.basicSalary;
+    const allowances = data.allowances ?? current.allowances;
+    const deductions = data.deductions ?? current.deductions;
+    const overtimePay = data.overtimePay ?? current.overtimePay;
+    const lateDeduction = data.lateDeduction ?? current.lateDeduction;
+    const attendanceBonus = data.attendanceBonus ?? current.attendanceBonus;
+    const attendancePenalty = data.attendancePenalty ?? current.attendancePenalty;
+    const performanceBonus = data.performanceBonus ?? current.performanceBonus;
+    const perksAllowance = data.perksAllowance ?? current.perksAllowance;
+    const benefitsDeduction = data.benefitsDeduction ?? current.benefitsDeduction;
+
+    const gross = parseFloat(basicSalary || 0) + parseFloat(allowances || 0) + parseFloat(overtimePay || 0) + parseFloat(attendanceBonus || 0) + parseFloat(performanceBonus || 0) + parseFloat(perksAllowance || 0);
+    const totalDeductions = parseFloat(deductions || 0) + parseFloat(lateDeduction || 0) + parseFloat(attendancePenalty || 0) + parseFloat(benefitsDeduction || 0);
+    const netSalary = gross - totalDeductions;
 
     return await payrollRepository.updatePayslip(id, {
       ...data,
@@ -167,13 +188,20 @@ const payrollService = {
         transportAllowance: calc.transportAllowance,
         positionAllowance: calc.positionAllowance,
         fuelAllowance: calc.fuelAllowance,
-        allowances: calc.allowances,
+        basicSalary: calc.basicSalary,
+        housingAllowance: calc.housingAllowance,
+        transportAllowance: calc.transportAllowance,
+        positionAllowance: calc.positionAllowance,
+        fuelAllowance: calc.fuelAllowance,
+        allowances: calc.allowances + (calc.bonus || 0), // Include bonus in allowances to prevent gap
         overtimePay: calc.overtimePay,
         lateDeduction: calc.lateDeduction,
         attendanceBonus: calc.attendanceBonus,
         attendancePenalty: calc.attendancePenalty,
         benefitsDeduction: calc.breakdown.benefitsEmployee,
         perksAllowance: calc.perks,
+        performanceBonus: calc.performanceBonus || 0,
+        meritTier: calc.meritTier || null,
         deductions: calc.deductions,
         netSalary: calc.netSalary,
         ytdGross,
@@ -188,6 +216,15 @@ const payrollService = {
       } else {
         payslip = await payrollRepository.createPayslip(payslipData);
       }
+
+      if (calc.meritProposalId && Number(calc.performanceBonus || 0) > 0) {
+        try {
+          await hrIntegrationService.markMeritBonusPaid(calc.meritProposalId);
+        } catch (e) {
+          console.warn(`Failed to mark merit bonus paid for proposal ${calc.meritProposalId}:`, e.message);
+        }
+      }
+
       results.push({ userId: u.id, payslip, calc });
     }
 
@@ -460,13 +497,16 @@ const payrollService = {
       }
     }
 
-    const [times, unpaidDays, benefits, perksTotal, attendanceSum] = await Promise.all([
+    const [times, unpaidDays, benefits, perksTotal, attendanceSum, perfBonusInfo] = await Promise.all([
       payrollService._aggregateTimesheets(userId, start, end),
       payrollService._aggregateUnpaidLeaveDays(userId, start, end),
       payrollService._aggregateBenefits(userId, start, end),
       payrollService._aggregatePerks(userId, start, end),
       payrollService._aggregateAttendanceProfile(userId, start, end),
+      hrIntegrationService.calculatePerformanceBonus(userId, comp, start, end),
     ]);
+
+    const performanceBonus = Number(perfBonusInfo?.amount || 0);
 
     const totalMonthWorkingDays = payrollService._businessDaysInRange(start, end);
     const effectiveWorkingDays = payrollService._businessDaysInRange(effectiveStart, effectiveEnd);
@@ -507,7 +547,14 @@ const payrollService = {
     }
 
     // --- Final Totals ---
-    const grossEarnings = basic + Number(comp.allowances || 0) + Number(comp.bonus || 0) + overtimePay + Number(perksTotal || 0) + attendanceBonus;
+    const grossEarnings =
+      basic +
+      Number(comp.allowances || 0) +
+      Number(comp.bonus || 0) +
+      overtimePay +
+      Number(perksTotal || 0) +
+      attendanceBonus +
+      performanceBonus;
 
     // Taxes & Progressive Calculation
     const pensionEmployee = basic * Number(comp.pensionEmployeePct ?? 0.07);
@@ -540,6 +587,11 @@ const payrollService = {
       attendanceBonus,
       attendancePenalty,
       perks: Number(perksTotal || 0),
+      performanceBonus,
+      meritTier: perfBonusInfo?.meritTier || null,
+      performanceBonusSource: perfBonusInfo?.source || 'none',
+      performanceRating: perfBonusInfo?.rating || 0,
+      meritProposalId: perfBonusInfo?.meritProposalId || null,
       grossEarnings,
       deductions: totalDeductions,
       netSalary,
@@ -556,6 +608,8 @@ const payrollService = {
         totalUnpaidDays: unpaidDays.total,
         benefitsEmployee: Number(benefits.employee || 0),
         benefitsEmployer: Number(benefits.employer || 0),
+        performanceBonus,
+        performanceBonusSource: perfBonusInfo?.source || 'none',
       },
     };
   },

@@ -52,6 +52,7 @@ const dashboardRoutes = require('./routes/dashboard');
 const assetRoutes = require('./routes/assets');
 const verificationRoutes = require('./routes/verification');
 const probationRoutes = require('./routes/probation');
+const hrIntegrationRoutes = require('./routes/hrIntegration');
 
 // Public Routes
 app.use('/api/auth', authRoutes);
@@ -85,6 +86,7 @@ app.use('/api/dashboard', authenticateToken, dashboardRoutes);
 app.use('/api/assets', authenticateToken, assetRoutes);
 app.use('/api/verification', authenticateToken, verificationRoutes);
 app.use('/api/probation', authenticateToken, probationRoutes);
+app.use('/api/hr-integration', hrIntegrationRoutes);
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'UP', timestamp: new Date() }));

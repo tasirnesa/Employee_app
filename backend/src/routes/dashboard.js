@@ -6,5 +6,6 @@ router.get('/actions', dashboardController.getActions);
 router.get('/stats', dashboardController.getStats);
 router.get('/today-attendance', dashboardController.getTodayAttendance);
 router.get('/people-events', dashboardController.getPeopleEvents);
+router.get('/summary', dashboardController.getSummary);
 
 module.exports = router;

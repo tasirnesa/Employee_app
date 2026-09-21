@@ -19,6 +19,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  DialogContentText,
   TextField,
   Box,
   IconButton,
@@ -28,6 +29,8 @@ import {
   Card,
   CardContent,
   CardActions,
+  Alert,
+  Snackbar,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -47,6 +50,9 @@ const Recruitment: React.FC = () => {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [pageError, setPageError]     = useState<string | null>(null);
+  const [pageSuccess, setPageSuccess] = useState<string | null>(null);
+  const [onboardPrompt, setOnboardPrompt] = useState<{ candidateId: number } | null>(null);
 
   // Check user role for access control
   const userRole = JSON.parse(localStorage.getItem('userProfile') || '{}').role;
@@ -93,84 +99,47 @@ const Recruitment: React.FC = () => {
 
   // Create candidate mutation
   const createCandidateMutation = useMutation({
-    mutationFn: async (candidateData: any) => {
-      const token = localStorage.getItem('token');
-      console.log('Creating candidate with data:', candidateData);
-      const response = await api.post('/api/recruitment/candidates', candidateData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    mutationFn: async (candidateData: any) =>
+      (await api.post('/api/recruitment/candidates', candidateData)).data,
     onSuccess: (data: any, variables: any) => {
       queryClient.invalidateQueries({ queryKey: ['candidates'] });
       setCandidateDialogOpen(false);
-      setCandidateForm({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        position: '',
-        experience: '',
-        education: '',
-        skills: '',
-        appliedDate: '',
-        status: 'Applied',
-        notes: ''
-      });
-
+      setCandidateForm({ firstName:'',lastName:'',email:'',phone:'',position:'',experience:'',
+        education:'',skills:'',appliedDate:'',status:'Applied',notes:'' });
       if (variables.status === 'Hired') {
-        if (window.confirm('Candidate successfully created as Hired! Would you like to begin their onboarding process now?')) {
-          navigate(`/onboarding/wizard?candidateId=${data.id}`);
-        }
+        setOnboardPrompt({ candidateId: data.id });
+      } else {
+        setPageSuccess('Candidate added successfully');
       }
     },
-    onError: (error: any) => {
-      console.error('Error creating candidate:', error);
-      console.error('Error response:', error.response);
-      console.error('Error response data:', error.response?.data);
-      console.error('Error status:', error.response?.status);
-      alert('Error creating candidate: ' + (error.response?.data?.error || error.message));
-    },
+    onError: (error: any) => setPageError(error.response?.data?.error || error.message),
   });
 
   const updateCandidateMutation = useMutation({
-    mutationFn: async (payload: any) => {
-      const token = localStorage.getItem('token');
-      const response = await api.put(`/api/recruitment/candidates/${selectedCandidate?.id}`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    mutationFn: async (payload: any) =>
+      (await api.put(`/api/recruitment/candidates/${selectedCandidate?.id}`, payload)).data,
     onSuccess: (data: any, variables: any) => {
       const candidateId = selectedCandidate?.id || data.id;
       queryClient.invalidateQueries({ queryKey: ['candidates'] });
       setCandidateDialogOpen(false);
       setSelectedCandidate(null);
-
       if (variables.status === 'Hired') {
-        if (window.confirm('Candidate marked as Hired! Would you like to begin their onboarding process now?')) {
-          navigate(`/onboarding/wizard?candidateId=${candidateId}`);
-        }
+        setOnboardPrompt({ candidateId });
       } else {
-        alert('Candidate updated successfully');
+        setPageSuccess('Candidate updated successfully');
       }
     },
-    onError: (error: any) => alert('Error updating candidate: ' + (error.response?.data?.error || error.message)),
+    onError: (error: any) => setPageError(error.response?.data?.error || error.message),
   });
 
   const deleteCandidateMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const token = localStorage.getItem('token');
-      await api.delete(`/api/recruitment/candidates/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    },
+    mutationFn: async (id: number) => { await api.delete(`/api/recruitment/candidates/${id}`); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['candidates'] });
       handleMenuClose();
-      alert('Candidate removed successfully');
+      setPageSuccess('Candidate removed');
     },
-    onError: (error: any) => alert('Error removing candidate: ' + (error.response?.data?.error || error.message)),
+    onError: (error: any) => setPageError(error.response?.data?.error || error.message),
   });
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -203,27 +172,18 @@ const Recruitment: React.FC = () => {
 
   const handleDelete = () => {
     if (selectedCandidate) {
-      if (window.confirm(`Are you sure you want to remove candidate ${selectedCandidate.firstName} ${selectedCandidate.lastName}?`)) {
-        deleteCandidateMutation.mutate(selectedCandidate.id);
-      }
+      deleteCandidateMutation.mutate(selectedCandidate.id);
     }
     handleMenuClose();
   };
 
-  // Form handler
   const handleCandidateFormChange = (field: string, value: string) => {
-    setCandidateForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setCandidateForm(prev => ({ ...prev, [field]: value }));
   };
 
   const handleCandidateSubmit = () => {
-    console.log('Form data before submission:', candidateForm);
-
-    // Validate form data
     if (!candidateForm.firstName || !candidateForm.lastName || !candidateForm.email || !candidateForm.position) {
-      alert('Please fill in all required fields: First Name, Last Name, Email, and Position');
+      setPageError('First Name, Last Name, Email, and Position are required');
       return;
     }
 
@@ -246,8 +206,6 @@ const Recruitment: React.FC = () => {
       appliedDate: candidateForm.appliedDate || new Date().toISOString().split('T')[0],
       notes: candidateForm.notes
     };
-
-    console.log('Sending candidate data:', candidateData);
 
     if (selectedCandidate) {
       updateCandidateMutation.mutate(candidateData);
@@ -281,6 +239,36 @@ const Recruitment: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 8, bgcolor: 'background.paper', p: 4, borderRadius: 2, boxShadow: 3 }}>
+      <Snackbar open={!!pageSuccess} autoHideDuration={4000} onClose={() => setPageSuccess(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert severity="success" onClose={() => setPageSuccess(null)} sx={{ borderRadius: 2 }}>{pageSuccess}</Alert>
+      </Snackbar>
+      {pageError && (
+        <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setPageError(null)}>{pageError}</Alert>
+      )}
+
+      {/* ── Onboarding prompt dialog (replaces window.confirm) ── */}
+      <Dialog open={!!onboardPrompt} onClose={() => setOnboardPrompt(null)}
+        maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle fontWeight={800}>🎉 Candidate Hired!</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Would you like to begin the onboarding process for this candidate now?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setOnboardPrompt(null)} variant="outlined" sx={{ borderRadius: 2 }}>
+            Later
+          </Button>
+          <Button variant="contained" sx={{ borderRadius: 2, fontWeight: 700 }}
+            onClick={() => {
+              navigate(`/onboarding/wizard?candidateId=${onboardPrompt!.candidateId}`);
+              setOnboardPrompt(null);
+            }}>
+            Start Onboarding
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" gutterBottom>
           Recruitment Management

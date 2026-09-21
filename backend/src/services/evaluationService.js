@@ -3,6 +3,7 @@ const employeeRepository = require('../repositories/employeeRepository');
 const userRepository = require('../repositories/userRepository');
 const prisma = require('../config/prisma'); // For transaction if needed, but repo handles most
 const bcrypt = require('bcrypt');
+const hrIntegrationService = require('./hrIntegrationService');
 
 const evaluationService = {
   getAllEvaluations: async () => {
@@ -199,51 +200,26 @@ const evaluationService = {
       console.warn('Failed to create notification for evaluation:', notifErr.message);
     }
 
-    // Auto-Recalculate Performance
+    // HR Integration: session-scoped performance + merit proposal + benefits eligibility
+    let hrIntegration = null;
     try {
-      const [evaluations, timesheets, goals] = await Promise.all([
-        prisma.evaluation.findMany({
-          where: { evaluateeID: parseInt(evaluateeID) },
-          include: { results: true }
-        }),
-        prisma.timesheet.findMany({
-          where: { employeeId: parseInt(evaluateeID), status: 'Approved' }
-        }),
-        prisma.goal.findMany({
-          where: { activatedBy: parseInt(evaluateeID) }
-        })
-      ]);
+      const validResults = results?.filter((r) => r.criteriaID != null && Number(r.score) > 0) || [];
+      const avgScore = validResults.length
+        ? validResults.reduce((s, r) => s + Number(r.score || 0), 0) / validResults.length
+        : 0;
 
-      let avgEvaluationScore = 0;
-      if (evaluations.length > 0) {
-        const allScores = evaluations.flatMap(e => e.results.map(r => (r.score || 0)));
-        if (allScores.length > 0) {
-          avgEvaluationScore = allScores.reduce((a, b) => a + b, 0) / allScores.length;
-        }
-      }
-      const totalTasks = goals.filter(g => g.status === 'Completed').length;
-      const totalHours = timesheets.reduce((sum, t) => sum + (t.hoursWorked || 0), 0);
-
-      const now = new Date();
-      const period = `${now.toLocaleString('default', { month: 'long' })} ${now.getFullYear()}`;
-
-      await prisma.performance.create({
-        data: {
-          userId: parseInt(evaluateeID),
-          evaluatorId: parseInt(evaluatorID),
-          tasksCompleted: totalTasks,
-          hoursWorked: Math.round(totalHours),
-          overallRating: avgEvaluationScore || 3.0,
-          evaluationPeriod: period,
-          date: now,
-          feedback: 'Automatically recalculated upon new evaluation completion.'
-        }
+      hrIntegration = await hrIntegrationService.onEvaluationCompleted({
+        evaluateeId: parseInt(evaluateeID),
+        evaluatorId: parseInt(evaluatorID),
+        evaluationId: evaluationRecord.evaluationID,
+        sessionId: parseInt(sessionID),
+        avgScore,
       });
     } catch (perfErr) {
-      console.warn('Failed to auto-recalculate performance:', perfErr.message);
+      console.warn('Failed HR integration on evaluation:', perfErr.message);
     }
 
-    return { ...evaluationRecord, resultsCount };
+    return { ...evaluationRecord, resultsCount, hrIntegration };
   },
 
   _createLinkedUserForEmployee: async (employee, authUserId) => {

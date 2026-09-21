@@ -33,6 +33,8 @@ import {
   FormControl,
   InputLabel,
   Grid,
+  Alert,
+  Snackbar,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -123,71 +125,34 @@ const Timesheets: React.FC = () => {
 
   // Mutations
   const createTimesheetMutation = useMutation({
-    mutationFn: async (payload: any) => {
-      const token = localStorage.getItem('token');
-      const res = await api.post('/api/timesheets', payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.data;
-    },
+    mutationFn: async (payload: any) => (await api.post('/api/timesheets', payload)).data,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['timesheets'] });
       setTimesheetDialogOpen(false);
-      setTimesheetForm({
-        employeeId: '',
-        projectId: '',
-        taskDescription: '',
-        date: '',
-        startTime: '',
-        endTime: '',
-        overtimeHours: '0',
-        notes: ''
-      });
+      flash('Timesheet created successfully');
+      setTimesheetForm({ employeeId: '', projectId: '', taskDescription: '', date: '', startTime: '', endTime: '', overtimeHours: '0', notes: '' });
     },
-    onError: (error: any) => {
-      console.error('Error creating timesheet:', error);
-      alert('Error creating timesheet: ' + (error?.response?.data?.error || error.message));
-    }
+    onError: (error: any) => flash(error?.response?.data?.error || error.message, 'error'),
   });
 
   const approveTimesheetMutation = useMutation({
-    mutationFn: async ({ id, approvedBy }: { id: number; approvedBy: number }) => {
-      const token = localStorage.getItem('token');
-      const res = await api.patch(`/api/timesheets/${id}/approve`, { approvedBy }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['timesheets'] });
-    },
-    onError: (error: any) => {
-      console.error('Error approving timesheet:', error);
-      alert('Error approving timesheet: ' + (error?.response?.data?.error || error.message));
-    }
+    mutationFn: async ({ id, approvedBy }: { id: number; approvedBy: number }) =>
+      (await api.patch(`/api/timesheets/${id}/approve`, { approvedBy })).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['timesheets'] }),
+    onError: (error: any) => flash(error?.response?.data?.error || error.message, 'error'),
   });
 
   const rejectTimesheetMutation = useMutation({
-    mutationFn: async ({ id, notes }: { id: number; notes?: string }) => {
-      const token = localStorage.getItem('token');
-      const res = await api.patch(`/api/timesheets/${id}/reject`, { notes }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['timesheets'] });
-    },
-    onError: (error: any) => {
-      console.error('Error rejecting timesheet:', error);
-      alert('Error rejecting timesheet: ' + (error?.response?.data?.error || error.message));
-    }
+    mutationFn: async ({ id, notes }: { id: number; notes?: string }) =>
+      (await api.patch(`/api/timesheets/${id}/reject`, { notes })).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['timesheets'] }),
+    onError: (error: any) => flash(error?.response?.data?.error || error.message, 'error'),
   });
 
   // Submit handlers
   const handleSubmitTimesheet = () => {
     if (!timesheetForm.employeeId || !timesheetForm.taskDescription || !timesheetForm.date || !timesheetForm.startTime || !timesheetForm.endTime) {
-      alert('Please fill in all required fields');
+      flash('Please fill in all required fields', 'error');
       return;
     }
     // Compose ISO strings that backend can parse as Date
@@ -233,6 +198,13 @@ const Timesheets: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 8, bgcolor: 'background.paper', p: 4, borderRadius: 2, boxShadow: 3 }}>
+      <Snackbar open={!!pageSuccess} autoHideDuration={4000} onClose={() => setPageSuccess(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert severity="success" onClose={() => setPageSuccess(null)} sx={{ borderRadius: 2 }}>{pageSuccess}</Alert>
+      </Snackbar>
+      {pageError && (
+        <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setPageError(null)}>{pageError}</Alert>
+      )}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" gutterBottom>
           Timesheets Management

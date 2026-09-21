@@ -17,17 +17,15 @@ const activeSessionWhere = {
   endDate: { gte: new Date() },
 };
 
-const dashboardController = {
-  getActions: asyncHandler(async (req, res) => {
-    const userId = parseInt(req.user.id);
-    const userRole = req.user.role;
+// --- Core fetch functions ---
 
-    const results = {
-      pendingLeaves: [],
-      activeSessions: [],
-      pendingGoals: [],
-      unreadCount: 0,
-    };
+const fetchActions = async (userId, userRole) => {
+  const results = {
+    pendingLeaves: [],
+    activeSessions: [],
+    pendingGoals: [],
+    unreadCount: 0,
+  };
 
     // 1. Pending Leaves
     try {
@@ -124,22 +122,19 @@ const dashboardController = {
       results.unreadCount = await prisma.notification.count({
         where: { userId, isRead: false },
       });
-    } catch (error) {
-      console.error('[Dashboard API] Error fetching notifications:', error.message);
-    }
+  } catch (error) {
+    console.error('[Dashboard API] Error fetching notifications:', error.message);
+  }
+  return results;
+};
 
-    res.json(results);
-  }),
-
-  getStats: asyncHandler(async (req, res) => {
-    const userId = parseInt(req.user.id);
-    const userRole = req.user.role;
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const thirtyDaysAgo = new Date(now);
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const sixtyDaysAgo = new Date(now);
-    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+const fetchStats = async (userId, userRole) => {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const sixtyDaysAgo = new Date(now);
+  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
     const stats = {
       role: userRole,
@@ -338,20 +333,19 @@ const dashboardController = {
           }
         } catch (_) {}
       }
-    } catch (error) {
-      console.error('[Dashboard API] Error fetching stats:', error.message);
-    }
+  } catch (error) {
+    console.error('[Dashboard API] Error fetching stats:', error.message);
+  }
+  return stats;
+};
 
-    res.json(stats);
-  }),
+const fetchPeopleEvents = async () => {
+  // Returns birthdays & work anniversaries in the next 30 days
+  const now = new Date();
+  const events = [];
 
-  getPeopleEvents: asyncHandler(async (req, res) => {
-    // Returns birthdays & work anniversaries in the next 30 days
-    const now = new Date();
-    const events = [];
-
-    try {
-      const employees = await prisma.employee.findMany({
+  try {
+    const employees = await prisma.employee.findMany({
         select: {
           id: true,
           firstName: true,
@@ -407,29 +401,21 @@ const dashboardController = {
         }
       }
 
-      events.sort((a, b) => a.daysUntil - b.daysUntil);
-    } catch (error) {
-      console.error('[Dashboard API] Error fetching people events:', error.message);
-    }
+    events.sort((a, b) => a.daysUntil - b.daysUntil);
+  } catch (error) {
+    console.error('[Dashboard API] Error fetching people events:', error.message);
+  }
+  return events.slice(0, 10);
+};
 
-    res.json(events.slice(0, 10));
-  }),
+const fetchTodayAttendance = async (userId, userRole) => {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
 
-  getTodayAttendance: asyncHandler(async (req, res) => {
-    const userRole = req.user.role;
-    const userId = parseInt(req.user.id);
-
-    if (!isAdminRole(userRole) && !isManagerRole(userRole)) {
-      return res.status(403).json({ message: 'Forbidden' });
-    }
-
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
-
-    let employeeFilter = {};
-    if (isManagerRole(userRole)) {
+  let employeeFilter = {};
+  if (isManagerRole(userRole)) {
       const teamMembers = await prisma.user.findMany({
         where: { managerId: userId },
         select: { id: true },
@@ -447,12 +433,51 @@ const dashboardController = {
     const absentStatuses = ['Absent', 'absent'];
     const leaveStatuses = ['On Leave', 'on leave', 'Leave'];
 
-    const present = records.filter((r) => presentStatuses.includes(r.status)).length;
-    const absent = records.filter((r) => absentStatuses.includes(r.status)).length;
-    const onLeave = records.filter((r) => leaveStatuses.includes(r.status)).length;
-    const total = records.length;
+  const present = records.filter((r) => presentStatuses.includes(r.status)).length;
+  const absent = records.filter((r) => absentStatuses.includes(r.status)).length;
+  const onLeave = records.filter((r) => leaveStatuses.includes(r.status)).length;
+  const total = records.length;
 
-    res.json({ present, absent, onLeave, total, date: todayStart });
+  return { present, absent, onLeave, total, date: todayStart };
+};
+
+// --- Route Handlers ---
+
+const dashboardController = {
+  getActions: asyncHandler(async (req, res) => {
+    const actions = await fetchActions(parseInt(req.user.id), req.user.role);
+    res.json(actions);
+  }),
+  getStats: asyncHandler(async (req, res) => {
+    const stats = await fetchStats(parseInt(req.user.id), req.user.role);
+    res.json(stats);
+  }),
+  getPeopleEvents: asyncHandler(async (req, res) => {
+    const events = await fetchPeopleEvents();
+    res.json(events);
+  }),
+  getTodayAttendance: asyncHandler(async (req, res) => {
+    if (!isAdminRole(req.user.role) && !isManagerRole(req.user.role)) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    const attendance = await fetchTodayAttendance(parseInt(req.user.id), req.user.role);
+    res.json(attendance);
+  }),
+  getSummary: asyncHandler(async (req, res) => {
+    const userId = parseInt(req.user.id);
+    const userRole = req.user.role;
+    
+    // We conditionally try to fetch todayAttendance if they have the role
+    const getAttendance = isAdminRole(userRole) || isManagerRole(userRole);
+
+    const [actions, stats, peopleEvents, todayAttendance] = await Promise.all([
+      fetchActions(userId, userRole),
+      fetchStats(userId, userRole),
+      fetchPeopleEvents(),
+      getAttendance ? fetchTodayAttendance(userId, userRole) : Promise.resolve(null)
+    ]);
+
+    res.json({ actions, stats, peopleEvents, todayAttendance });
   }),
 };
 

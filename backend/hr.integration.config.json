@@ -1,0 +1,14 @@
+{
+  "meritTiers": [
+    { "minRating": 4.5, "tier": "Outstanding", "bonusPercent": 15, "salaryIncreasePercent": 8 },
+    { "minRating": 4.0, "tier": "Excellent", "bonusPercent": 10, "salaryIncreasePercent": 5 },
+    { "minRating": 3.5, "tier": "Good", "bonusPercent": 5, "salaryIncreasePercent": 2 },
+    { "minRating": 3.0, "tier": "Meets Expectations", "bonusPercent": 2, "salaryIncreasePercent": 0 },
+    { "minRating": 0, "tier": "Needs Improvement", "bonusPercent": 0, "salaryIncreasePercent": 0 }
+  ],
+  "autoCreateMeritProposalMinRating": 3.5,
+  "premiumPerkMinRating": 4.0,
+  "premiumBenefitMinRating": 3.5,
+  "performanceBonusUsesApprovedMeritFirst": true,
+  "recurringPerformanceBonusFromRating": false
+}

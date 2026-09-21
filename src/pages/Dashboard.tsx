@@ -87,53 +87,31 @@ const Dashboard: React.FC = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: todayAttendance } = useQuery({
-    queryKey: ['today-attendance'],
+  const { data: summaryData, isLoading: summaryLoading, isError: summaryError } = useQuery({
+    queryKey: ['dashboard-summary'],
     queryFn: async () => {
-      const res = await api.get('/api/dashboard/today-attendance');
-      return res.data;
-    },
-    enabled: showOrgAnalytics,
-  });
-
-  const { data: peopleEvents = [] } = useQuery({
-    queryKey: ['people-events'],
-    queryFn: async () => {
-      const res = await api.get('/api/dashboard/people-events');
-      return res.data as Array<{
-        type: 'birthday' | 'anniversary';
-        name: string;
-        avatar?: string;
-        daysUntil: number;
-        years?: number;
-        label: string;
-      }>;
-    },
-    staleTime: 60 * 60 * 1000, // re-fetch once an hour
-  });
-
-  const { data: actions, isLoading: actionsLoading, isError: actionsError } = useQuery({
-    queryKey: ['dashboard-actions'],
-    queryFn: async () => {
-      const response = await api.get('/api/dashboard/actions');
-      return response.data as DashboardActions;
-    },
-  });
-
-  const { data: dashboardStats, isLoading: statsLoading, isError: statsError } = useQuery({
-    queryKey: ['dashboard-stats'],
-    queryFn: async () => {
-      const response = await api.get('/api/dashboard/stats');
+      const response = await api.get('/api/dashboard/summary');
       return response.data;
     },
     refetchInterval: 60 * 1000, // auto-refresh every 60s
   });
 
-  const employeeCacheKey = currentUser?.id ? `meEmployee_${currentUser.id}` : undefined;
-  const cachedMe = (() => {
-    if (!employeeCacheKey) return null;
-    try { return JSON.parse(localStorage.getItem(employeeCacheKey) || 'null'); } catch { return null; }
-  })();
+  const actions = summaryData?.actions as DashboardActions | undefined;
+  const actionsLoading = summaryLoading;
+  const actionsError = summaryError;
+  const dashboardStats = summaryData?.stats;
+  const statsLoading = summaryLoading;
+  const statsError = summaryError;
+  const todayAttendance = summaryData?.todayAttendance;
+  const peopleEvents = (summaryData?.peopleEvents || []) as Array<{
+    type: 'birthday' | 'anniversary';
+    name: string;
+    avatar?: string;
+    daysUntil: number;
+    years?: number;
+    label: string;
+  }>;
+
   const normalize = (s?: string | null) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
   const liveMe = (() => {
     const list = employeesForTime || [];
@@ -144,7 +122,7 @@ const Dashboard: React.FC = () => {
     if (byName) return byName;
     return undefined;
   })();
-  const meEmployee: Employee | undefined = liveMe || cachedMe || undefined;
+  const meEmployee: Employee | undefined = liveMe;
 
   const computeEntitlement = (hireDate?: string | null) => {
     if (!hireDate) return 0;
@@ -581,7 +559,7 @@ const Dashboard: React.FC = () => {
                   </IconButton>
                 </Box>
                 <Box sx={{ position: 'relative', height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
-                  <svg viewBox="0 0 36 36" style={{ width: '140px', height: '140px' }}>
+                  <svg viewBox="0 0 36 36" style={{ width: '140px', height: '140px' }} role="img" aria-label={`Remaining leave balance: ${remainingDays} days`}>
                     <path d="M18 2 a16 16 0 1 1 0 32 a16 16 0 1 1 0 -32" fill="none" stroke="#f1f5f9" strokeWidth="3" />
                     <path
                       d="M18 2 a16 16 0 1 1 0 32"

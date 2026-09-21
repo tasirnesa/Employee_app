@@ -29,6 +29,8 @@ import {
   CardActions,
   Avatar,
   Divider,
+  Alert,
+  Snackbar,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -48,6 +50,12 @@ const Benefits: React.FC = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'benefits' | 'perks'>('benefits');
   const [benefitDialogOpen, setBenefitDialogOpen] = useState(false);
+  const [pageNotify, setPageNotify] = useState<{ msg: string; sev: 'success' | 'error' } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const flash = (msg: string, sev: 'success' | 'error' = 'success') => {
+    setPageNotify({ msg, sev });
+    setTimeout(() => setPageNotify(null), 4000);
+  };
   const [perkDialogOpen, setPerkDialogOpen] = useState(false);
   const [selectedBenefit, setSelectedBenefit] = useState<Benefit | null>(null);
   const [selectedPerk, setSelectedPerk] = useState<Perk | null>(null);
@@ -68,7 +76,9 @@ const Benefits: React.FC = () => {
     companyContribution: '',
     effectiveDate: '',
     expiryDate: '',
-    notes: ''
+    notes: '',
+    eligibilityTier: 'Standard',
+    minPerformanceRating: '',
   });
 
   const [perkForm, setPerkForm] = useState({
@@ -78,7 +88,9 @@ const Benefits: React.FC = () => {
     value: '',
     frequency: '',
     startDate: '',
-    endDate: ''
+    endDate: '',
+    eligibilityTier: 'Standard',
+    minPerformanceRating: '',
   });
 
   // Fetch benefits data
@@ -119,177 +131,97 @@ const Benefits: React.FC = () => {
 
   // Mutations
   const createBenefitMutation = useMutation({
-    mutationFn: async (payload: any) => {
-      const token = localStorage.getItem('token');
-      const res = await api.post('/api/benefits/benefits', payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['benefits'] });
-      setBenefitDialogOpen(false);
-      alert('Benefit created successfully');
-    },
-    onError: (error: any) => alert('Error creating benefit: ' + (error?.response?.data?.error || error.message))
+    mutationFn: async (payload: any) => (await api.post('/api/benefits/benefits', payload)).data,
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['benefits'] }); setBenefitDialogOpen(false); flash('Benefit created'); },
+    onError: (e: any) => flash(e?.response?.data?.error || e.message, 'error'),
   });
 
   const updateBenefitMutation = useMutation({
-    mutationFn: async (payload: any) => {
-      const token = localStorage.getItem('token');
-      const res = await api.put(`/api/benefits/benefits/${selectedBenefit?.id}`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['benefits'] });
-      setBenefitDialogOpen(false);
-      setSelectedBenefit(null);
-      alert('Benefit updated successfully');
-    },
-    onError: (error: any) => alert('Error updating benefit: ' + (error?.response?.data?.error || error.message))
+    mutationFn: async (payload: any) => (await api.put(`/api/benefits/benefits/${selectedBenefit?.id}`, payload)).data,
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['benefits'] }); setBenefitDialogOpen(false); setSelectedBenefit(null); flash('Benefit updated'); },
+    onError: (e: any) => flash(e?.response?.data?.error || e.message, 'error'),
   });
 
   const deleteBenefitMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const token = localStorage.getItem('token');
-      await api.delete(`/api/benefits/benefits/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['benefits'] });
-      handleMenuClose();
-      alert('Benefit removed successfully');
-    },
-    onError: (error: any) => alert('Error removing benefit: ' + (error?.response?.data?.error || error.message))
+    mutationFn: async (id: number) => { await api.delete(`/api/benefits/benefits/${id}`); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['benefits'] }); handleMenuClose(); flash('Benefit removed'); },
+    onError: (e: any) => flash(e?.response?.data?.error || e.message, 'error'),
   });
 
   const createPerkMutation = useMutation({
-    mutationFn: async (payload: any) => {
-      const token = localStorage.getItem('token');
-      const res = await api.post('/api/benefits/perks', payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['perks'] });
-      setPerkDialogOpen(false);
-      alert('Perk created successfully');
-    },
-    onError: (error: any) => alert('Error creating perk: ' + (error?.response?.data?.error || error.message))
+    mutationFn: async (payload: any) => (await api.post('/api/benefits/perks', payload)).data,
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['perks'] }); setPerkDialogOpen(false); flash('Perk created'); },
+    onError: (e: any) => flash(e?.response?.data?.error || e.message, 'error'),
   });
 
   const updatePerkMutation = useMutation({
-    mutationFn: async (payload: any) => {
-      const token = localStorage.getItem('token');
-      const res = await api.put(`/api/benefits/perks/${selectedPerk?.id}`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['perks'] });
-      setPerkDialogOpen(false);
-      setSelectedPerk(null);
-      alert('Perk updated successfully');
-    },
-    onError: (error: any) => alert('Error updating perk: ' + (error?.response?.data?.error || error.message))
+    mutationFn: async (payload: any) => (await api.put(`/api/benefits/perks/${selectedPerk?.id}`, payload)).data,
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['perks'] }); setPerkDialogOpen(false); setSelectedPerk(null); flash('Perk updated'); },
+    onError: (e: any) => flash(e?.response?.data?.error || e.message, 'error'),
   });
 
   const deletePerkMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const token = localStorage.getItem('token');
-      await api.delete(`/api/benefits/perks/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['perks'] });
-      handleMenuClose();
-      alert('Perk removed successfully');
-    },
-    onError: (error: any) => alert('Error removing perk: ' + (error?.response?.data?.error || error.message))
+    mutationFn: async (id: number) => { await api.delete(`/api/benefits/perks/${id}`); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['perks'] }); handleMenuClose(); flash('Perk removed'); },
+    onError: (e: any) => flash(e?.response?.data?.error || e.message, 'error'),
   });
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, item: any, type: 'benefit' | 'perk') => {
     setAnchorEl(event.currentTarget);
-    if (type === 'benefit') {
-      setSelectedBenefit(item);
-      setSelectedPerk(null);
-    } else {
-      setSelectedPerk(item);
-      setSelectedBenefit(null);
-    }
+    if (type === 'benefit') { setSelectedBenefit(item); setSelectedPerk(null); }
+    else { setSelectedPerk(item); setSelectedBenefit(null); }
   };
 
   const handleEdit = () => {
     if (selectedBenefit && activeTab === 'benefits') {
       setBenefitForm({
-        employeeId: String(selectedBenefit.employeeId),
-        benefitType: selectedBenefit.benefitType,
-        provider: selectedBenefit.provider,
-        coverage: selectedBenefit.coverage,
+        employeeId: String(selectedBenefit.employeeId), benefitType: selectedBenefit.benefitType,
+        provider: selectedBenefit.provider, coverage: selectedBenefit.coverage,
         monthlyCost: String(selectedBenefit.monthlyCost),
         employeeContribution: String(selectedBenefit.employeeContribution),
         companyContribution: String(selectedBenefit.companyContribution),
         effectiveDate: new Date(selectedBenefit.effectiveDate).toISOString().split('T')[0],
         expiryDate: selectedBenefit.expiryDate ? new Date(selectedBenefit.expiryDate).toISOString().split('T')[0] : '',
-        notes: selectedBenefit.notes || ''
+        notes: selectedBenefit.notes || '',
+        eligibilityTier: (selectedBenefit as any).eligibilityTier || 'Standard',
+        minPerformanceRating: (selectedBenefit as any).minPerformanceRating != null
+          ? String((selectedBenefit as any).minPerformanceRating)
+          : '',
       });
       setBenefitDialogOpen(true);
     } else if (selectedPerk && activeTab === 'perks') {
       setPerkForm({
-        employeeId: String(selectedPerk.employeeId),
-        perkType: selectedPerk.perkType,
-        description: selectedPerk.description,
-        value: String(selectedPerk.value),
+        employeeId: String(selectedPerk.employeeId), perkType: selectedPerk.perkType,
+        description: selectedPerk.description, value: String(selectedPerk.value),
         frequency: selectedPerk.frequency,
         startDate: new Date(selectedPerk.startDate).toISOString().split('T')[0],
-        endDate: selectedPerk.endDate ? new Date(selectedPerk.endDate).toISOString().split('T')[0] : ''
+        endDate: selectedPerk.endDate ? new Date(selectedPerk.endDate).toISOString().split('T')[0] : '',
+        eligibilityTier: (selectedPerk as any).eligibilityTier || 'Standard',
+        minPerformanceRating: (selectedPerk as any).minPerformanceRating != null
+          ? String((selectedPerk as any).minPerformanceRating)
+          : '',
       });
       setPerkDialogOpen(true);
     }
     handleMenuClose();
   };
 
-  const handleMenuClose = () => {
-    setAnchorEl(null);
+  const handleMenuClose = () => setAnchorEl(null);
+
+  const handleBenefitFormChange = (field: string, value: string) => setBenefitForm(prev => ({ ...prev, [field]: value }));
+  const handlePerkFormChange    = (field: string, value: string) => setPerkForm(prev => ({ ...prev, [field]: value }));
+
+  const handleDelete = () => { setDeleteConfirm(true); handleMenuClose(); };
+
+  const confirmDelete = () => {
+    if (activeTab === 'benefits' && selectedBenefit) deleteBenefitMutation.mutate(selectedBenefit.id);
+    else if (activeTab === 'perks' && selectedPerk) deletePerkMutation.mutate(selectedPerk.id);
+    setDeleteConfirm(false);
   };
 
-  // Form handlers
-  const handleBenefitFormChange = (field: string, value: string) => {
-    setBenefitForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handlePerkFormChange = (field: string, value: string) => {
-    setPerkForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleDelete = () => {
-    if (activeTab === 'benefits' && selectedBenefit) {
-      if (window.confirm('Are you sure you want to remove this benefit?')) {
-        deleteBenefitMutation.mutate(selectedBenefit.id);
-      }
-    } else if (activeTab === 'perks' && selectedPerk) {
-      if (window.confirm('Are you sure you want to remove this perk?')) {
-        deletePerkMutation.mutate(selectedPerk.id);
-      }
-    }
-  };
-
-  // Submit handlers
   const handleSubmitBenefit = () => {
     if (!benefitForm.employeeId || !benefitForm.benefitType || !benefitForm.provider || !benefitForm.effectiveDate) {
-      alert('Please fill Employee, Benefit Type, Provider and Effective Date');
+      flash('Please fill Employee, Benefit Type, Provider and Effective Date', 'error');
       return;
     }
     const payload = {
@@ -303,6 +235,10 @@ const Benefits: React.FC = () => {
       effectiveDate: benefitForm.effectiveDate,
       expiryDate: benefitForm.expiryDate || null,
       notes: benefitForm.notes,
+      eligibilityTier: benefitForm.eligibilityTier || 'Standard',
+      minPerformanceRating: benefitForm.minPerformanceRating
+        ? parseFloat(benefitForm.minPerformanceRating)
+        : null,
     };
     if (selectedBenefit) {
       updateBenefitMutation.mutate(payload);
@@ -313,7 +249,7 @@ const Benefits: React.FC = () => {
 
   const handleSubmitPerk = () => {
     if (!perkForm.employeeId || !perkForm.perkType || !perkForm.startDate) {
-      alert('Please fill Employee, Perk Type and Start Date');
+      flash('Please fill Employee, Perk Type and Start Date', 'error');
       return;
     }
     const payload = {
@@ -324,6 +260,10 @@ const Benefits: React.FC = () => {
       frequency: perkForm.frequency,
       startDate: perkForm.startDate,
       endDate: perkForm.endDate || null,
+      eligibilityTier: perkForm.eligibilityTier || 'Standard',
+      minPerformanceRating: perkForm.minPerformanceRating
+        ? parseFloat(perkForm.minPerformanceRating)
+        : null,
     };
     if (selectedPerk) {
       updatePerkMutation.mutate(payload);
@@ -389,6 +329,27 @@ const Benefits: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 8, bgcolor: 'background.paper', p: 4, borderRadius: 2, boxShadow: 3 }}>
+      {/* Feedback */}
+      <Snackbar open={!!pageNotify && pageNotify.sev === 'success'} autoHideDuration={4000}
+        onClose={() => setPageNotify(null)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert severity="success" onClose={() => setPageNotify(null)} sx={{ borderRadius: 2 }}>{pageNotify?.msg}</Alert>
+      </Snackbar>
+      {pageNotify?.sev === 'error' && (
+        <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setPageNotify(null)}>{pageNotify.msg}</Alert>
+      )}
+      {/* Delete confirm */}
+      <Dialog open={deleteConfirm} onClose={() => setDeleteConfirm(false)} maxWidth="xs" fullWidth>
+        <DialogTitle fontWeight={800}>Confirm Remove</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            Are you sure you want to remove this {activeTab === 'benefits' ? 'benefit' : 'perk'}?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDeleteConfirm(false)} variant="outlined" sx={{ borderRadius: 2 }}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={confirmDelete} sx={{ borderRadius: 2, fontWeight: 700 }}>Remove</Button>
+        </DialogActions>
+      </Dialog>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" gutterBottom>
           Benefits & Perks Management
@@ -770,6 +731,30 @@ const Benefits: React.FC = () => {
                 variant="outlined"
                 value={benefitForm.notes}
                 onChange={(e) => handleBenefitFormChange('notes', e.target.value)}
+              />
+            </Box>
+            <Box sx={{ flex: '1 1 250px', minWidth: '250px' }}>
+              <TextField
+                fullWidth
+                label="Eligibility Tier"
+                select
+                SelectProps={{ native: true }}
+                value={benefitForm.eligibilityTier}
+                onChange={(e) => handleBenefitFormChange('eligibilityTier', e.target.value)}
+                helperText="Premium tiers can auto-activate from performance ratings"
+              >
+                <option value="Standard">Standard</option>
+                <option value="Premium">Premium</option>
+              </TextField>
+            </Box>
+            <Box sx={{ flex: '1 1 250px', minWidth: '250px' }}>
+              <TextField
+                fullWidth
+                label="Min Performance Rating (1–5)"
+                type="number"
+                inputProps={{ min: 1, max: 5, step: 0.1 }}
+                value={benefitForm.minPerformanceRating}
+                onChange={(e) => handleBenefitFormChange('minPerformanceRating', e.target.value)}
               />
             </Box>
           </Box>

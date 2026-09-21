@@ -197,7 +197,7 @@ const OnboardingManagement: React.FC = () => {
             await api.post(`/api/onboarding/${employeeId}/generate-contract`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['onboarding', selectedEmployeeId] });
-            alert('Contract generated and sent successfully!');
+            // success handled silently — document list will refresh
         },
     });
 

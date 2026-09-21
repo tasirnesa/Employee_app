@@ -199,7 +199,7 @@ const LeaveManagement: React.FC = () => {
   // Submit handlers
   const handleSubmitLeave = () => {
     if (!leaveForm.employeeId || !leaveForm.leaveTypeId || !leaveForm.startDate || !leaveForm.endDate || !leaveForm.reason) {
-      alert('Please fill in all required fields');
+      setSnackbar({ open: true, message: 'Please fill in all required fields', severity: 'error' });
       return;
     }
     

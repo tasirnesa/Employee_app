@@ -60,6 +60,9 @@ model User {
   notifications           Notification[]
   documents               Document[]
   verifiedDocuments       Document[]           @relation("DocumentVerifier")
+  meritProposals          MeritProposal[]      @relation("MeritEmployee")
+  meritProposed           MeritProposal[]      @relation("MeritProposer")
+  meritReviewed           MeritProposal[]      @relation("MeritReviewer")
 
   @@index([managerId])
 }
@@ -421,6 +424,8 @@ model Payslip {
   lateDeduction Decimal   @default(0) @db.Decimal(10, 2)
   attendanceBonus Decimal @default(0) @db.Decimal(10, 2)
   attendancePenalty Decimal @default(0) @db.Decimal(10, 2)
+  performanceBonus  Decimal @default(0) @db.Decimal(10, 2)
+  meritTier         String?
   benefitsDeduction Decimal @default(0) @db.Decimal(10, 2)
   perksAllowance Decimal  @default(0) @db.Decimal(10, 2)
   deductions    Decimal   @db.Decimal(10, 2)
@@ -493,6 +498,8 @@ model Benefit {
   effectiveDate        DateTime
   expiryDate           DateTime?
   status               String // Active, Inactive, Pending, Expired
+  minPerformanceRating Float?
+  eligibilityTier      String?   @default("Standard")
   notes                String?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
@@ -509,6 +516,8 @@ model Perk {
   value       Decimal   @db.Decimal(10, 2) // monetary value if applicable
   frequency   String // Monthly, Quarterly, Annually, One-time
   status      String // Active, Inactive, Pending
+  minPerformanceRating Float?
+  eligibilityTier      String?   @default("Standard")
   startDate   DateTime
   endDate     DateTime?
   createdAt   DateTime  @default(now())
@@ -516,6 +525,33 @@ model Perk {
   employee    User      @relation(fields: [employeeId], references: [id])
 
   @@map("Perk")
+}
+
+model MeritProposal {
+  id                    Int       @id @default(autoincrement())
+  employeeId            Int
+  evaluationID          Int?
+  sessionID             Int?
+  proposedBy            Int
+  performanceRating     Float
+  meritTier             String
+  bonusPercent          Float     @default(0)
+  bonusAmount           Decimal   @default(0) @db.Decimal(10, 2)
+  salaryIncreasePercent Float?
+  status                String    @default("Pending")
+  reviewNotes           String?
+  reviewedBy            Int?
+  reviewedAt            DateTime?
+  appliedAt             DateTime?
+  bonusPaidAt           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  employee User  @relation("MeritEmployee", fields: [employeeId], references: [id])
+  proposer User  @relation("MeritProposer", fields: [proposedBy], references: [id])
+  reviewer User? @relation("MeritReviewer", fields: [reviewedBy], references: [id])
+
+  @@map("MeritProposal")
 }
 
 model Project {
