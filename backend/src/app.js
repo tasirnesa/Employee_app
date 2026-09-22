@@ -5,14 +5,18 @@ const fs = require('fs');
 const { authenticateToken } = require('./middleware/auth');
 const errorHandler = require('./middleware/errorHandler');
 const reminderService = require('./services/reminderService');
+const { securityHeaders, generalLimiter, authLimiter } = require('./middleware/security');
 
 const app = express();
 
 // Initialize periodic tasks
 reminderService.init();
 
-// Middleware
+// Middleware — CORS must come FIRST so preflight OPTIONS requests are handled
+// before any other middleware (rate limiters, helmet) can intercept and drop them.
 app.use(cors());
+app.use(securityHeaders);
+app.use(generalLimiter);
 app.use(express.json());
 
 // Ensure uploads directory exists and serve statically
@@ -55,7 +59,7 @@ const probationRoutes = require('./routes/probation');
 const hrIntegrationRoutes = require('./routes/hrIntegration');
 
 // Public Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 
 // Protected Routes
 app.use('/api/users', authenticateToken, userRoutes);

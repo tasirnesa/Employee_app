@@ -2,8 +2,11 @@ const goalRepository = require('../repositories/goalRepository');
 const prisma = require('../config/prisma'); // still needed for tx if not fully encapsulated
 
 const goalService = {
-  getGoals: async (userId = null) => {
-    const where = userId ? { activatedBy: parseInt(userId) } : {};
+  getGoals: async (userId = null, assignedToUserId = null, assignedToDeptId = null) => {
+    let where = {};
+    if (userId) where.activatedBy = parseInt(userId);
+    if (assignedToUserId) where.assignedToUserId = parseInt(assignedToUserId);
+    if (assignedToDeptId) where.assignedToDeptId = parseInt(assignedToDeptId);
     return await goalRepository.findAll(where);
   },
 
@@ -30,10 +33,15 @@ const goalService = {
       progress: computedProgress != null ? Math.max(0, Math.min(100, Number(computedProgress))) : 0,
       duedate: data.duedate ? new Date(data.duedate) : null,
       activatedBy: data.activatedBy ? parseInt(data.activatedBy) : tokenUserId || null,
+      assignedToUserId: data.assignedToUserId ? parseInt(data.assignedToUserId) : null,
+      assignedToDeptId: data.assignedToDeptId ? parseInt(data.assignedToDeptId) : null,
     });
 
-    if (created.activatedBy) {
-      await goalService._notifyAssignedUser(created);
+    // Notify the assigned user (if different from creator)
+    if (created.assignedToUserId && created.assignedToUserId !== created.activatedBy) {
+      await goalService._notifyAssignedUser(created, created.assignedToUserId);
+    } else if (created.activatedBy) {
+      await goalService._notifyAssignedUser(created, created.activatedBy);
     }
 
     return created;
@@ -42,6 +50,8 @@ const goalService = {
   updateGoal: async (gid, data) => {
     const updateData = { ...data };
     if (data.duedate !== undefined) updateData.duedate = data.duedate ? new Date(data.duedate) : null;
+    if (data.assignedToUserId !== undefined) updateData.assignedToUserId = data.assignedToUserId ? parseInt(data.assignedToUserId) : null;
+    if (data.assignedToDeptId !== undefined) updateData.assignedToDeptId = data.assignedToDeptId ? parseInt(data.assignedToDeptId) : null;
 
     if (data.progress == null && Array.isArray(data.keyResult)) {
       updateData.progress = goalService._calculateAverageProgress(data.keyResult);
@@ -106,11 +116,12 @@ const goalService = {
     return values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : 0;
   },
 
-  _notifyAssignedUser: async (goal) => {
+  _notifyAssignedUser: async (goal, userId) => {
+    if (!userId) return;
     try {
       await prisma.notification.create({
         data: {
-          userId: goal.activatedBy,
+          userId,
           title: 'New Goal Assigned',
           message: `A new goal has been assigned to you: "${goal.objective}".`,
           type: 'INFO',

@@ -2,7 +2,14 @@ const prisma = require('../config/prisma');
 
 const goalRepository = {
   findAll: async (where = {}) => {
-    return await prisma.goal.findMany({ where, orderBy: { gid: 'desc' } });
+    return await prisma.goal.findMany({
+      where,
+      orderBy: { gid: 'desc' },
+      include: {
+        assignedToUser: { select: { fullName: true } },
+        assignedToDept: { select: { name: true } },
+      }
+    });
   },
 
   findById: async (gid) => {

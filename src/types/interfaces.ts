@@ -178,6 +178,9 @@ export interface Payslip {
   lateDeduction: number;
   attendanceBonus: number;
   attendancePenalty: number;
+  performanceBonus?: number;
+  perksAllowance?: number;
+  benefitsDeduction?: number;
   deductions: number;
   netSalary: number;
   status: 'Generated' | 'Paid' | 'Pending';

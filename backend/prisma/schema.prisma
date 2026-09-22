@@ -36,6 +36,7 @@ model User {
   evaluationsAsEvaluator  Evaluation[]         @relation("evaluator")
   evaluationsAsEvaluatee  Evaluation[]         @relation("evaluatee")
   goals                   Goal[]               @relation("userGoals")
+  assignedGoals           Goal[]               @relation("assignedGoals")
   evaluationSessions      EvaluationSession[]  @relation("userSessions")
   createdCriteria         EvaluationCriteria[] @relation("creatorCriteria")
   authorizedCriteria      EvaluationCriteria[] @relation("authorizerCriteria")
@@ -76,6 +77,7 @@ model Department {
   manager   User?    @relation("DepartmentManager", fields: [managerId], references: [id])
   users     User[] // Users in this department
   employees Employee[]
+  assignedGoals Goal[]  @relation("deptGoals")
 }
 
 model Position {
@@ -179,16 +181,21 @@ model EvaluationResult {
 }
 
 model Goal {
-  gid         Int       @id @default(autoincrement())
-  objective   String
-  keyResult   Json?     @default("[]") // Store array of strings as JSON
-  priority    String?
-  status      String?
-  progress    Int?
-  duedate     DateTime?
-  category    String?
-  activatedBy Int?      @map("ActivatedBy")
-  user        User?     @relation(fields: [activatedBy], references: [id], name: "userGoals") // Added name to match
+  gid                Int       @id @default(autoincrement())
+  objective          String
+  keyResult          Json?     @default("[]") // Store array of strings as JSON
+  priority           String?
+  status             String?
+  progress           Int?
+  duedate            DateTime?
+  category           String?
+  activatedBy        Int?      @map("ActivatedBy")
+  assignedToUserId   Int?
+  assignedToDeptId   Int?
+
+  user               User?       @relation(fields: [activatedBy], references: [id], name: "userGoals")
+  assignedToUser     User?       @relation(fields: [assignedToUserId], references: [id], name: "assignedGoals")
+  assignedToDept     Department? @relation(fields: [assignedToDeptId], references: [id], name: "deptGoals")
 
   // Relations
   keyResultProgress KeyResultProgress[]

@@ -820,10 +820,13 @@ const Payroll: React.FC = () => {
             period: '',
             basicSalary: '',
             allowances: '',
+            performanceBonus: '0',
+            perksAllowance: '0',
             overtimePay: '0',
             lateDeduction: '0',
             attendanceBonus: '0',
             attendancePenalty: '0',
+            benefitsDeduction: '0',
             deductions: '',
             netSalary: ''
           });

@@ -3,7 +3,8 @@ const asyncHandler = require('../utils/asyncHandler');
 
 const goalController = {
   getGoals: asyncHandler(async (req, res) => {
-    const goals = await goalService.getGoals(req.query.userId);
+    const { userId, assignedToUserId, assignedToDeptId } = req.query;
+    const goals = await goalService.getGoals(userId, assignedToUserId, assignedToDeptId);
     res.json(goals);
   }),
 

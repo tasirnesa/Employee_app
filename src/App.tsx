@@ -105,8 +105,7 @@ const AppContent: React.FC = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
-  if (isLoading) {
-    console.log('Loading user data...');
+  if (isAuthenticated && isLoading) {
     return (
       <Box sx={{ p: 3, bgcolor: 'background.default' }}>
         <Typography>Loading user data...</Typography>
@@ -114,8 +113,7 @@ const AppContent: React.FC = () => {
     );
   }
 
-  if (error) {
-    console.log('Current user fetch error:', (error as any).message);
+  if (isAuthenticated && error) {
     return (
       <Box sx={{ p: 3, bgcolor: 'background.default' }}>
         <Typography color="error">Error loading user data: {(error as any).message}</Typography>
