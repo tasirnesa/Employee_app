@@ -60,7 +60,22 @@ const goalService = {
       updateData.progress = Math.max(0, Math.min(100, Number(updateData.progress)));
     }
 
-    return await goalRepository.update(gid, updateData);
+    // Check if we are assigning this to a new user to trigger a notification
+    let sendNotificationTo = null;
+    if (updateData.assignedToUserId) {
+      const existingGoal = await goalRepository.findById(gid);
+      if (existingGoal && existingGoal.assignedToUserId !== updateData.assignedToUserId) {
+        sendNotificationTo = updateData.assignedToUserId;
+      }
+    }
+
+    const updated = await goalRepository.update(gid, updateData);
+
+    if (sendNotificationTo) {
+      await goalService._notifyAssignedUser(updated, sendNotificationTo);
+    }
+
+    return updated;
   },
 
   deleteGoal: async (gid) => {

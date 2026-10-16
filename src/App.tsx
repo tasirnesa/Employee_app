@@ -56,21 +56,14 @@ import WorkerProfile360 from './pages/WorkerProfile360';
 import MyTasks from './pages/MyTasks';
 
 const AppContent: React.FC = () => {
-  console.log('App component rendering');
   const isAuthenticated = !!localStorage.getItem('token');
-  console.log('isAuthenticated:', isAuthenticated);
 
   const { data: currentUser, isLoading, error, refetch } = useQuery({
     queryKey: ['currentUser'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
-      console.log('Token for /api/users/me:', token);
-      if (!token) {
-        console.error('No token found');
-        throw new Error('No authentication token');
-      }
+      if (!token) throw new Error('No authentication token');
       const response = await api.get('/api/users/me');
-      console.log('Fetched current user from API:', response.data);
       return response.data as User;
     },
     enabled: isAuthenticated,
@@ -83,7 +76,6 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     if (currentUser) {
-      console.log('Setting user in context:', currentUser);
       setUser(currentUser);
       localStorage.setItem('userProfile', JSON.stringify(currentUser));
     } else if (!isAuthenticated) {
@@ -93,7 +85,6 @@ const AppContent: React.FC = () => {
   }, [currentUser, isAuthenticated, setUser]);
 
   const handleLogout = () => {
-    console.log('Logging out');
     localStorage.removeItem('token');
     localStorage.removeItem('userProfile');
     setUser(null);
@@ -101,9 +92,7 @@ const AppContent: React.FC = () => {
     navigate('/login');
   };
 
-  const toggleSidebar = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
-  };
+  const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
 
   if (isAuthenticated && isLoading) {
     return (
@@ -117,24 +106,15 @@ const AppContent: React.FC = () => {
     return (
       <Box sx={{ p: 3, bgcolor: 'background.default' }}>
         <Typography color="error">Error loading user data: {(error as any).message}</Typography>
-        <Typography>
-          Please try logging out and logging in again, or check the backend logs.
-        </Typography>
-        <Button variant="contained" color="error" onClick={handleLogout} sx={{ mt: 2 }}>
-          Log Out
-        </Button>
+        <Typography>Please try logging out and logging in again.</Typography>
+        <Button variant="contained" color="error" onClick={handleLogout} sx={{ mt: 2 }}>Log Out</Button>
       </Box>
     );
   }
 
-  // Check if user is on first login and needs to change password
   const isFirstLogin = currentUser && String(currentUser.isFirstLogin).toLowerCase() === 'true';
   const isEmployee = currentUser?.role === 'Employee';
   const showSidebarAndHeader = isAuthenticated && !isFirstLogin;
-
-  console.log('App render - currentUser:', currentUser);
-  console.log('App render - isFirstLogin:', isFirstLogin);
-  console.log('App render - showSidebarAndHeader:', showSidebarAndHeader);
 
   return (
     <Box sx={{ display: 'flex', bgcolor: 'background.default', minHeight: '100vh' }}>

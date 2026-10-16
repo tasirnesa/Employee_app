@@ -73,28 +73,14 @@ const Recruitment: React.FC = () => {
     notes: ''
   });
 
-  // Fetch candidates data
   const { data: candidates, isLoading: candidatesLoading, error: candidatesError } = useQuery({
     queryKey: ['candidates'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/recruitment/candidates', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    queryFn: async () => (await api.get('/api/recruitment/candidates')).data,
   });
 
-  // Fetch positions data for dropdown
   const { data: positions } = useQuery({
     queryKey: ['positions'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/positions', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    queryFn: async () => (await api.get('/api/positions')).data,
   });
 
   // Create candidate mutation

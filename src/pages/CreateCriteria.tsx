@@ -18,7 +18,6 @@ import type { EvaluationCriteria } from '../types/interfaces';
 import Papa from 'papaparse'; 
 
 const CreateCriteria: React.FC = () => {
-  console.log('CreateCriteria rendering');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [fileError, setFileError] = useState<string | null>(null);
@@ -43,22 +42,20 @@ const CreateCriteria: React.FC = () => {
       const requestData = Array.isArray(criteriaData)
         ? criteriaData.map(item => ({
             ...item,
-            criteriaID: 0, 
-            createdBy: 1, 
+            criteriaID: 0,
+            createdBy: 1,
             createdDate: new Date().toISOString(),
           }))
         : {
             ...criteriaData,
-            criteriaID: 0, 
-            createdBy: 1, 
-            createdDate: new Date().toISOString(), 
+            criteriaID: 0,
+            createdBy: 1,
+            createdDate: new Date().toISOString(),
           };
-      console.log('Sending data to backend:', requestData);
       const response = await api.post(
         Array.isArray(criteriaData) ? '/api/criteria/bulk' : '/api/criteria',
         requestData
       );
-      console.log('Backend response:', response.data);
       return response.data;
     },
     onSuccess: () => {
@@ -97,8 +94,7 @@ const CreateCriteria: React.FC = () => {
 
     Papa.parse(file, {
       header: true,
-      complete: (result: any) => { 
-        console.log('Parse result:', result);
+      complete: (result: any) => {
         const data = result.data as { title: string; description?: string }[];
         if (!Array.isArray(data)) {
           setFileError('Invalid file format: Data is not an array');
@@ -113,7 +109,6 @@ const CreateCriteria: React.FC = () => {
             createdBy: 1,
             createdDate: new Date().toISOString(),
           } as EvaluationCriteria));
-        console.log('Valid data:', validData);
         if (validData.length === 0) {
           setFileError('No valid criteria found in the file');
           return;
@@ -141,7 +136,6 @@ const CreateCriteria: React.FC = () => {
         }}
         validationSchema={validationSchema}
         onSubmit={(values, { setSubmitting, resetForm }) => {
-          console.log('Form values:', values);
           if (values.bulkCriteria.length > 0) {
             createCriteriaMutation.mutate(values.bulkCriteria);
           } else {

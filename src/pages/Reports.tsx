@@ -48,71 +48,12 @@ function Reports() {
   const [selectedPeriod, setSelectedPeriod] = useState('all');
 
   // Fetch comprehensive data
-  const { data: users } = useQuery({
-    queryKey: ['users'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/users', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
-  });
-
-  const { data: evaluations } = useQuery({
-    queryKey: ['evaluations'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/evaluations', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
-  });
-
-  const { data: performanceData } = useQuery({
-    queryKey: ['performanceData'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/performance', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
-  });
-
-  const { data: attendanceData } = useQuery({
-    queryKey: ['attendance'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/attendance', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
-  });
-
-  const { data: leavesData } = useQuery({
-    queryKey: ['leaves'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/leaves', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
-  });
-
-  const { data: timesheetsData } = useQuery({
-    queryKey: ['timesheets'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/timesheets', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
-  });
+  const { data: users }           = useQuery({ queryKey: ['users'],         queryFn: async () => (await api.get('/api/users')).data });
+  const { data: evaluations }     = useQuery({ queryKey: ['evaluations'],    queryFn: async () => (await api.get('/api/evaluations')).data });
+  const { data: performanceData } = useQuery({ queryKey: ['performanceData'],queryFn: async () => (await api.get('/api/performance')).data });
+  const { data: attendanceData }  = useQuery({ queryKey: ['attendance'],     queryFn: async () => (await api.get('/api/attendance')).data });
+  const { data: leavesData }      = useQuery({ queryKey: ['leaves'],         queryFn: async () => (await api.get('/api/leaves')).data });
+  const { data: timesheetsData }  = useQuery({ queryKey: ['timesheets'],     queryFn: async () => (await api.get('/api/timesheets')).data });
 
   // Calculate analytics
   const calculateAnalytics = () => {

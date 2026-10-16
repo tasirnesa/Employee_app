@@ -1,40 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import type { Evaluation } from '../types/index.ts'; // Ensure correct path
+// Deprecated — evaluations are managed via /evaluations/view and /evaluations/create
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const EvaluationForm: React.FC = () => {
-  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const fetchEvaluations = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:5000/api/evaluations', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setEvaluations(response.data);
-      } catch (err: any) {
-        console.error('Fetch evaluations error:', err);
-        setError('Failed to load evaluations');
-      }
-    };
-    fetchEvaluations();
-  }, []);
-
-  return (
-    <div>
-      <h1>Evaluations</h1>
-      {error && <p>{error}</p>}
-      <ul>
-        {evaluations.map((evaluation) => (
-          <li key={evaluation.evaluationID}>
-            {evaluation.evaluationType} - {evaluation.evaluationDate}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+  const navigate = useNavigate();
+  useEffect(() => { navigate('/evaluations/view', { replace: true }); }, [navigate]);
+  return null;
 };
 
 export default EvaluationForm;

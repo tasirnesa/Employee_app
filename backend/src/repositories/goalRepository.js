@@ -21,7 +21,14 @@ const goalRepository = {
   },
 
   update: async (gid, data) => {
-    return await prisma.goal.update({ where: { gid: parseInt(gid) }, data });
+    return await prisma.goal.update({
+      where: { gid: parseInt(gid) },
+      data,
+      include: {
+        assignedToUser: { select: { fullName: true } },
+        assignedToDept: { select: { name: true } },
+      }
+    });
   },
 
   delete: async (gid) => {

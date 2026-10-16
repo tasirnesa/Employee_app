@@ -76,9 +76,10 @@ const DocumentManagement: React.FC = () => {
 
   const handleUpload = () => {
     if (!uploadData.title || !uploadData.categoryId || !selectedFile) {
-      alert('Please fill in all required fields and select a file.');
+      setFormError('Please fill in Title, Category and select a file.');
       return;
     }
+    setFormError(null);
 
     const formData = new FormData();
     formData.append('title', uploadData.title);
@@ -276,6 +277,7 @@ const DocumentManagement: React.FC = () => {
       <Dialog open={isUploadOpen} onClose={() => setIsUploadOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
         <DialogTitle fontWeight="bold">Upload Document</DialogTitle>
         <DialogContent dividers>
+          {formError && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{formError}</Alert>}
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid size={{ xs: 12 }}>
               <TextField 

@@ -246,7 +246,7 @@ const Dashboard: React.FC = () => {
         </Box>
 
         <DashboardWorklets role={role} />
-        <DashboardQuickActions role={role} />
+        {/* DashboardQuickActions removed — worklets already provide the same navigation */}
 
         {statsError && (
           <Alert severity="error" sx={{ mb: 3, borderRadius: 3 }}>
@@ -393,87 +393,18 @@ const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-              <Card sx={{ borderRadius: 4, border: '1px solid #eef2ff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Typography variant="h6" fontWeight={800} sx={{ color: '#1e293b' }}>
-                        Internal Communications
-                      </Typography>
-                      {chatThreads.some((t) => t.unreadCount > 0) && (
-                        <Chip
-                          label={`${chatThreads.reduce((sum, t) => sum + (t.unreadCount || 0), 0)} New`}
-                          size="small"
-                          color="error"
-                          sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }}
-                        />
-                      )}
-                    </Box>
-                    <Button size="small" onClick={() => navigate('/todo')}>Open Chat</Button>
-                  </Box>
-                  <List sx={{ maxHeight: 320, overflow: 'auto' }}>
-                    {chatThreads.map((t) => (
-                      <ListItem
-                        key={t.withId}
-                        sx={{ px: 0, py: 1.5, borderRadius: 2, '&:hover': { bgcolor: '#f8fafc' }, cursor: 'pointer' }}
-                        onClick={() => {
-                          window.dispatchEvent(new CustomEvent('open-chat', {
-                            detail: { user: { id: t.withId, fullName: t.withName, profileImageUrl: t.avatar } },
-                          }));
-                        }}
-                      >
-                        <ListItemAvatar>
-                          <Badge
-                            badgeContent={t.unreadCount}
-                            color="error"
-                            overlap="circular"
-                            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                            invisible={!t.unreadCount}
-                          >
-                            <Avatar src={t.avatar || undefined} sx={{ bgcolor: 'primary.light' }}>
-                              {t.withName.charAt(0)}
-                            </Avatar>
-                          </Badge>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={<Typography variant="body2" fontWeight={700} noWrap>{t.withName}</Typography>}
-                          secondary={
-                            <Typography
-                              variant="caption"
-                              color={t.unreadCount ? 'primary.main' : 'text.secondary'}
-                              fontWeight={t.unreadCount ? 700 : 400}
-                              noWrap
-                            >
-                              {t.lastText}
-                            </Typography>
-                          }
-                        />
-                        <Typography variant="caption" color="text.disabled" sx={{ ml: 1 }}>
-                          {new Date(t.lastAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </Typography>
-                      </ListItem>
-                    ))}
-                    {chatThreads.length === 0 && (
-                      <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
-                        No messages found.
-                      </Typography>
-                    )}
-                  </List>
-                </CardContent>
-              </Card>
-
-              <Card sx={{ borderRadius: 4, border: '1px solid #eef2ff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+            <Card sx={{ borderRadius: 4, border: '1px solid #eef2ff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                     <Typography variant="h6" fontWeight={800} sx={{ color: '#1e293b' }}>Upcoming Evaluations</Typography>
-                    <Button size="small" onClick={() => navigate('/schedule')}>Calendar</Button>
+                    <Button size="small" onClick={() => navigate('/schedule')}>Manage Sessions</Button>
                   </Box>
-                  <List sx={{ maxHeight: 320, overflow: 'auto' }}>
-                    {(sessionsList || []).slice(0, 4).map((s: any) => (
+                  <List sx={{ maxHeight: 280, overflow: 'auto' }}>
+                    {(sessionsList || []).slice(0, 5).map((s: any) => (
                       <ListItem key={s.sessionID} sx={{ px: 0, py: 1.5 }}>
-                        <Box sx={{ mr: 2, p: 1, borderRadius: 2, bgcolor: '#f1f5f9', textAlign: 'center', minWidth: 50 }}>
-                          <Typography variant="caption" fontWeight={800} display="block" color="primary">
+                        <Box sx={{ mr: 2, p: 1, borderRadius: 2, bgcolor: String(s.type || '').toLowerCase() === 'on' ? '#f0fdf4' : '#f1f5f9', textAlign: 'center', minWidth: 56 }}>
+                          <Typography variant="caption" fontWeight={800} display="block"
+                            color={String(s.type || '').toLowerCase() === 'on' ? 'success.main' : 'primary'}>
                             {new Date(s.startDate).toLocaleString('en-US', { month: 'short' }).toUpperCase()}
                           </Typography>
                           <Typography variant="h6" fontWeight={800} display="block" sx={{ lineHeight: 1 }}>
@@ -481,9 +412,26 @@ const Dashboard: React.FC = () => {
                           </Typography>
                         </Box>
                         <ListItemText
-                          primary={<Typography variant="body2" fontWeight={700}>{s.title}</Typography>}
-                          secondary={`${new Date(s.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • ${s.type || 'Meeting'}`}
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2" fontWeight={700}>{s.title}</Typography>
+                              <Chip
+                                label={String(s.type || '').toLowerCase() === 'on' ? 'Active' : 'Inactive'}
+                                size="small"
+                                color={String(s.type || '').toLowerCase() === 'on' ? 'success' : 'default'}
+                                sx={{ height: 18, fontSize: 10, fontWeight: 700 }}
+                              />
+                            </Box>
+                          }
+                          secondary={`${new Date(s.startDate).toLocaleDateString()} → ${new Date(s.endDate).toLocaleDateString()}${s.department ? ` • ${s.department}` : ''}`}
                         />
+                        {String(s.type || '').toLowerCase() === 'on' && (
+                          <Button size="small" variant="outlined"
+                            onClick={() => navigate(`/evaluations/create?sessionId=${s.sessionID}`)}
+                            sx={{ ml: 1, borderRadius: 2, fontSize: 11, flexShrink: 0 }}>
+                            Evaluate
+                          </Button>
+                        )}
                       </ListItem>
                     ))}
                     {(!sessionsList || !sessionsList.length) && (
@@ -494,7 +442,6 @@ const Dashboard: React.FC = () => {
                   </List>
                 </CardContent>
               </Card>
-            </Box>
           </Box>
 
           <Box sx={{ gridColumn: { xs: 'span 12', lg: 'span 4' }, display: 'flex', flexDirection: 'column', gap: 3 }}>

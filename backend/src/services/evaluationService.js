@@ -93,6 +93,19 @@ const evaluationService = {
     if (!evaluateeExists) throw new Error(`Evaluatee with id ${evaluateeID} does not exist`);
     if (!sessionExists) throw new Error(`Session with id ${sessionID} does not exist`);
 
+    // Prevent duplicate evaluations for the same session by the same evaluator
+    const duplicateEvaluation = await prisma.evaluation.findFirst({
+      where: {
+        evaluatorID: parseInt(evaluatorID),
+        evaluateeID: parseInt(evaluateeID),
+        sessionID: parseInt(sessionID)
+      }
+    });
+
+    if (duplicateEvaluation) {
+      throw new Error('You have already submitted an evaluation for this employee during this session.');
+    }
+
     // Session Validation logic from index.js
     const now = new Date();
     const isOn = String(sessionExists.type || '').toLowerCase() === 'on';

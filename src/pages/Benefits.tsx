@@ -93,40 +93,19 @@ const Benefits: React.FC = () => {
     minPerformanceRating: '',
   });
 
-  // Fetch benefits data
   const { data: benefits, isLoading: benefitsLoading, error: benefitsError } = useQuery({
     queryKey: ['benefits'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/benefits/benefits', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    queryFn: async () => (await api.get('/api/benefits/benefits')).data,
   });
 
-  // Fetch perks data
   const { data: perks, isLoading: perksLoading, error: perksError } = useQuery({
     queryKey: ['perks'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/benefits/perks', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    queryFn: async () => (await api.get('/api/benefits/perks')).data,
   });
 
-  // Fetch users for dropdown (benefits reference User model, not Employee model)
   const { data: employees } = useQuery({
     queryKey: ['users'],
-    queryFn: async () => {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/users', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data;
-    },
+    queryFn: async () => (await api.get('/api/users')).data,
   });
 
   // Mutations
