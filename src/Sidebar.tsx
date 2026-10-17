@@ -11,7 +11,6 @@ import {
   Typography,
   Box,
   Tooltip,
-  Avatar,
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from './context/UserContext';
@@ -28,7 +27,6 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import PaidIcon from '@mui/icons-material/Paid';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import GroupAddIcon from '@mui/icons-material/GroupAdd';
-import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 import DescriptionIcon from '@mui/icons-material/Description';
 import DevicesIcon from '@mui/icons-material/Devices';
 import NotificationsIcon from '@mui/icons-material/Notifications';
@@ -36,11 +34,18 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import InboxIcon from '@mui/icons-material/Inbox';
 import WorkIcon from '@mui/icons-material/Work';
 import EventIcon from '@mui/icons-material/Event';
-import ChecklistIcon from '@mui/icons-material/Checklist';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
-import RuleIcon from '@mui/icons-material/Rule';
-import AssignmentIcon from '@mui/icons-material/Assignment';
+import { isPeoplePath } from './components/PeopleTabBar';
+import { isLifecyclePath } from './components/LifecycleTabBar';
+import { isEvaluationPath } from './components/EvaluationTabBar';
+import { isPerformancePath } from './components/PerformanceTabBar';
+import { isTimePath } from './components/TimeTabBar';
+import { isCompensationPath } from './components/CompensationTabBar';
+import { isRecruitmentPath } from './components/RecruitmentTabBar';
+import { isWorkPath } from './components/WorkTabBar';
+import { isDocumentsPath } from './components/DocumentsTabBar';
+import { isAnalyticsPath } from './components/AnalyticsTabBar';
 
 const DRAWER_WIDTH = 240;
 const COLLAPSED_WIDTH = 72;
@@ -50,13 +55,10 @@ interface SidebarProps {
   onToggle?: () => void;
 }
 
-// ── Types ────────────────────────────────────────────────────────────────────
 interface NavItem {
   label: string;
   path: string;
   icon?: React.ReactNode;
-  adminOnly?: boolean;
-  employeeOnly?: boolean;
   matchStart?: boolean;
 }
 
@@ -64,142 +66,21 @@ interface NavGroup {
   label: string;
   icon: React.ReactNode;
   items: NavItem[];
-  adminOnly?: boolean;       // entire group hidden from employees
-  employeeVisible?: boolean; // group shown to all roles (default: shown to all)
 }
 
-// ── Navigation structure ─────────────────────────────────────────────────────
-const buildNav = (isEmployee: boolean, isAdmin: boolean): NavGroup[] => [
-  // ── People ────────────────────────────────────────────────────────────────
-  {
-    label: 'People',
-    icon: <PeopleIcon />,
-    items: [
-      // Admin/Manager only
-      ...(!isEmployee ? [
-        { label: 'Users', path: '/users/view', matchStart: true },
-        { label: 'Create User', path: '/users/create' },
-        { label: 'Employees', path: '/employees/view', matchStart: true },
-        { label: 'Create Employee', path: '/employees/create' },
-        { label: 'Departments', path: '/departments' },
-        { label: 'Positions', path: '/positions' },
-      ] : [
-        // Employee only
-        { label: 'My Profile', path: '/employees/view' },
-        { label: 'My Onboarding', path: '/onboarding/me' },
-      ]),
-    ],
-  },
-
-  // ── Lifecycle (admin/manager only) ────────────────────────────────────────
-  ...(!isEmployee ? [{
-    label: 'Lifecycle',
-    icon: <BadgeIcon />,
-    items: [
-      { label: 'New Hire Wizard', path: '/onboarding/wizard' },
-      { label: 'Onboarding', path: '/onboarding' },
-      { label: 'Probation Reviews', path: '/probation' },
-      { label: 'Offboarding', path: '/offboarding' },
-    ],
-  }] : []),
-
-  // ── Evaluation ────────────────────────────────────────────────────────────
-  {
-    label: 'Evaluation',
-    icon: <RateReviewIcon />,
-    items: [
-      ...(!isEmployee ? [{ label: 'Create Session', path: '/evaluations/create' }] : []),
-      { label: 'View Evaluations', path: '/evaluations/view', matchStart: true },
-      ...(!isEmployee ? [{ label: 'Criteria', path: '/criteria/view', matchStart: true }] : []),
-      ...(!isEmployee ? [{ label: 'Create Criteria', path: '/criteria/create' }] : []),
-    ],
-  },
-
-  // ── Performance & Goals ───────────────────────────────────────────────────
-  {
-    label: 'Performance',
-    icon: <AssessmentIcon />,
-    items: [
-      { label: 'Goals & OKRs', path: '/goals', icon: <FlagIcon /> },
-      { label: 'Performance Analytics', path: '/analytics-performance', icon: <AssessmentIcon /> },
-      { label: 'Schedule', path: '/schedule', icon: <EventIcon /> },
-      ...(!isEmployee ? [{ label: 'Projects', path: '/projects', icon: <WorkIcon /> }] : []),
-    ],
-  },
-
-  // ── Time & Attendance ─────────────────────────────────────────────────────
-  {
-    label: 'Time & Attendance',
-    icon: <AccessTimeIcon />,
-    items: [
-      { label: 'Attendance', path: '/attendance' },
-      { label: 'Timesheets', path: '/timesheets' },
-      { label: 'Leave Management', path: '/leave-management' },
-    ],
-  },
-
-  // ── Compensation ──────────────────────────────────────────────────────────
-  {
-    label: 'Compensation',
-    icon: <PaidIcon />,
-    items: [
-      { label: 'Payroll', path: '/payroll' },
-      { label: 'Benefits & Perks', path: '/benefits' },
-    ],
-  },
-
-  // ── Recruitment (admin/manager only) ──────────────────────────────────────
-  ...(!isEmployee ? [{
-    label: 'Recruitment',
-    icon: <GroupAddIcon />,
-    items: [
-      { label: 'Candidates', path: '/recruitment' },
-    ],
-  }] : []),
-
-  // ── Work ─────────────────────────────────────────────────────────────────
-  {
-    label: 'Work',
-    icon: <InboxIcon />,
-    items: [
-      { label: 'My Tasks', path: '/inbox' },
-      { label: 'Todo List', path: '/todo' },
-    ],
-  },
-
-  // ── Documents ─────────────────────────────────────────────────────────────
-  {
-    label: 'Documents',
-    icon: <DescriptionIcon />,
-    items: [
-      { label: 'Documents', path: '/document-management' },
-      ...(!isEmployee ? [{ label: 'Assets', path: '/asset-management', icon: <DevicesIcon /> }] : []),
-    ],
-  },
-
-  // ── Analytics (admin/manager only) ────────────────────────────────────────
-  ...(!isEmployee ? [{
-    label: 'Analytics',
-    icon: <BarChartIcon />,
-    items: [
-      { label: 'Reports', path: '/reports' },
-    ],
-  }] : []),
+const buildNav = (isEmployee: boolean, _isAdmin: boolean): NavGroup[] => [
 ];
 
-// ── Flat top-level items (always visible) ────────────────────────────────────
 const TOP_ITEMS = [
   { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
   { label: 'Notifications', path: '/notifications', icon: <NotificationsIcon /> },
 ];
 
-// ── Bottom settings items ─────────────────────────────────────────────────────
 const SETTINGS_ITEMS = [
   { label: 'Change Password', path: '/change-password', icon: <VpnKeyIcon /> },
   { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
 ];
 
-// ── NavItem component ─────────────────────────────────────────────────────────
 const NavItemButton: React.FC<{
   label: string;
   path: string;
@@ -208,7 +89,7 @@ const NavItemButton: React.FC<{
   collapsed?: boolean;
   onClick: () => void;
   selected: boolean;
-}> = ({ label, path, icon, indent, collapsed, onClick, selected }) => {
+}> = ({ label, icon, indent, collapsed, onClick, selected }) => {
   const btn = (
     <ListItemButton
       selected={selected}
@@ -228,12 +109,13 @@ const NavItemButton: React.FC<{
         '&:hover': { bgcolor: 'action.hover' },
       }}
     >
-      {icon && (
-        <ListItemIcon sx={{ minWidth: 36, color: 'inherit' }}>
-          {icon}
-        </ListItemIcon>
+      {icon && <ListItemIcon sx={{ minWidth: 36, color: 'inherit' }}>{icon}</ListItemIcon>}
+      {!collapsed && (
+        <ListItemText
+          primary={label}
+          primaryTypographyProps={{ fontSize: 13, fontWeight: selected ? 700 : 500 }}
+        />
       )}
-      {!collapsed && <ListItemText primary={label} primaryTypographyProps={{ fontSize: 13, fontWeight: selected ? 700 : 500 }} />}
     </ListItemButton>
   );
 
@@ -246,7 +128,6 @@ const NavItemButton: React.FC<{
   );
 };
 
-// ── Main component ────────────────────────────────────────────────────────────
 const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -259,10 +140,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
   const isEmployee = userRole === 'Employee';
   const isAdmin = userRole === 'Admin' || userRole === 'SuperAdmin';
 
-  // Recent actions
   const [recent, setRecent] = useState<Array<{ label: string; path: string }>>([]);
   useEffect(() => {
-    try { setRecent(JSON.parse(localStorage.getItem('recentActions') || '[]')); } catch { /* ignore */ }
+    try { setRecent(JSON.parse(localStorage.getItem('recentActions') || '[]')); } catch { /**/ }
   }, []);
 
   const go = (label: string, path: string) => {
@@ -275,16 +155,24 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
   const isSelected = (path: string, matchStart?: boolean) =>
     matchStart ? location.pathname.startsWith(path) : location.pathname === path;
 
-  // Track which groups are open — default only the most-used ones open
+  const isPeopleActive = isPeoplePath(location.pathname);
+  const isLifecycleActive = isLifecyclePath(location.pathname);
+  const isEvaluationActive = isEvaluationPath(location.pathname);
+  const isPerformanceActive = isPerformancePath(location.pathname);
+  const isTimeActive         = isTimePath(location.pathname);
+  const isCompensationActive = isCompensationPath(location.pathname);
+  const isRecruitmentActive  = isRecruitmentPath(location.pathname);
+  const isWorkActive         = isWorkPath(location.pathname);
+  const isDocumentsActive    = isDocumentsPath(location.pathname);
+  const isAnalyticsActive    = isAnalyticsPath(location.pathname);
+
   const navGroups = buildNav(isEmployee, isAdmin);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    const defaults: Record<string, boolean> = {};
-    navGroups.forEach((g) => { defaults[g.label] = false; });
-    // Open the active group by default
-    return defaults;
+    const d: Record<string, boolean> = {};
+    navGroups.forEach((g) => (d[g.label] = false));
+    return d;
   });
 
-  // Auto-open the group containing the current route on mount
   useEffect(() => {
     const next = { ...openGroups };
     navGroups.forEach((group) => {
@@ -293,12 +181,14 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
       }
     });
     setOpenGroups(next);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
-  const toggleGroup = (label: string) => {
+  const toggleGroup = (label: string) =>
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
-  };
+
+  // Default People landing route
+  const peopleDefaultPath = isEmployee ? '/employees/view' : '/employees/view';
 
   return (
     <Drawer
@@ -320,8 +210,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
         },
       }}
     >
-      {/* ── Header ─────────────────────────────────────────────── */}
+      {/* Header */}
       <Box
+        onClick={onToggle}
         sx={{
           display: 'flex',
           alignItems: 'center',
@@ -333,7 +224,6 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
           borderColor: 'divider',
           minHeight: 64,
         }}
-        onClick={onToggle}
       >
         <Box
           component="img"
@@ -353,11 +243,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
         )}
       </Box>
 
-      {/* ── Scrollable nav body ─────────────────────────────────── */}
+      {/* Nav body */}
       <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', py: 1 }}>
         <List disablePadding>
-
-          {/* Top flat items: Dashboard + Notifications */}
           {TOP_ITEMS.map((item) => (
             <NavItemButton
               key={item.path}
@@ -372,10 +260,223 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
 
           <Divider sx={{ my: 1, mx: 2 }} />
 
-          {/* Grouped nav sections */}
+          {/* ── People button ─────────────────────────────────── */}
+          <Tooltip title={collapsed ? 'People' : ''} placement="right">
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => go('People', peopleDefaultPath)}
+                sx={{
+                  borderRadius: 2, mx: 1, my: 0.25, minHeight: 40, transition: 'all 0.2s ease',
+                  background: isPeopleActive ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : 'transparent',
+                  boxShadow: isPeopleActive ? '0 4px 12px rgba(99,102,241,0.3)' : 'none',
+                  '& .MuiListItemIcon-root': { color: isPeopleActive ? 'white' : 'text.secondary' },
+                  '&:hover': { background: isPeopleActive ? 'linear-gradient(135deg, #5a5de8 0%, #7c4ee8 100%)' : 'rgba(99,102,241,0.08)' },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}><PeopleIcon /></ListItemIcon>
+                {!collapsed && (
+                  <ListItemText primary="People" primaryTypographyProps={{ fontSize: 13, fontWeight: 700, color: isPeopleActive ? 'white' : 'text.secondary' }} />
+                )}
+              </ListItemButton>
+            </ListItem>
+          </Tooltip>
+
+          {/* ── Lifecycle button ───────────────────────────────── */}
+          {!isEmployee && (
+            <Tooltip title={collapsed ? 'Lifecycle' : ''} placement="right">
+              <ListItem disablePadding>
+                <ListItemButton
+                  onClick={() => go('Lifecycle', '/onboarding')}
+                  sx={{
+                    borderRadius: 2, mx: 1, my: 0.25, minHeight: 40, transition: 'all 0.2s ease',
+                    background: isLifecycleActive ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'transparent',
+                    boxShadow: isLifecycleActive ? '0 4px 12px rgba(16,185,129,0.3)' : 'none',
+                    '& .MuiListItemIcon-root': { color: isLifecycleActive ? 'white' : 'text.secondary' },
+                    '&:hover': { background: isLifecycleActive ? 'linear-gradient(135deg, #047857 0%, #059669 100%)' : 'rgba(16,185,129,0.08)' },
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 36 }}><BadgeIcon /></ListItemIcon>
+                  {!collapsed && (
+                    <ListItemText primary="Lifecycle" primaryTypographyProps={{ fontSize: 13, fontWeight: 700, color: isLifecycleActive ? 'white' : 'text.secondary' }} />
+                  )}
+                </ListItemButton>
+              </ListItem>
+            </Tooltip>
+          )}
+
+          {/* ── Evaluation button ───────────────────────────────── */}
+          <Tooltip title={collapsed ? 'Evaluation' : ''} placement="right">
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => go('Evaluation', isEmployee ? '/evaluations/view' : '/evaluations/view')}
+                sx={{
+                  borderRadius: 2, mx: 1, my: 0.25, minHeight: 40, transition: 'all 0.2s ease',
+                  background: isEvaluationActive ? 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)' : 'transparent',
+                  boxShadow: isEvaluationActive ? '0 4px 12px rgba(245,158,11,0.3)' : 'none',
+                  '& .MuiListItemIcon-root': { color: isEvaluationActive ? 'white' : 'text.secondary' },
+                  '&:hover': { background: isEvaluationActive ? 'linear-gradient(135deg, #b45309 0%, #d97706 100%)' : 'rgba(245,158,11,0.08)' },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}><RateReviewIcon /></ListItemIcon>
+                {!collapsed && (
+                  <ListItemText primary="Evaluation" primaryTypographyProps={{ fontSize: 13, fontWeight: 700, color: isEvaluationActive ? 'white' : 'text.secondary' }} />
+                )}
+              </ListItemButton>
+            </ListItem>
+          </Tooltip>
+          {/* ── Performance button ──────────────────────────────── */}
+          <Tooltip title={collapsed ? 'Performance' : ''} placement="right">
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => go('Performance', '/goals')}
+                sx={{
+                  borderRadius: 2, mx: 1, my: 0.25, minHeight: 40, transition: 'all 0.2s ease',
+                  background: isPerformanceActive ? 'linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%)' : 'transparent',
+                  boxShadow: isPerformanceActive ? '0 4px 12px rgba(14,165,233,0.3)' : 'none',
+                  '& .MuiListItemIcon-root': { color: isPerformanceActive ? 'white' : 'text.secondary' },
+                  '&:hover': { background: isPerformanceActive ? 'linear-gradient(135deg, #0369a1 0%, #0284c7 100%)' : 'rgba(14,165,233,0.08)' },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}><AssessmentIcon /></ListItemIcon>
+                {!collapsed && (
+                  <ListItemText primary="Performance" primaryTypographyProps={{ fontSize: 13, fontWeight: 700, color: isPerformanceActive ? 'white' : 'text.secondary' }} />
+                )}
+              </ListItemButton>
+            </ListItem>
+          </Tooltip>
+          {/* ── Time & Attendance button ─────────────────────────── */}
+          <Tooltip title={collapsed ? 'Time & Attendance' : ''} placement="right">
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => go('Time & Attendance', '/attendance')}
+                sx={{
+                  borderRadius: 2, mx: 1, my: 0.25, minHeight: 40, transition: 'all 0.2s ease',
+                  background: isTimeActive ? 'linear-gradient(135deg, #e11d48 0%, #f43f5e 100%)' : 'transparent',
+                  boxShadow: isTimeActive ? '0 4px 12px rgba(244,63,94,0.3)' : 'none',
+                  '& .MuiListItemIcon-root': { color: isTimeActive ? 'white' : 'text.secondary' },
+                  '&:hover': { background: isTimeActive ? 'linear-gradient(135deg, #be123c 0%, #e11d48 100%)' : 'rgba(244,63,94,0.08)' },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}><AccessTimeIcon /></ListItemIcon>
+                {!collapsed && (
+                  <ListItemText primary="Time & Attendance" primaryTypographyProps={{ fontSize: 13, fontWeight: 700, color: isTimeActive ? 'white' : 'text.secondary' }} />
+                )}
+              </ListItemButton>
+            </ListItem>
+          </Tooltip>
+
+          {/* ── Compensation button ──────────────────────────────── */}
+          <Tooltip title={collapsed ? 'Compensation' : ''} placement="right">
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => go('Compensation', '/payroll')}
+                sx={{
+                  borderRadius: 2, mx: 1, my: 0.25, minHeight: 40, transition: 'all 0.2s ease',
+                  background: isCompensationActive ? 'linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%)' : 'transparent',
+                  boxShadow: isCompensationActive ? '0 4px 12px rgba(139,92,246,0.3)' : 'none',
+                  '& .MuiListItemIcon-root': { color: isCompensationActive ? 'white' : 'text.secondary' },
+                  '&:hover': { background: isCompensationActive ? 'linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%)' : 'rgba(139,92,246,0.08)' },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}><PaidIcon /></ListItemIcon>
+                {!collapsed && (
+                  <ListItemText primary="Compensation" primaryTypographyProps={{ fontSize: 13, fontWeight: 700, color: isCompensationActive ? 'white' : 'text.secondary' }} />
+                )}
+              </ListItemButton>
+            </ListItem>
+          </Tooltip>
+
+          {/* ── Recruitment button (admin only) ──────────────────── */}
+          {!isEmployee && (
+            <Tooltip title={collapsed ? 'Recruitment' : ''} placement="right">
+              <ListItem disablePadding>
+                <ListItemButton
+                  onClick={() => go('Recruitment', '/recruitment')}
+                  sx={{
+                    borderRadius: 2, mx: 1, my: 0.25, minHeight: 40, transition: 'all 0.2s ease',
+                    background: isRecruitmentActive ? 'linear-gradient(135deg, #db2777 0%, #ec4899 100%)' : 'transparent',
+                    boxShadow: isRecruitmentActive ? '0 4px 12px rgba(236,72,153,0.3)' : 'none',
+                    '& .MuiListItemIcon-root': { color: isRecruitmentActive ? 'white' : 'text.secondary' },
+                    '&:hover': { background: isRecruitmentActive ? 'linear-gradient(135deg, #be185d 0%, #db2777 100%)' : 'rgba(236,72,153,0.08)' },
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 36 }}><GroupAddIcon /></ListItemIcon>
+                  {!collapsed && (
+                    <ListItemText primary="Recruitment" primaryTypographyProps={{ fontSize: 13, fontWeight: 700, color: isRecruitmentActive ? 'white' : 'text.secondary' }} />
+                  )}
+                </ListItemButton>
+              </ListItem>
+            </Tooltip>
+          )}
+
+          {/* ── Work button ──────────────────────────────────────── */}
+          <Tooltip title={collapsed ? 'Work' : ''} placement="right">
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => go('Work', '/inbox')}
+                sx={{
+                  borderRadius: 2, mx: 1, my: 0.25, minHeight: 40, transition: 'all 0.2s ease',
+                  background: isWorkActive ? 'linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)' : 'transparent',
+                  boxShadow: isWorkActive ? '0 4px 12px rgba(20,184,166,0.3)' : 'none',
+                  '& .MuiListItemIcon-root': { color: isWorkActive ? 'white' : 'text.secondary' },
+                  '&:hover': { background: isWorkActive ? 'linear-gradient(135deg, #0d6b64 0%, #0f766e 100%)' : 'rgba(20,184,166,0.08)' },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}><InboxIcon /></ListItemIcon>
+                {!collapsed && (
+                  <ListItemText primary="Work" primaryTypographyProps={{ fontSize: 13, fontWeight: 700, color: isWorkActive ? 'white' : 'text.secondary' }} />
+                )}
+              </ListItemButton>
+            </ListItem>
+          </Tooltip>
+
+          {/* ── Documents button ─────────────────────────────────── */}
+          <Tooltip title={collapsed ? 'Documents' : ''} placement="right">
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => go('Documents', '/document-management')}
+                sx={{
+                  borderRadius: 2, mx: 1, my: 0.25, minHeight: 40, transition: 'all 0.2s ease',
+                  background: isDocumentsActive ? 'linear-gradient(135deg, #475569 0%, #64748b 100%)' : 'transparent',
+                  boxShadow: isDocumentsActive ? '0 4px 12px rgba(100,116,139,0.3)' : 'none',
+                  '& .MuiListItemIcon-root': { color: isDocumentsActive ? 'white' : 'text.secondary' },
+                  '&:hover': { background: isDocumentsActive ? 'linear-gradient(135deg, #334155 0%, #475569 100%)' : 'rgba(100,116,139,0.08)' },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}><DescriptionIcon /></ListItemIcon>
+                {!collapsed && (
+                  <ListItemText primary="Documents" primaryTypographyProps={{ fontSize: 13, fontWeight: 700, color: isDocumentsActive ? 'white' : 'text.secondary' }} />
+                )}
+              </ListItemButton>
+            </ListItem>
+          </Tooltip>
+
+          {/* ── Analytics button (admin only) ────────────────────── */}
+          {!isEmployee && (
+            <Tooltip title={collapsed ? 'Analytics' : ''} placement="right">
+              <ListItem disablePadding>
+                <ListItemButton
+                  onClick={() => go('Analytics', '/reports')}
+                  sx={{
+                    borderRadius: 2, mx: 1, my: 0.25, minHeight: 40, transition: 'all 0.2s ease',
+                    background: isAnalyticsActive ? 'linear-gradient(135deg, #b45309 0%, #d97706 100%)' : 'transparent',
+                    boxShadow: isAnalyticsActive ? '0 4px 12px rgba(217,119,6,0.3)' : 'none',
+                    '& .MuiListItemIcon-root': { color: isAnalyticsActive ? 'white' : 'text.secondary' },
+                    '&:hover': { background: isAnalyticsActive ? 'linear-gradient(135deg, #92400e 0%, #b45309 100%)' : 'rgba(217,119,6,0.08)' },
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 36 }}><BarChartIcon /></ListItemIcon>
+                  {!collapsed && (
+                    <ListItemText primary="Analytics" primaryTypographyProps={{ fontSize: 13, fontWeight: 700, color: isAnalyticsActive ? 'white' : 'text.secondary' }} />
+                  )}
+                </ListItemButton>
+              </ListItem>
+            </Tooltip>
+          )}
+
+          {/* Other nav groups */}
           {navGroups.map((group) => (
             <React.Fragment key={group.label}>
-              {/* Group header */}
               <Tooltip title={collapsed ? group.label : ''} placement="right">
                 <ListItem disablePadding>
                   <ListItemButton
@@ -397,18 +498,15 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
                           primary={group.label}
                           primaryTypographyProps={{ fontSize: 13, fontWeight: 700, color: 'text.secondary' }}
                         />
-                        {openGroups[group.label] ? (
-                          <ExpandLess sx={{ fontSize: 18, color: 'text.disabled' }} />
-                        ) : (
-                          <ExpandMore sx={{ fontSize: 18, color: 'text.disabled' }} />
-                        )}
+                        {openGroups[group.label]
+                          ? <ExpandLess sx={{ fontSize: 18, color: 'text.disabled' }} />
+                          : <ExpandMore sx={{ fontSize: 18, color: 'text.disabled' }} />}
                       </>
                     )}
                   </ListItemButton>
                 </ListItem>
               </Tooltip>
 
-              {/* Group items */}
               <Collapse in={!collapsed && openGroups[group.label]} timeout="auto" unmountOnExit>
                 <List disablePadding>
                   {group.items.map((item) => (
@@ -455,7 +553,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
         </List>
       </Box>
 
-      {/* ── Bottom: Settings items ──────────────────────────────── */}
+      {/* Settings */}
       <Box sx={{ borderTop: '1px solid', borderColor: 'divider', py: 1 }}>
         <List disablePadding>
           {SETTINGS_ITEMS.map((item) => (

@@ -17,8 +17,9 @@ const securityHeaders = helmet({
 // Rate limiting
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: process.env.NODE_ENV === 'production' ? 300 : 2000, // relaxed for dev
   message: 'Too many requests from this IP, please try again later.',
+  skip: () => process.env.NODE_ENV !== 'production', // skip entirely in dev
 });
 
 const authLimiter = rateLimit({

@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import api from './lib/axios';
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import CreateUser from './pages/CreateUser';
@@ -21,6 +21,16 @@ import Header from './components/Header';
 import RightRail from './components/RightRail';
 import Sidebar from './Sidebar';
 import ProtectedRoute from './components/ProtectedRoute';
+import PeopleTabBar, { isPeoplePath } from './components/PeopleTabBar';
+import LifecycleTabBar, { isLifecyclePath } from './components/LifecycleTabBar';
+import EvaluationTabBar, { isEvaluationPath } from './components/EvaluationTabBar';
+import PerformanceTabBar, { isPerformancePath } from './components/PerformanceTabBar';
+import TimeTabBar, { isTimePath } from './components/TimeTabBar';
+import CompensationTabBar, { isCompensationPath } from './components/CompensationTabBar';
+import RecruitmentTabBar, { isRecruitmentPath } from './components/RecruitmentTabBar';
+import WorkTabBar, { isWorkPath } from './components/WorkTabBar';
+import DocumentsTabBar, { isDocumentsPath } from './components/DocumentsTabBar';
+import AnalyticsTabBar, { isAnalyticsPath } from './components/AnalyticsTabBar';
 import { UserProvider, useUser } from './context/UserContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import theme from './theme';
@@ -72,6 +82,7 @@ const AppContent: React.FC = () => {
 
   const { setUser } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
@@ -130,6 +141,36 @@ const AppContent: React.FC = () => {
       >
         {showSidebarAndHeader && <Header collapsed={sidebarCollapsed} onToggle={toggleSidebar} />}
         <Box sx={{ p: 0, minHeight: isFirstLogin ? '100vh' : 'calc(100vh - 64px)' }}>
+          {showSidebarAndHeader && isPeoplePath(location.pathname) && (
+            <PeopleTabBar isEmployee={currentUser?.role === 'Employee'} />
+          )}
+          {showSidebarAndHeader && isLifecyclePath(location.pathname) && (
+            <LifecycleTabBar />
+          )}
+          {showSidebarAndHeader && isEvaluationPath(location.pathname) && (
+            <EvaluationTabBar isEmployee={currentUser?.role === 'Employee'} />
+          )}
+          {showSidebarAndHeader && isPerformancePath(location.pathname) && (
+            <PerformanceTabBar isEmployee={currentUser?.role === 'Employee'} />
+          )}
+          {showSidebarAndHeader && isTimePath(location.pathname) && (
+            <TimeTabBar />
+          )}
+          {showSidebarAndHeader && isCompensationPath(location.pathname) && (
+            <CompensationTabBar />
+          )}
+          {showSidebarAndHeader && isRecruitmentPath(location.pathname) && (
+            <RecruitmentTabBar />
+          )}
+          {showSidebarAndHeader && isWorkPath(location.pathname) && (
+            <WorkTabBar />
+          )}
+          {showSidebarAndHeader && isDocumentsPath(location.pathname) && (
+            <DocumentsTabBar isEmployee={isEmployee} />
+          )}
+          {showSidebarAndHeader && isAnalyticsPath(location.pathname) && (
+            <AnalyticsTabBar />
+          )}
           <Routes>
             <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
             <Route path="/forgot-password" element={!isAuthenticated ? <ForgotPassword /> : <Navigate to="/dashboard" />} />
